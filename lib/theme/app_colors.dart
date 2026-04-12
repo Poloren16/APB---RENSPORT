@@ -7,9 +7,6 @@ class AppColors {
   static const Color surface = Colors.white;
   static const Color textPrimary = Color(0xFF161616);
   static const Color textSecondary = Color(0xFF525252);
-<<<<<<< HEAD
-  static const Color accent = Color(0xFF0078D4); // Blue for secondary/success accents
-=======
   static const Color accent = Color(0xFF24A148); // Energetic green for secondary/success accents
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
+
 }
