@@ -17,9 +17,12 @@ class RensiusApp extends StatelessWidget {
       title: 'RENSIUS',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: AppColors.primary,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          primary: AppColors.primary,
+        ),
         scaffoldBackgroundColor: AppColors.background,
-        fontFamily: 'Inter', // Assuming we would use a modern font like Inter
+        fontFamily: 'Inter',
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
