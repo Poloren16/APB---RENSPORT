@@ -45,7 +45,7 @@ class AkunPage extends StatelessWidget {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade700,
+                      color: AppColors.primary,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     alignment: Alignment.center,
@@ -117,10 +117,10 @@ class AkunPage extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.monetization_on, color: Colors.orange.shade700, size: 20),
+                      Icon(Icons.monetization_on, color: AppColors.primary, size: 20),
                       const SizedBox(width: 8),
                       const Text(
-                        '0 Gelora Points',
+                        '0 Rensius Points',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -129,12 +129,12 @@ class AkunPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Text(
+                  const Text(
                     'Detail Points',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.orange.shade700,
+                      color: AppColors.primary,
                     ),
                   ),
                 ],

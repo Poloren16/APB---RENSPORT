@@ -90,7 +90,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepOrange, // Matches the orange active color in the image
+        selectedItemColor: AppColors.primary, // Matches the theme's primary color
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
