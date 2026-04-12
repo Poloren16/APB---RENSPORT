@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'pages/login_page.dart';
+import 'pages/booking_history.dart';
+import 'pages/payment_page.dart';
 import 'theme/app_colors.dart';
 
 void main() {
@@ -50,6 +52,10 @@ class RensiusApp extends StatelessWidget {
         ),
       ),
       home: const LoginPage(),
+      routes: {
+        '/booking': (context) => const BookingPage(),
+        '/payment': (context) => const PaymentPage(),
+      },
     );
   }
 }
