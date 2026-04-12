@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../widgets/shared/venue_category_chips.dart';
+import '../widgets/shared/venue_date_picker.dart';
+import 'booking_page.dart';
 
 class VenuePage extends StatefulWidget {
   const VenuePage({super.key});
@@ -9,6 +12,24 @@ class VenuePage extends StatefulWidget {
 }
 
 class _VenuePageState extends State<VenuePage> {
+  DateTime _selectedDate = DateTime.now();
+  String _selectedCategory = 'Semua';
+
+  static const List<CategoryItem> _categories = [
+    CategoryItem('Semua'),
+    CategoryItem('Favorite', Icons.bookmark_outline),
+    CategoryItem('Mini Soccer', Icons.sports_soccer),
+    CategoryItem('Sepak Bola', Icons.sports_soccer),
+  ];
+
+  static String _monthName(int month) {
+    const names = [
+      '',
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+    ];
+    return names[month];
+  }
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -114,17 +135,10 @@ class _VenuePageState extends State<VenuePage> {
           // Categories Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _buildCategoryChip('Semua', isSelected: true),
-                  _buildCategoryChip('Favorite', icon: Icons.bookmark_outline),
-                  _buildCategoryChip('Mini Soccer', icon: Icons.sports_soccer),
-                  _buildCategoryChip('Sepak Bola', icon: Icons.sports_soccer),
-                ],
-              ),
+            child: VenueCategoryChips(
+              categories: _categories,
+              selectedCategory: _selectedCategory,
+              onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
             ),
           ),
 
@@ -142,21 +156,27 @@ class _VenuePageState extends State<VenuePage> {
                       children: [
                         Icon(Icons.calendar_month, color: Colors.grey[600]),
                         const SizedBox(width: 8),
-                        const Text(
-                          'April',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        Text(
+                          _monthName(_selectedDate.month),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
                       ],
                     ),
-                    const Text(
-                      'Reset & Mulai Ulang',
-                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
+                    GestureDetector(
+                      onTap: () => setState(() => _selectedDate = DateTime.now()),
+                      child: const Text(
+                        'Reset & Mulai Ulang',
+                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 15),
-                _buildDatePicker(),
+                VenueDatePicker(
+                  selectedDate: _selectedDate,
+                  onDateSelected: (date) => setState(() => _selectedDate = date),
+                ),
               ],
             ),
           ),
@@ -175,104 +195,44 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildCategoryChip(String label, {bool isSelected = false, IconData? icon}) {
-    return Container(
-      margin: const EdgeInsets.only(right: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isSelected ? AppColors.primary : Colors.grey.shade300,
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? AppColors.primary : Colors.grey[600],
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          if (icon != null) ...[
-            const SizedBox(width: 4),
-            Icon(icon, size: 16, color: isSelected ? AppColors.primary : Colors.grey[600]),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDatePicker() {
-    List<Map<String, String>> days = [
-      {'day': 'Rab', 'date': '8'},
-      {'day': 'Kam', 'date': '9'},
-      {'day': 'Jum', 'date': '10'},
-      {'day': 'Sab', 'date': '11'},
-      {'day': 'Min', 'date': '12'},
-      {'day': 'Sen', 'date': '13'},
-      {'day': 'Sel', 'date': '14'},
-    ];
-
-    return SizedBox(
-      height: 70,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: days.length,
-        itemBuilder: (context, index) {
-          bool isSelected = index == 4;
-          return Container(
-            width: 55,
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-              borderRadius: BorderRadius.circular(15),
-              border: isSelected ? Border.all(color: AppColors.primary, width: 2) : null,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  days[index]['day']!,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.primary : Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-                Text(
-                  days[index]['date']!,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.primary : Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildDetailedVenueCard() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const BookingPage(
+                  venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+                  venueType: 'Tenis',
+                  venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
+                  venueHours: '06:00 - 22:00',
+                ),
+              ),
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
           // Main Venue Info
           Padding(
             padding: const EdgeInsets.all(15),
@@ -383,12 +343,31 @@ class _VenuePageState extends State<VenuePage> {
           const SizedBox(height: 10),
         ],
       ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _goToBooking() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BookingPage(
+          venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+          venueType: 'Tenis',
+          venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
+          venueHours: '06:00 - 22:00',
+        ),
+      ),
     );
   }
 
   Widget _buildCourtItem(String name) {
-    return Padding(
-      padding: const EdgeInsets.all(15),
+    return InkWell(
+      onTap: _goToBooking,
+      child: Padding(
+        padding: const EdgeInsets.all(15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -455,24 +434,28 @@ class _VenuePageState extends State<VenuePage> {
           ),
         ],
       ),
+      ),
     );
   }
 
   Widget _buildTimeSlot(String time, {required bool isAvailable}) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isAvailable ? Colors.white : Colors.grey[100],
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Text(
-        time,
-        style: TextStyle(
-          color: isAvailable ? Colors.black : Colors.grey[400],
-          fontSize: 12,
-          decoration: isAvailable ? null : TextDecoration.lineThrough,
+    return GestureDetector(
+      onTap: isAvailable ? _goToBooking : null,
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isAvailable ? Colors.white : Colors.grey[100],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Text(
+          time,
+          style: TextStyle(
+            color: isAvailable ? Colors.black : Colors.grey[400],
+            fontSize: 12,
+            decoration: isAvailable ? null : TextDecoration.lineThrough,
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'booking_history.dart';
 
 class PaymentPage extends StatefulWidget {
   final String venueName;
@@ -565,6 +566,7 @@ class _PaymentPageState extends State<PaymentPage> {
 
           // Total + Pay button row
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Total price
               Column(
@@ -580,39 +582,55 @@ class _PaymentPageState extends State<PaymentPage> {
                   Text(
                     _formatPrice(widget.price),
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
                       color: AppColors.textPrimary,
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(width: 16),
-
               // Pay button
-              Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _isAgreed ? () {} : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      disabledBackgroundColor: Colors.grey.shade300,
-                      foregroundColor: Colors.white,
-                      disabledForegroundColor: Colors.grey.shade500,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Bayar',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+              ElevatedButton(
+                onPressed: _isAgreed
+                    ? () {
+                        BookingHistoryPage.mockHistory.insert(0, {
+                          'orderId':
+                              'ID${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
+                          'venueName': widget.venueName,
+                          'courtName': widget.courtName,
+                          'date': widget.date,
+                          'time': widget.timeRange,
+                          'price': widget.price,
+                          'status': 'Menunggu Jadwal',
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Pembayaran berhasil! Silakan cek aktivitas.'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        Navigator.popUntil(context, (route) => route.isFirst);
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  foregroundColor: Colors.white,
+                  disabledForegroundColor: Colors.grey.shade500,
+                  elevation: 0,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Bayar',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
