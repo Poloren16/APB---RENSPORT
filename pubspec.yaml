@@ -10,10 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-<<<<<<< HEAD
   url_launcher: ^6.3.2
-=======
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
 
 dev_dependencies:
   flutter_test:
@@ -22,9 +19,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-<<<<<<< HEAD
-=======
 
   assets:
     - assets/images/
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b

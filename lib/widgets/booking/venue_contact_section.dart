@@ -25,7 +25,7 @@ class VenueContactSection extends StatelessWidget {
           border: Border.all(color: Colors.grey.shade200, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 4,
               offset: const Offset(0, 1),
             ),
@@ -65,7 +65,7 @@ class VenueContactSection extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -84,14 +84,14 @@ class VenueContactSection extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF0E21A0).withOpacity(0.8),
-                  const Color(0xFF1A3CC8).withOpacity(0.8),
+                  const Color(0xFF0E21A0).withValues(alpha: 0.8),
+                  const Color(0xFF1A3CC8).withValues(alpha: 0.8),
                 ],
               ),
             ),
             child: Center(
               child: Icon(Icons.sports_soccer,
-                  color: Colors.white.withOpacity(0.5), size: 32),
+                  color: Colors.white.withValues(alpha: 0.5), size: 32),
             ),
           ),
           Padding(
@@ -272,7 +272,7 @@ class VenueContactSection extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               SizedBox(
-                height: 190,
+                height: 220,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../widgets/booking/venue_header_slivers.dart';
-import '../widgets/booking/calendar_picker_scroll.dart';
+import '../widgets/shared/venue_date_picker.dart';
 import '../widgets/booking/court_slots_card.dart';
 import '../widgets/booking/venue_contact_section.dart';
+import 'court_detail_page.dart';
+import 'payment_page.dart';
 
 class BookingPage extends StatefulWidget {
   final String venueName;
@@ -30,7 +32,7 @@ class _BookingPageState extends State<BookingPage>
   DateTime _selectedDate = DateTime.now();
   final Set<String> _selectedSlots = {};
 
-  final List<String> _tabs = ['Pilih Jadwal', 'Club', 'Coach', 'Service'];
+  final List<String> _tabs = ['Pilih Jadwal', 'Service'];
 
   // Slot waktu
   final List<Map<String, dynamic>> _timeSlots = [
@@ -77,12 +79,6 @@ class _BookingPageState extends State<BookingPage>
     return 'Rp$formatted';
   }
 
-  List<DateTime> _getWeekDates() {
-    final now = _selectedDate;
-    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
-    return List.generate(14, (i) => startOfWeek.add(Duration(days: i)));
-  }
-
   int get _totalSelected => _selectedSlots.length;
   
   int get _totalPrice => _selectedSlots.fold(0, (sum, key) {
@@ -91,9 +87,12 @@ class _BookingPageState extends State<BookingPage>
     return sum + (_timeSlots[slotIndex]['price'] as int);
   });
 
-  String _getDayName(DateTime date) {
-    const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-    return days[date.weekday % 7];
+  String _getMonthName(DateTime date) {
+    const months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return months[date.month - 1];
   }
 
   Widget _buildOperationalRow(String day, String hours, bool isHighlighted) {
@@ -139,7 +138,8 @@ class _BookingPageState extends State<BookingPage>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        final currentDayName = _getDayName(_selectedDate);
+        const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        final currentDayName = days[_selectedDate.weekday % 7];
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -208,7 +208,7 @@ class _BookingPageState extends State<BookingPage>
     final query = Uri.encodeComponent(widget.venueName + ' ' + widget.venueAddress);
     final url = Uri.parse('https://www.openstreetmap.org/search?query=$query');
     if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+      await launchUrl(url, mode: LaunchMode.inAppBrowserView);
     }
   }
 
@@ -289,7 +289,38 @@ class _BookingPageState extends State<BookingPage>
               height: 52,
               child: ElevatedButton(
                 onPressed: () {
+                  final selectedCourts = <String>{};
+                  final selectedTimes = <String>[];
+                  for (final key in _selectedSlots) {
+                    final parts = key.split('_');
+                    final slotIndex = int.tryParse(parts[0]) ?? 0;
+                    final courtIndex = int.tryParse(parts[1]) ?? 0;
+                    selectedCourts.add(_courts[courtIndex]['name']);
+                    selectedTimes.add(_timeSlots[slotIndex]['time'].split(' - ')[0]);
+                  }
+                  
+                  // Sorting the times so they appear chronologically
+                  selectedTimes.sort((a, b) {
+                    final hA = int.tryParse(a.split(':')[0]) ?? 0;
+                    final hB = int.tryParse(b.split(':')[0]) ?? 0;
+                    return hA.compareTo(hB);
+                  });
+
+                  final dateStr = '${_selectedDate.day} ${monthNames[_selectedDate.month - 1]} ${_selectedDate.year}';
+
                   Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PaymentPage(
+                        venueName: widget.venueName,
+                        courtName: selectedCourts.join(', '),
+                        date: dateStr,
+                        timeRange: '${selectedTimes.length} Slot Waktu (${selectedTimes.join(', ')})',
+                        price: _totalPrice,
+                      ),
+                    ),
+                  );
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: const Text(
@@ -354,21 +385,72 @@ class _BookingPageState extends State<BookingPage>
 
                 // Calendar Section
                 SliverToBoxAdapter(
-                  child: CalendarPickerScroll(
-                    selectedDate: _selectedDate,
-                    weekDates: _getWeekDates(),
-                    onDateSelected: (date) {
-                      setState(() {
-                         _selectedDate = date;
-                         _selectedSlots.clear();
-                      });
-                    },
-                    onReset: () {
-                      setState(() {
-                        _selectedDate = DateTime.now();
-                        _selectedSlots.clear();
-                      });
-                    },
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            GestureDetector(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: _selectedDate,
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(const Duration(days: 60)),
+                                  builder: (context, child) => Theme(
+                                    data: Theme.of(context).copyWith(
+                                      colorScheme: const ColorScheme.light(primary: AppColors.primary),
+                                    ),
+                                    child: child!,
+                                  ),
+                                );
+                                if (picked != null) {
+                                  setState(() {
+                                    _selectedDate = picked;
+                                    _selectedSlots.clear();
+                                  });
+                                }
+                              },
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.calendar_month, color: AppColors.primary, size: 20),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _getMonthName(_selectedDate),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                  ),
+                                  const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                _selectedDate = DateTime.now();
+                                _selectedSlots.clear();
+                              }),
+                              child: const Text(
+                                'Reset & Mulai Ulang',
+                                style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16, bottom: 8),
+                        child: VenueDatePicker(
+                          selectedDate: _selectedDate,
+                          onDateSelected: (date) {
+                            setState(() {
+                              _selectedDate = date;
+                              _selectedSlots.clear();
+                            });
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -388,6 +470,21 @@ class _BookingPageState extends State<BookingPage>
                       });
                     },
                     formatCurrency: _formatCurrency,
+                    onCourtTap: (court) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CourtDetailPage(
+                            courtName: court['name'] as String,
+                            venueName: widget.venueName,
+                            sportType: court['type'] as String,
+                            dimensions: 'P 23 X L 10',
+                            courtCategory: 'Outdoor',
+                            floorType: 'Vinyl',
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
 

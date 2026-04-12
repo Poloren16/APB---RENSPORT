@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-<<<<<<< HEAD
-import '../data/venue_data.dart';
-=======
+import '../widgets/shared/venue_category_chips.dart';
+import '../widgets/shared/venue_date_picker.dart';
+import 'booking_page.dart';
 
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
 class VenuePage extends StatefulWidget {
   const VenuePage({super.key});
 
@@ -13,6 +12,24 @@ class VenuePage extends StatefulWidget {
 }
 
 class _VenuePageState extends State<VenuePage> {
+  DateTime _selectedDate = DateTime.now();
+  String _selectedCategory = 'Semua';
+
+  static const List<CategoryItem> _categories = [
+    CategoryItem('Semua'),
+    CategoryItem('Favorite', Icons.bookmark_outline),
+    CategoryItem('Mini Soccer', Icons.sports_soccer),
+    CategoryItem('Sepak Bola', Icons.sports_soccer),
+  ];
+
+  static String _monthName(int month) {
+    const names = [
+      '',
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+    ];
+    return names[month];
+  }
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -118,17 +135,10 @@ class _VenuePageState extends State<VenuePage> {
           // Categories Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _buildCategoryChip('Semua', isSelected: true),
-                  _buildCategoryChip('Favorite', icon: Icons.bookmark_outline),
-                  _buildCategoryChip('Mini Soccer', icon: Icons.sports_soccer),
-                  _buildCategoryChip('Sepak Bola', icon: Icons.sports_soccer),
-                ],
-              ),
+            child: VenueCategoryChips(
+              categories: _categories,
+              selectedCategory: _selectedCategory,
+              onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
             ),
           ),
 
@@ -146,21 +156,27 @@ class _VenuePageState extends State<VenuePage> {
                       children: [
                         Icon(Icons.calendar_month, color: Colors.grey[600]),
                         const SizedBox(width: 8),
-                        const Text(
-                          'April',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        Text(
+                          _monthName(_selectedDate.month),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
                       ],
                     ),
-                    const Text(
-                      'Reset & Mulai Ulang',
-                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
+                    GestureDetector(
+                      onTap: () => setState(() => _selectedDate = DateTime.now()),
+                      child: const Text(
+                        'Reset & Mulai Ulang',
+                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 15),
-                _buildDatePicker(),
+                VenueDatePicker(
+                  selectedDate: _selectedDate,
+                  onDateSelected: (date) => setState(() => _selectedDate = date),
+                ),
               ],
             ),
           ),
@@ -170,13 +186,7 @@ class _VenuePageState extends State<VenuePage> {
           // Venue Card Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-<<<<<<< HEAD
-            child: Column(
-              children: GlobalVenueData.venues.map((v) => _buildDetailedVenueCard(v)).toList(),
-            ),
-=======
             child: _buildDetailedVenueCard(),
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
           ),
           
           const SizedBox(height: 30),
@@ -185,110 +195,44 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildCategoryChip(String label, {bool isSelected = false, IconData? icon}) {
-    return Container(
-      margin: const EdgeInsets.only(right: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isSelected ? AppColors.primary : Colors.grey.shade300,
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? AppColors.primary : Colors.grey[600],
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          if (icon != null) ...[
-            const SizedBox(width: 4),
-            Icon(icon, size: 16, color: isSelected ? AppColors.primary : Colors.grey[600]),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDatePicker() {
-    List<Map<String, String>> days = [
-      {'day': 'Rab', 'date': '8'},
-      {'day': 'Kam', 'date': '9'},
-      {'day': 'Jum', 'date': '10'},
-      {'day': 'Sab', 'date': '11'},
-      {'day': 'Min', 'date': '12'},
-      {'day': 'Sen', 'date': '13'},
-      {'day': 'Sel', 'date': '14'},
-    ];
-
-    return SizedBox(
-      height: 70,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: days.length,
-        itemBuilder: (context, index) {
-          bool isSelected = index == 4;
-          return Container(
-            width: 55,
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-              borderRadius: BorderRadius.circular(15),
-              border: isSelected ? Border.all(color: AppColors.primary, width: 2) : null,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  days[index]['day']!,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.primary : Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-                Text(
-                  days[index]['date']!,
-                  style: TextStyle(
-                    color: isSelected ? AppColors.primary : Colors.black,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-<<<<<<< HEAD
-  Widget _buildDetailedVenueCard(Map<String, dynamic> venue) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-=======
   Widget _buildDetailedVenueCard() {
     return Container(
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const BookingPage(
+                  venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+                  venueType: 'Tenis',
+                  venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
+                  venueHours: '06:00 - 22:00',
+                ),
+              ),
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
           // Main Venue Info
           Padding(
             padding: const EdgeInsets.all(15),
@@ -328,15 +272,9 @@ class _VenuePageState extends State<VenuePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-<<<<<<< HEAD
-                      Text(
-                        venue['name'] ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-=======
                       const Text(
                         'Bandung Elektrik Cigereleng Tennis Court',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -345,17 +283,10 @@ class _VenuePageState extends State<VenuePage> {
                         children: [
                           Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
-<<<<<<< HEAD
-                          Expanded(
-                            child: Text(
-                              venue['location'] ?? '',
-                              style: const TextStyle(color: Colors.grey, fontSize: 11),
-=======
                           const Expanded(
                             child: Text(
                               'Jl. PLN Cigereleng No.19, Ciseureu...',
                               style: TextStyle(color: Colors.grey, fontSize: 11),
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -377,28 +308,16 @@ class _VenuePageState extends State<VenuePage> {
                         children: [
                           Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
-<<<<<<< HEAD
-                          Text(
-                            venue['type'] ?? '',
-                            style: const TextStyle(color: Colors.grey, fontSize: 11),
-=======
                           const Text(
                             'Tenis',
                             style: TextStyle(color: Colors.grey, fontSize: 11),
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-<<<<<<< HEAD
-                      Text(
-                        venue['price'] ?? '',
-                        style: const TextStyle(
-=======
                       const Text(
                         'Rp125.000 ~ Rp175.000',
                         style: TextStyle(
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -411,13 +330,6 @@ class _VenuePageState extends State<VenuePage> {
             ),
           ),
           
-<<<<<<< HEAD
-          if (venue['courts'] != null && (venue['courts'] as List).isNotEmpty)
-            const Divider(height: 1),
-
-          if (venue['courts'] != null)
-            ...(venue['courts'] as List).map((court) => _buildCourtItem(court)),
-=======
           const Divider(height: 1),
 
           // Sub-Venue (Courts) List
@@ -427,21 +339,35 @@ class _VenuePageState extends State<VenuePage> {
             child: Divider(height: 1),
           ),
           _buildCourtItem('BEC Tennis Court Lap.B'),
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
           
           const SizedBox(height: 10),
         ],
       ),
+          ),
+        ),
+      ),
     );
   }
 
-<<<<<<< HEAD
-  Widget _buildCourtItem(Map<String, dynamic> court) {
-=======
+  void _goToBooking() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BookingPage(
+          venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+          venueType: 'Tenis',
+          venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
+          venueHours: '06:00 - 22:00',
+        ),
+      ),
+    );
+  }
+
   Widget _buildCourtItem(String name) {
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
-    return Padding(
-      padding: const EdgeInsets.all(15),
+    return InkWell(
+      onTap: _goToBooking,
+      child: Padding(
+        padding: const EdgeInsets.all(15),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -462,21 +388,12 @@ class _VenuePageState extends State<VenuePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-<<<<<<< HEAD
-                      court['name'] ?? '',
-=======
                       name,
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-<<<<<<< HEAD
-                        Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
-                        const SizedBox(width: 4),
-                        Text(court['size'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 11)),
-=======
                         Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
                         const SizedBox(width: 4),
                         const Text('Tenis', style: TextStyle(color: Colors.grey, fontSize: 11)),
@@ -484,7 +401,6 @@ class _VenuePageState extends State<VenuePage> {
                         Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
                         const SizedBox(width: 4),
                         const Text('P 23 X L 10', style: TextStyle(color: Colors.grey, fontSize: 11)),
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -506,11 +422,6 @@ class _VenuePageState extends State<VenuePage> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-<<<<<<< HEAD
-              children: (court['schedules'] as List? ?? []).map<Widget>((schedule) {
-                return _buildTimeSlot(schedule['time'] ?? '', isAvailable: schedule['isAvailable'] ?? true);
-              }).toList(),
-=======
               children: [
                 _buildTimeSlot('14:00', isAvailable: false),
                 _buildTimeSlot('15:00', isAvailable: false),
@@ -519,29 +430,32 @@ class _VenuePageState extends State<VenuePage> {
                 _buildTimeSlot('18:00', isAvailable: true),
                 _buildTimeSlot('19:00', isAvailable: true),
               ],
->>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
             ),
           ),
         ],
+      ),
       ),
     );
   }
 
   Widget _buildTimeSlot(String time, {required bool isAvailable}) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isAvailable ? Colors.white : Colors.grey[100],
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Text(
-        time,
-        style: TextStyle(
-          color: isAvailable ? Colors.black : Colors.grey[400],
-          fontSize: 12,
-          decoration: isAvailable ? null : TextDecoration.lineThrough,
+    return GestureDetector(
+      onTap: isAvailable ? _goToBooking : null,
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isAvailable ? Colors.white : Colors.grey[100],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Text(
+          time,
+          style: TextStyle(
+            color: isAvailable ? Colors.black : Colors.grey[400],
+            fontSize: 12,
+            decoration: isAvailable ? null : TextDecoration.lineThrough,
+          ),
         ),
       ),
     );

@@ -7,6 +7,7 @@ class CourtSlotsCard extends StatelessWidget {
   final Set<String> selectedSlots;
   final Function(String) onSlotSelected;
   final String Function(int) formatCurrency;
+  final Function(Map<String, dynamic>)? onCourtTap;
 
   const CourtSlotsCard({
     super.key,
@@ -15,6 +16,7 @@ class CourtSlotsCard extends StatelessWidget {
     required this.selectedSlots,
     required this.onSlotSelected,
     required this.formatCurrency,
+    this.onCourtTap,
   });
 
   @override
@@ -51,56 +53,59 @@ class CourtSlotsCard extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    // Court header inside card
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius:
-                            const BorderRadius.vertical(top: Radius.circular(14)),
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Colors.grey.shade200,
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  court['name'],
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.sports_tennis,
-                                        size: 11, color: AppColors.textSecondary),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      court['type'],
-                                      style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.textSecondary),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                    // Court header inside card (clickable → Court Detail)
+                    GestureDetector(
+                      onTap: onCourtTap != null ? () => onCourtTap!(court) : null,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius:
+                              const BorderRadius.vertical(top: Radius.circular(14)),
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.grey.shade200,
+                              width: 1,
                             ),
                           ),
-                          const Icon(Icons.chevron_right,
-                              size: 16, color: AppColors.textSecondary),
-                        ],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    court['name'],
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 2,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.sports_tennis,
+                                          size: 11, color: AppColors.textSecondary),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        court['type'],
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.textSecondary),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right,
+                                size: 16, color: AppColors.textSecondary),
+                          ],
+                        ),
                       ),
                     ),
                     // Time slots inside the card
@@ -158,14 +163,6 @@ class CourtSlotsCard extends StatelessWidget {
                                   ),
                                 )
                               else ...[
-                                Text(
-                                  formatCurrency(slot['originalPrice'] as int),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    decoration: TextDecoration.lineThrough,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                ),
                                 Text(
                                   formatCurrency(slot['price'] as int),
                                   style: TextStyle(

@@ -4,9 +4,13 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
 <<<<<<< HEAD
+<<<<<<< HEAD
   url_launcher_windows
 =======
 >>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
+=======
+  url_launcher_windows
+>>>>>>> gena
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
