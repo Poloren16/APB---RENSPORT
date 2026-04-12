@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'login_page.dart';
+<<<<<<< HEAD
 import 'management_venue.dart';
+=======
+
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
 class AkunPage extends StatelessWidget {
   final String username;
   final String role;
@@ -162,6 +166,7 @@ class AkunPage extends StatelessWidget {
                   onTap: () {},
                 ),
                 const Divider(height: 1, color: Color(0xFFEEEEEE)),
+<<<<<<< HEAD
                 if (role.toLowerCase() == 'admin' || role.toLowerCase() == 'superadmin') ...[
                   _buildListTile(
                     icon: Icons.stadium,
@@ -175,6 +180,8 @@ class AkunPage extends StatelessWidget {
                   ),
                   const Divider(height: 1, color: Color(0xFFEEEEEE)),
                 ],
+=======
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                 _buildListTile(
                   icon: Icons.logout,
                   title: 'Keluar Akun',

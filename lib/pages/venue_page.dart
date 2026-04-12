@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+<<<<<<< HEAD
 import '../data/venue_data.dart';
+=======
+
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
 class VenuePage extends StatefulWidget {
   const VenuePage({super.key});
 
@@ -166,9 +170,13 @@ class _VenuePageState extends State<VenuePage> {
           // Venue Card Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
+<<<<<<< HEAD
             child: Column(
               children: GlobalVenueData.venues.map((v) => _buildDetailedVenueCard(v)).toList(),
             ),
+=======
+            child: _buildDetailedVenueCard(),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
           ),
           
           const SizedBox(height: 30),
@@ -258,9 +266,14 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildDetailedVenueCard(Map<String, dynamic> venue) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
+=======
+  Widget _buildDetailedVenueCard() {
+    return Container(
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -315,9 +328,15 @@ class _VenuePageState extends State<VenuePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+<<<<<<< HEAD
                       Text(
                         venue['name'] ?? '',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+=======
+                      const Text(
+                        'Bandung Elektrik Cigereleng Tennis Court',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -326,10 +345,17 @@ class _VenuePageState extends State<VenuePage> {
                         children: [
                           Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
+<<<<<<< HEAD
                           Expanded(
                             child: Text(
                               venue['location'] ?? '',
                               style: const TextStyle(color: Colors.grey, fontSize: 11),
+=======
+                          const Expanded(
+                            child: Text(
+                              'Jl. PLN Cigereleng No.19, Ciseureu...',
+                              style: TextStyle(color: Colors.grey, fontSize: 11),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -351,16 +377,28 @@ class _VenuePageState extends State<VenuePage> {
                         children: [
                           Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
+<<<<<<< HEAD
                           Text(
                             venue['type'] ?? '',
                             style: const TextStyle(color: Colors.grey, fontSize: 11),
+=======
+                          const Text(
+                            'Tenis',
+                            style: TextStyle(color: Colors.grey, fontSize: 11),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
+<<<<<<< HEAD
                       Text(
                         venue['price'] ?? '',
                         style: const TextStyle(
+=======
+                      const Text(
+                        'Rp125.000 ~ Rp175.000',
+                        style: TextStyle(
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -373,11 +411,23 @@ class _VenuePageState extends State<VenuePage> {
             ),
           ),
           
+<<<<<<< HEAD
           if (venue['courts'] != null && (venue['courts'] as List).isNotEmpty)
             const Divider(height: 1),
 
           if (venue['courts'] != null)
             ...(venue['courts'] as List).map((court) => _buildCourtItem(court)),
+=======
+          const Divider(height: 1),
+
+          // Sub-Venue (Courts) List
+          _buildCourtItem('BEC Tennis Court Lap.A'),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 15),
+            child: Divider(height: 1),
+          ),
+          _buildCourtItem('BEC Tennis Court Lap.B'),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
           
           const SizedBox(height: 10),
         ],
@@ -385,7 +435,11 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildCourtItem(Map<String, dynamic> court) {
+=======
+  Widget _buildCourtItem(String name) {
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
     return Padding(
       padding: const EdgeInsets.all(15),
       child: Column(
@@ -408,15 +462,29 @@ class _VenuePageState extends State<VenuePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
+<<<<<<< HEAD
                       court['name'] ?? '',
+=======
+                      name,
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
+<<<<<<< HEAD
                         Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
                         const SizedBox(width: 4),
                         Text(court['size'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+=======
+                        Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
+                        const SizedBox(width: 4),
+                        const Text('Tenis', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                        const SizedBox(width: 10),
+                        Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
+                        const SizedBox(width: 4),
+                        const Text('P 23 X L 10', style: TextStyle(color: Colors.grey, fontSize: 11)),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -438,9 +506,20 @@ class _VenuePageState extends State<VenuePage> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
+<<<<<<< HEAD
               children: (court['schedules'] as List? ?? []).map<Widget>((schedule) {
                 return _buildTimeSlot(schedule['time'] ?? '', isAvailable: schedule['isAvailable'] ?? true);
               }).toList(),
+=======
+              children: [
+                _buildTimeSlot('14:00', isAvailable: false),
+                _buildTimeSlot('15:00', isAvailable: false),
+                _buildTimeSlot('16:00', isAvailable: false),
+                _buildTimeSlot('17:00', isAvailable: false),
+                _buildTimeSlot('18:00', isAvailable: true),
+                _buildTimeSlot('19:00', isAvailable: true),
+              ],
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
             ),
           ),
         ],

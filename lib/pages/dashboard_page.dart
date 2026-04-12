@@ -3,7 +3,11 @@ import '../theme/app_colors.dart';
 import 'notifikasi.dart';
 import 'akun_page.dart';
 import 'venue_page.dart';
+<<<<<<< HEAD
 import '../data/venue_data.dart';
+=======
+
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
 class DashboardPage extends StatefulWidget {
   final String username;
   final String role;
@@ -232,7 +236,11 @@ class _DashboardPageState extends State<DashboardPage> {
                   style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
                 const SizedBox(height: 20),
+<<<<<<< HEAD
                 ...GlobalVenueData.venues.map((v) => _buildVenueCard(v)),
+=======
+                _buildVenueCard(),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                 const SizedBox(height: 20),
               ],
             ),
@@ -323,9 +331,14 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildVenueCard(Map<String, dynamic> venue) {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
+=======
+  Widget _buildVenueCard() {
+    return Container(
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -361,19 +374,32 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+<<<<<<< HEAD
                       Text(
                         venue['name'] ?? '',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+=======
+                      const Text(
+                        'ASATU ARENA CIKINI',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
                           Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
+<<<<<<< HEAD
                           Expanded(
                             child: Text(
                               venue['location'] ?? '',
                               style: const TextStyle(color: Colors.grey, fontSize: 12),
+=======
+                          const Expanded(
+                            child: Text(
+                              'Jakarta Pusat',
+                              style: TextStyle(color: Colors.grey, fontSize: 12),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -384,16 +410,28 @@ class _DashboardPageState extends State<DashboardPage> {
                         children: [
                           Icon(Icons.sports_soccer, size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
+<<<<<<< HEAD
                           Text(
                             venue['type'] ?? '',
                             style: const TextStyle(color: Colors.grey, fontSize: 12),
+=======
+                          const Text(
+                            'Mini Soccer',
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
+<<<<<<< HEAD
                       Text(
                         venue['price'] ?? '',
                         style: const TextStyle(
+=======
+                      const Text(
+                        'Rp2.200.000 ~ Rp2.200.000',
+                        style: TextStyle(
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -406,11 +444,18 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
           
+<<<<<<< HEAD
           if (venue['courts'] != null && (venue['courts'] as List).isNotEmpty)
             const Divider(height: 1),
 
           if (venue['courts'] != null)
             ...(venue['courts'] as List).map((court) => _buildCourtItem(court)),
+=======
+          const Divider(height: 1),
+
+          // Sub-Venue (Courts) List
+          _buildCourtItem('ASATU Mini Soccer'),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
           
           const SizedBox(height: 10),
         ],
@@ -418,7 +463,11 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildCourtItem(Map<String, dynamic> court) {
+=======
+  Widget _buildCourtItem(String name) {
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
     return Padding(
       padding: const EdgeInsets.all(15),
       child: Column(
@@ -441,15 +490,29 @@ class _DashboardPageState extends State<DashboardPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
+<<<<<<< HEAD
                       court['name'] ?? '',
+=======
+                      name,
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
+<<<<<<< HEAD
                         Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
                         const SizedBox(width: 4),
                         Text(court['size'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+=======
+                        Icon(Icons.sports_soccer, size: 14, color: Colors.grey[400]),
+                        const SizedBox(width: 4),
+                        const Text('Mini Soccer', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                        const SizedBox(width: 10),
+                        Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
+                        const SizedBox(width: 4),
+                        const Text('P 40 X L 32', style: TextStyle(color: Colors.grey, fontSize: 11)),
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -471,9 +534,19 @@ class _DashboardPageState extends State<DashboardPage> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
+<<<<<<< HEAD
               children: (court['schedules'] as List? ?? []).map<Widget>((schedule) {
                 return _buildTimeSlot(schedule['time'] ?? '', isAvailable: schedule['isAvailable'] ?? true);
               }).toList(),
+=======
+              children: [
+                _buildTimeSlot('14:00', isAvailable: true),
+                _buildTimeSlot('16:00', isAvailable: false),
+                _buildTimeSlot('18:00', isAvailable: true),
+                _buildTimeSlot('20:00', isAvailable: false),
+                _buildTimeSlot('22:00', isAvailable: true),
+              ],
+>>>>>>> a301a937d336de204cafa46fa4686289bc1dac3b
             ),
           ),
         ],
