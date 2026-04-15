@@ -115,66 +115,77 @@ class CourtSlotsCard extends StatelessWidget {
                       final slotKey = '${slotIdx}_$courtIdx';
                       final isSelected = selectedSlots.contains(slotKey);
                       final isBooked = slot['booked'] as bool;
-                      return GestureDetector(
-                        onTap: isBooked ? null : () => onSlotSelected(slotKey),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isBooked
-                                ? Colors.white
-                                : isSelected
-                                    ? AppColors.primary.withOpacity(0.1)
-                                    : Colors.white,
-                            border: Border(
-                              top: BorderSide(
-                                  color: Colors.grey.shade100, width: 1),
-                              left: isSelected
-                                  ? const BorderSide(
-                                      color: AppColors.primary, width: 3)
-                                  : BorderSide.none,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                slot['time'],
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: isBooked
-                                      ? Colors.grey.shade400
-                                      : isSelected
-                                          ? AppColors.primary
-                                          : AppColors.textPrimary,
-                                ),
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                        child: GestureDetector(
+                          onTap: isBooked ? null : () => onSlotSelected(slotKey),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isBooked
+                                  ? Colors.grey.shade50
+                                  : isSelected
+                                      ? AppColors.primary
+                                      : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : Colors.grey.shade200,
+                                width: 1,
                               ),
-                              const SizedBox(height: 2),
-                              if (isBooked)
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: AppColors.primary.withOpacity(0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      )
+                                    ]
+                                  : [],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Text(
-                                  'Booked',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                )
-                              else ...[
-                                Text(
-                                  formatCurrency(slot['price'] as int),
+                                  slot['time'],
                                   style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: isSelected
-                                        ? AppColors.primary
-                                        : AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    color: isBooked
+                                        ? Colors.grey.shade400
+                                        : isSelected
+                                            ? Colors.white
+                                            : AppColors.textPrimary,
                                   ),
                                 ),
-                              ]
-                            ],
+                                const SizedBox(height: 4),
+                                if (isBooked)
+                                  Text(
+                                    'Penuh (Booked)',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                  )
+                                else ...[
+                                  Text(
+                                    formatCurrency(slot['price'] as int),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected
+                                          ? Colors.white.withOpacity(0.9)
+                                          : AppColors.textPrimary.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ]
+                              ],
+                            ),
                           ),
                         ),
                       );

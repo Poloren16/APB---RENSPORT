@@ -38,39 +38,47 @@ class VenueDatePicker extends StatelessWidget {
         itemBuilder: (context, index) {
           final date = dates[index];
           final isSelected = isSameDay(date, selectedDate);
+          
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final isPast = date.isBefore(today);
+
           return GestureDetector(
-            onTap: () => onDateSelected(date),
-            child: Container(
-              width: 55,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.1)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(15),
-                border: isSelected
-                    ? Border.all(color: AppColors.primary, width: 2)
-                    : null,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    getDayName(date),
-                    style: TextStyle(
-                      color: isSelected ? AppColors.primary : Colors.grey,
-                      fontSize: 12,
+            onTap: isPast ? null : () => onDateSelected(date),
+            child: Opacity(
+              opacity: isPast ? 0.4 : 1.0,
+              child: Container(
+                width: 55,
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(15),
+                  border: isSelected
+                      ? Border.all(color: AppColors.primary, width: 2)
+                      : null,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      getDayName(date),
+                      style: TextStyle(
+                        color: isSelected ? AppColors.primary : Colors.grey,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                  Text(
-                    '${date.day}',
-                    style: TextStyle(
-                      color: isSelected ? AppColors.primary : Colors.black,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      '${date.day}',
+                      style: TextStyle(
+                        color: isSelected ? AppColors.primary : Colors.black,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
