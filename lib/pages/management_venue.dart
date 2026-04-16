@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../data/venue_data.dart';
+import '../utils/alert_utils.dart';
 
 class ManagementVenuePage extends StatefulWidget {
   const ManagementVenuePage({super.key});
@@ -507,10 +508,11 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                     // Validasi minimal form terisi
                     if (nameController.text.trim().isEmpty ||
                         locationController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Name and Location cannot be empty'),
-                        ),
+                      AlertUtils.showResultDialog(
+                        context,
+                        isSuccess: false,
+                        title: 'Form Belum Lengkap!',
+                        message: 'Nama Venue dan Lokasi wajib diisi untuk melanjutkan.',
                       );
                       return;
                     }
@@ -567,14 +569,13 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
 
                     Navigator.pop(context);
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          isEditing
-                              ? 'Venue updated successfully'
-                              : 'Venue added successfully',
-                        ),
-                      ),
+                    AlertUtils.showResultDialog(
+                      context,
+                      isSuccess: true,
+                      title: isEditing ? 'Update Berhasil!' : 'Venue Ditambahkan!',
+                      message: isEditing
+                          ? '"${nameController.text.trim()}" telah berhasil diperbarui.'
+                          : '"${nameController.text.trim()}" kini tersedia dalam daftar venue Anda.',
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -648,8 +649,11 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                   _venues.removeAt(index);
                 });
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('"$venueName" has been deleted.')),
+                AlertUtils.showResultDialog(
+                  context,
+                  isSuccess: true,
+                  title: 'Dihapus!',
+                  message: '"$venueName" telah berhasil dihapus dari sistem.',
                 );
               },
               style: ElevatedButton.styleFrom(

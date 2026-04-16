@@ -1,21 +1,28 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'booking_history.dart';
+import '../utils/alert_utils.dart';
+import './receipt_page.dart';
+import '../utils/booking_utils.dart';
 
 class PaymentPage extends StatefulWidget {
+  final String username;
   final String venueName;
   final String courtName;
   final String date;
   final String timeRange;
   final int price;
+  final List<Map<String, String>> individualSlots;
 
   const PaymentPage({
     super.key,
+    this.username = 'User',
     this.venueName = 'Bandung Elektrik Cigereleng Tennis Court',
     this.courtName = 'BEC Tennis Court Lap.A',
     this.date = 'Senin, 13 April 2026',
     this.timeRange = '06:00 - 07:00',
     this.price = 100000,
+    this.individualSlots = const [],
   });
 
   @override
@@ -693,24 +700,50 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   void _processPayment() {
-    BookingHistoryPage.mockHistory.insert(0, {
+    String paymentName = 'Virtual Account';
+    if (_selectedPaymentMethodId == 'qris') paymentName = 'QRIS';
+    if (_selectedPaymentMethodId == 'gopay') paymentName = 'GoPay';
+    if (_selectedPaymentMethodId == 'bca') paymentName = 'BCA Virtual Account';
+    if (_selectedPaymentMethodId == 'mandiri') paymentName = 'Mandiri Virtual Account';
+    if (_selectedPaymentMethodId == 'bni') paymentName = 'BNI Virtual Account';
+    if (_selectedPaymentMethodId == 'credit_card') paymentName = 'Kartu Kredit / Debit';
+
+    final newBooking = {
       'orderId': 'ID${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
       'venueName': widget.venueName,
       'courtName': widget.courtName,
       'date': widget.date,
       'time': widget.timeRange,
       'price': widget.price,
+      'paymentMethod': paymentName,
       'status': 'Menunggu Jadwal',
-    });
+    };
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Pembayaran berhasil! Silakan cek aktivitas.'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
+    // Perform atomic slot reservation
+    for (var slot in widget.individualSlots) {
+      BookingUtils.reserveSlot(
+        venueName: widget.venueName,
+        courtName: slot['court'] ?? '',
+        dateStr: widget.date,
+        timeSlot: slot['time'] ?? '',
+      );
+    }
+    
+    BookingHistoryPage.mockHistory.insert(0, newBooking);
+    
+    AlertUtils.showResultDialog(
+      context,
+      isSuccess: true,
+      title: 'Pembayaran Berhasil!',
+      message: 'Pesananmu telah dikonfirmasi. Kamu bisa melihat receipt untuk validasi di lapangan.',
+      onConfirm: () {
+        Navigator.popUntil(context, (route) => route.isFirst);
+        // Navigate to receipt from home (Aktivitas) if possible, 
+        // but since we are popUntil isFirst, we just go back.
+        // Let's just go to Receipt directly then pop to first? 
+        // Better: Go to Receipt, then when "Kembali" is pressed, it goes back.
+      },
     );
-    Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   Widget _buildSummaryRow(String label, String value) {

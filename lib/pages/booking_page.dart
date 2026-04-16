@@ -8,8 +8,10 @@ import '../widgets/booking/venue_contact_section.dart';
 import 'court_detail_page.dart';
 import 'payment_page.dart';
 import '../models/review_model.dart';
+import '../utils/booking_utils.dart';
 
 class BookingPage extends StatefulWidget {
+  final String username;
   final String venueName;
   final String venueType;
   final String venueAddress;
@@ -17,6 +19,7 @@ class BookingPage extends StatefulWidget {
 
   const BookingPage({
     super.key,
+    this.username = 'User',
     this.venueName = 'Bandung Elektrik Cigereleng Tennis Court',
     this.venueType = 'Tenis',
     this.venueAddress = 'Jl. PLN Cigereleng No.19, Ciseureuh, K...',
@@ -43,9 +46,9 @@ class _BookingPageState extends State<BookingPage>
     {'time': '09:00 - 10:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
     {'time': '10:00 - 11:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
     {'time': '11:00 - 12:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
-    {'time': '12:00 - 13:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
+    {'time': '12:00 - 13:00', 'price': 100000, 'originalPrice': 125000, 'available': false, 'booked': true},
     {'time': '13:00 - 14:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
-    {'time': '14:00 - 15:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
+    {'time': '14:00 - 15:00', 'price': 100000, 'originalPrice': 125000, 'available': false, 'booked': true},
     {'time': '15:00 - 16:00', 'price': 125000, 'originalPrice': 150000, 'available': true, 'booked': false},
     {'time': '16:00 - 17:00', 'price': 125000, 'originalPrice': 150000, 'available': true, 'booked': false},
     {'time': '17:00 - 18:00', 'price': 125000, 'originalPrice': 150000, 'available': true, 'booked': false},
@@ -313,18 +316,31 @@ class _BookingPageState extends State<BookingPage>
                     return hA.compareTo(hB);
                   });
 
-                  final dateStr = '${_selectedDate.day} ${monthNames[_selectedDate.month - 1]} ${_selectedDate.year}';
+                  final dateStr = BookingUtils.formatDate(_selectedDate);
+                  
+                  // Prepare individual slots for atomic locking
+                  final individualSlots = _selectedSlots.map((key) {
+                    final parts = key.split('_');
+                    final slotIdx = int.tryParse(parts[0]) ?? 0;
+                    final courtIdx = int.tryParse(parts[1]) ?? 0;
+                    return {
+                      'court': _courts[courtIdx]['name'] as String,
+                      'time': _timeSlots[slotIdx]['time'] as String,
+                    };
+                  }).toList();
 
                   Navigator.pop(context);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => PaymentPage(
+                        username: widget.username,
                         venueName: widget.venueName,
                         courtName: selectedCourts.join(', '),
                         date: dateStr,
                         timeRange: '${selectedTimes.length} Slot Waktu (${selectedTimes.join(', ')})',
                         price: _totalPrice,
+                        individualSlots: individualSlots,
                       ),
                     ),
                   );
@@ -404,7 +420,7 @@ class _BookingPageState extends State<BookingPage>
                                         onSurface: AppColors.textPrimary,
                                       ),
                                     ),
-                                    child: child!,
+                                    child: child ?? const SizedBox(),
                                   ),
                                 );
                                 if (picked != null) {
@@ -463,6 +479,8 @@ class _BookingPageState extends State<BookingPage>
                 // Court Headers + Time Slots
                 SliverToBoxAdapter(
                   child: CourtSlotsCard(
+                    venueName: widget.venueName,
+                    dateStr: BookingUtils.formatDate(_selectedDate),
                     courts: _courts,
                     timeSlots: _timeSlots,
                     selectedSlots: _selectedSlots,
@@ -481,6 +499,7 @@ class _BookingPageState extends State<BookingPage>
                         context,
                         MaterialPageRoute(
                           builder: (_) => CourtDetailPage(
+                            username: widget.username,
                             courtName: court['name'] as String,
                             venueName: widget.venueName,
                             sportType: court['type'] as String,
@@ -577,7 +596,8 @@ class _BookingPageState extends State<BookingPage>
   }
 
   Widget _buildPlayerReviewsSection() {
-    final venueReviews = Review.mockReviews.where((r) => r.venueName == widget.venueName).toList();
+    var venueReviews = Review.mockReviews.where((r) => r.venueName == widget.venueName).toList();
+    venueReviews.sort((a, b) => b.date.compareTo(a.date));
     if (venueReviews.isEmpty) return const SizedBox.shrink();
 
     return Container(
@@ -661,10 +681,6 @@ class _BookingPageState extends State<BookingPage>
                     style: const TextStyle(fontSize: 13, color: Colors.black87),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    'Tipe: ${review.courtName.split(' ').last}',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
-                  ),
                 ],
               );
             },
@@ -673,9 +689,12 @@ class _BookingPageState extends State<BookingPage>
             Padding(
               padding: const EdgeInsets.only(top: 16),
               child: Center(
-                child: Text(
-                  'Lihat Semua ${venueReviews.length} Ulasan',
-                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
+                child: GestureDetector(
+                  onTap: () => _showAllReviews(context, venueReviews),
+                  child: Text(
+                    'Lihat Semua ${venueReviews.length} Ulasan',
+                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
                 ),
               ),
             ),
@@ -684,6 +703,117 @@ class _BookingPageState extends State<BookingPage>
       ),
     );
   }
+
+  void _showAllReviews(BuildContext context, List<Review> reviews) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Semua Ulasan',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView.separated(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(20),
+                    itemCount: reviews.length,
+                    separatorBuilder: (_, __) => const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Divider(height: 1),
+                    ),
+                    itemBuilder: (context, index) {
+                      final review = reviews[index];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: AppColors.primary.withOpacity(0.1),
+                                child: Text(
+                                  review.username[0],
+                                  style: const TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      review.username,
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                    ),
+                                    Row(
+                                      children: [
+                                        Row(
+                                          children: List.generate(5, (i) => Icon(
+                                            i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                                            size: 14,
+                                            color: Colors.orange,
+                                          )),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '${review.date.day} ${_getMonthName(review.date)} ${review.date.year}',
+                                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            review.comment,
+                            style: const TextStyle(fontSize: 14, color: Colors.black87),
+                          ),
+                          const SizedBox(height: 6),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
 }
 
 // Sticky tab bar delegate

@@ -5,6 +5,7 @@ import '../widgets/shared/venue_date_picker.dart';
 import 'booking_page.dart';
 import 'court_detail_page.dart';
 import '../models/review_model.dart';
+import '../utils/booking_utils.dart';
 
 class VenuePage extends StatefulWidget {
   const VenuePage({super.key});
@@ -461,8 +462,10 @@ class _VenuePageState extends State<VenuePage> {
               children: [
                 _buildTimeSlot(name, '08:00', isAvailable: true),
                 _buildTimeSlot(name, '10:00', isAvailable: true),
-                _buildTimeSlot(name, '12:00', isAvailable: false),
-                _buildTimeSlot(name, '14:00', isAvailable: false),
+                _buildTimeSlot(name, '11:00', isAvailable: true),
+                _buildTimeSlot(name, '12:00', isAvailable: true),
+                _buildTimeSlot(name, '13:00', isAvailable: true),
+                _buildTimeSlot(name, '14:00', isAvailable: true),
                 _buildTimeSlot(name, '16:00', isAvailable: true),
                 _buildTimeSlot(name, '18:00', isAvailable: true),
                 _buildTimeSlot(name, '20:00', isAvailable: true),
@@ -476,29 +479,43 @@ class _VenuePageState extends State<VenuePage> {
   }
 
   Widget _buildTimeSlot(String courtName, String time, {required bool isAvailable}) {
+    final dateStr = BookingUtils.formatDate(_selectedDate);
+    final isBooked = BookingUtils.isSlotBooked(
+      venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+      courtName: courtName,
+      dateStr: dateStr,
+      timeSlot: time,
+    );
+
+    final bool effectiveAvailable = isAvailable && !isBooked;
+
     // Helper to map simplified time to range
-    String timeRange = '$time - ${int.parse(time.split(':')[0]) + 1}:00';
-    if (timeRange.length < 13) {
-      if (int.parse(time.split(':')[0]) + 1 < 10) {
-         timeRange = '$time - 0${int.parse(time.split(':')[0]) + 1}:00';
-      }
-    }
+    final startHour = int.tryParse(time.split(':')[0]) ?? 0;
+    final endHour = startHour + 1;
+    final timeRange = '$time - ${endHour.toString().padLeft(2, '0')}:00';
 
     return GestureDetector(
-      onTap: isAvailable ? () => _goToCourtDetail(courtName, initialSlot: timeRange) : () {},
-      child: Container(
+      onTap: effectiveAvailable
+          ? () => _goToCourtDetail(courtName, initialSlot: timeRange)
+          : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isAvailable ? Colors.white : Colors.grey[100],
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.grey.shade200),
+          color: effectiveAvailable ? Colors.white : Colors.grey[50],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: effectiveAvailable ? AppColors.primary : Colors.grey.shade300,
+            width: 1,
+          ),
         ),
         child: Text(
           time,
           style: TextStyle(
-            color: isAvailable ? Colors.black : Colors.grey[400],
+            color: effectiveAvailable ? AppColors.primary : Colors.grey[400],
             fontSize: 12,
+            fontWeight: effectiveAvailable ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
       ),

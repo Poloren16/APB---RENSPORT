@@ -53,7 +53,7 @@ class CalendarPickerScroll extends StatelessWidget {
                             primary: AppColors.primary,
                           ),
                         ),
-                        child: child!,
+                        child: child ?? const SizedBox(),
                       );
                     },
                   );

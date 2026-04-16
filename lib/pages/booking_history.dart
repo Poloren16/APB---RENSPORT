@@ -1,23 +1,16 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/review_model.dart';
+import '../utils/alert_utils.dart';
+import './receipt_page.dart';
 
 class BookingHistoryPage extends StatefulWidget {
-  const BookingHistoryPage({super.key});
+  final String username;
+  const BookingHistoryPage({super.key, this.username = 'User'});
 
   static List<Map<String, dynamic>> mockHistory = [];
 
-  static List<Map<String, dynamic>> mockPastHistory = [
-    {
-      'orderId': 'ID9876543',
-      'courtName': 'ASATU Mini Soccer',
-      'venueName': 'ASATU ARENA CIKINI',
-      'date': '7 Apr 2024',
-      'time': '1 Slot Waktu (19:00)',
-      'price': 2200000,
-      'status': 'Selesai',
-    }
-  ];
+  static List<Map<String, dynamic>> mockPastHistory = [];
 
   @override
   State<BookingHistoryPage> createState() => _BookingHistoryPageState();
@@ -337,10 +330,13 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                               const Icon(Icons.access_time,
                                   size: 14, color: AppColors.textSecondary),
                               const SizedBox(width: 6),
-                              Text(
-                                item['time'] ?? '-',
-                                style: const TextStyle(
-                                    fontSize: 13, color: AppColors.textPrimary),
+                              Expanded(
+                                child: Text(
+                                  item['time'] ?? '-',
+                                  style: const TextStyle(
+                                      fontSize: 13, color: AppColors.textPrimary),
+                                  softWrap: true,
+                                ),
                               ),
                             ],
                           ),
@@ -359,61 +355,118 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                 ),
                 if (!isPast && index != null) ...[
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          final finished =
-                              BookingHistoryPage.mockHistory.removeAt(index);
-                          finished['status'] = 'Selesai';
-                          BookingHistoryPage.mockPastHistory.insert(0, finished);
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                'Pertandingan selesai! Dipindah ke Riwayat Transaksi.'),
-                            backgroundColor: Colors.green,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ReceiptPage(booking: item),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                          label: const Text('Invoice'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary, width: 1.2),
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text('Tandai Selesai & Pindah ke Riwayat'),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            AlertUtils.showConfirmationDialog(
+                              context,
+                              title: 'Selesaikan Booking?',
+                              message: 'Yakin ingin menyelesaikan booking ini dan memindahkannya ke riwayat aktivitas?',
+                              onConfirm: () {
+                                setState(() {
+                                  final finished =
+                                      BookingHistoryPage.mockHistory.removeAt(index);
+                                  finished['status'] = 'Selesai';
+                                  BookingHistoryPage.mockPastHistory.insert(0, finished);
+                                });
+                                AlertUtils.showToast(
+                                  context,
+                                  'Booking telah selesai & dipindah ke riwayat!',
+                                );
+                              },
+                            );
+                          },
+                          icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                          label: const Text('Selesai'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ] else if (isPast) ...[
                   const SizedBox(height: 16),
                   Builder(
                     builder: (context) {
-                      final hasReviewed = !Review.canUserReview('Salsabila', item['courtName'] ?? '');
-                      return SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: hasReviewed ? null : () => _showReviewDialog(context, item),
-                          icon: Icon(
-                            hasReviewed ? Icons.check_circle_rounded : Icons.star_outline_rounded,
-                            size: 18,
-                            color: hasReviewed ? Colors.green : AppColors.primary,
-                          ),
-                          label: Text(hasReviewed ? 'Sudah Diulas' : 'Beri Ulasan'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: hasReviewed ? Colors.green : AppColors.primary,
-                            disabledForegroundColor: Colors.green,
-                            side: BorderSide(
-                                color: hasReviewed ? Colors.green : AppColors.primary, 
-                                width: 1.2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                      final existingReview = Review.findUserReview(widget.username, item['venueName'] ?? '');
+                      final hasReviewed = existingReview != null;
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ReceiptPage(booking: item),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                              label: const Text('Invoice'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textSecondary,
+                                side: BorderSide(color: Colors.grey.shade300, width: 1.2),
+                                padding: const EdgeInsets.symmetric(vertical: 11),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 11),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showReviewDialog(context, item, existingReview: existingReview),
+                              icon: Icon(
+                                hasReviewed ? Icons.edit_note_rounded : Icons.star_outline_rounded,
+                                size: 18,
+                              ),
+                              label: Text(hasReviewed ? 'Edit Ulasan' : 'Beri Ulasan'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                side: const BorderSide(color: AppColors.primary, width: 1.2),
+                                padding: const EdgeInsets.symmetric(vertical: 11),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       );
                     }
                   ),
@@ -476,9 +529,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     );
   }
 
-  void _showReviewDialog(BuildContext context, Map<String, dynamic> item) {
-    int selectedRating = 0;
-    final TextEditingController reviewController = TextEditingController();
+  void _showReviewDialog(BuildContext context, Map<String, dynamic> item, {Review? existingReview}) {
+    int selectedRating = existingReview?.rating.toInt() ?? 0;
+    final TextEditingController reviewController = TextEditingController(text: existingReview?.comment ?? '');
 
     showDialog(
       context: context,
@@ -488,16 +541,16 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
           title: Column(
             children: [
               Text(
-                'Beri Ulasan',
-                style: TextStyle(
+                existingReview == null ? 'Beri Ulasan' : 'Edit Ulasan',
+                style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
                     fontSize: 20),
               ),
               const SizedBox(height: 8),
               Text(
-                item['courtName'] ?? 'Venue',
-                style: TextStyle(
+                item['venueName'] ?? 'Venue',
+                style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.normal),
@@ -535,7 +588,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                 maxLines: 4,
                 decoration: InputDecoration(
                   hintText: 'Tuliskan pengalamanmu di sini...',
-                  hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
+                  hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
                   filled: true,
                   fillColor: Colors.grey.shade50,
                   border: OutlineInputBorder(
@@ -560,10 +613,14 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                   ? null
                   : () {
                       setState(() {
-                        Review.mockReviews.add(Review(
-                          username: 'Salsabila',
+                        if (existingReview != null) {
+                          // Update existing
+                          Review.mockReviews.remove(existingReview);
+                        }
+                        
+                        Review.mockReviews.insert(0, Review(
+                          username: widget.username,
                           venueName: item['venueName'] ?? 'Venue',
-                          courtName: item['courtName'] ?? 'Court',
                           rating: selectedRating.toDouble(),
                           comment: reviewController.text,
                           date: DateTime.now(),
@@ -571,11 +628,13 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                       });
                       
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Terima kasih atas ulasan Anda!'),
-                          backgroundColor: Colors.green,
-                        ),
+                      AlertUtils.showResultDialog(
+                        context,
+                        isSuccess: true,
+                        title: existingReview == null ? 'Ulasan Terkirim!' : 'Ulasan Diperbarui!',
+                        message: existingReview == null 
+                          ? 'Terima kasih! Ulasanmu telah berhasil kami terima.'
+                          : 'Ulasanmu telah berhasil diperbarui.',
                       );
                     },
               style: ElevatedButton.styleFrom(
@@ -585,7 +644,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('Kirim Ulasan'),
+              child: Text(existingReview == null ? 'Kirim Ulasan' : 'Simpan Perubahan'),
             ),
           ],
         ),

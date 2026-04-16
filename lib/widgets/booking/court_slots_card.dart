@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/booking_utils.dart';
 
 class CourtSlotsCard extends StatelessWidget {
   final List<Map<String, dynamic>> courts;
@@ -9,8 +10,13 @@ class CourtSlotsCard extends StatelessWidget {
   final String Function(int) formatCurrency;
   final Function(Map<String, dynamic>)? onCourtTap;
 
+  final String venueName;
+  final String dateStr;
+
   const CourtSlotsCard({
     super.key,
+    required this.venueName,
+    required this.dateStr,
     required this.courts,
     required this.timeSlots,
     required this.selectedSlots,
@@ -114,79 +120,76 @@ class CourtSlotsCard extends StatelessWidget {
                       final slot = entry.value;
                       final slotKey = '${slotIdx}_$courtIdx';
                       final isSelected = selectedSlots.contains(slotKey);
-                      final isBooked = slot['booked'] as bool;
+                      
+                      // Check global availability
+                      final isAlreadyBooked = BookingUtils.isSlotBooked(
+                        venueName: venueName,
+                        courtName: court['name'],
+                        dateStr: dateStr,
+                        timeSlot: slot['time'],
+                      );
+                      
+                      final isBooked = (slot['booked'] as bool) || isAlreadyBooked;
                       return Padding(
                         padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
                         child: GestureDetector(
-                          onTap: isBooked ? null : () => onSlotSelected(slotKey),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: isBooked
-                                  ? Colors.grey.shade50
-                                  : isSelected
-                                      ? AppColors.primary
-                                      : Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : Colors.grey.shade200,
-                                width: 1,
-                              ),
-                              boxShadow: isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color: AppColors.primary.withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 3),
-                                      )
-                                    ]
-                                  : [],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  slot['time'],
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: isBooked
-                                        ? Colors.grey.shade400
-                                        : isSelected
-                                            ? Colors.white
-                                            : AppColors.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                if (isBooked)
-                                  Text(
-                                    'Penuh (Booked)',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                  )
-                                else ...[
-                                  Text(
-                                    formatCurrency(slot['price'] as int),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: isSelected
-                                          ? Colors.white.withOpacity(0.9)
-                                          : AppColors.textPrimary.withOpacity(0.7),
-                                    ),
-                                  ),
-                                ]
-                              ],
-                            ),
+                      onTap: isBooked ? null : () => onSlotSelected(slotKey),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isBooked
+                              ? Colors.grey.shade50
+                              : isSelected
+                                  ? AppColors.primary
+                                  : Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primary : Colors.grey.shade200,
+                            width: 1,
                           ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  )
+                                ]
+                              : [],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              slot['time'],
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isBooked
+                                    ? Colors.grey.shade400
+                                    : isSelected
+                                        ? Colors.white
+                                        : AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            if (!isBooked) ...[
+                              Text(
+                                formatCurrency(slot['price'] as int),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected
+                                      ? Colors.white.withOpacity(0.9)
+                                      : AppColors.textPrimary.withOpacity(0.7),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                         ),
                       );
                     }),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../utils/alert_utils.dart';
 
 class PengaturanKeamananPage extends StatefulWidget {
   final String email;
@@ -226,8 +227,11 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
                   setState(() => currentPassword = '••••••••••••');
                 }
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Password berhasil diubah')),
+                AlertUtils.showResultDialog(
+                  context,
+                  isSuccess: true,
+                  title: 'Password Diperbarui!',
+                  message: 'Password akun Anda telah berhasil diubah secara aman.',
                 );
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
