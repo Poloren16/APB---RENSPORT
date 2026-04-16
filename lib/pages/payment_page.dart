@@ -25,6 +25,7 @@ class PaymentPage extends StatefulWidget {
 class _PaymentPageState extends State<PaymentPage> {
   bool _isAgreed = false;
   bool _isTimeExpanded = false;
+  String? _selectedPaymentMethodId;
 
   String _formatPrice(int price) {
     return 'Rp${price.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}';
@@ -59,6 +60,10 @@ class _PaymentPageState extends State<PaymentPage> {
                   // Detail Transaksi
                   _buildTransactionDetail(),
                   const SizedBox(height: 16),
+
+                  // Metode Pembayaran
+                  _buildPaymentMethodSection(),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -212,14 +217,16 @@ class _PaymentPageState extends State<PaymentPage> {
                       const Icon(Icons.access_time_rounded,
                           size: 16, color: AppColors.textSecondary),
                       const SizedBox(width: 8),
-                      Text(
-                        widget.timeRange,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
+                      Expanded(
+                        child: Text(
+                          widget.timeRange,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       Text(
                         _formatPrice(widget.price),
                         style: const TextStyle(
@@ -278,13 +285,15 @@ class _PaymentPageState extends State<PaymentPage> {
             size: 16,
             color: isHighlight ? AppColors.primary : AppColors.textSecondary),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isHighlight ? FontWeight.w600 : FontWeight.w400,
-            color:
-                isHighlight ? AppColors.textPrimary : AppColors.textSecondary,
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isHighlight ? FontWeight.w600 : FontWeight.w400,
+              color:
+                  isHighlight ? AppColors.textPrimary : AppColors.textSecondary,
+            ),
           ),
         ),
       ],
@@ -496,6 +505,234 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
+  // ── Payment Method Section ──────────────────────────────
+
+  Widget _buildPaymentMethodSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Metode Pembayaran',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'E-Wallet & QRIS',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          _buildPaymentOption('qris', 'QRIS (Gopay, OVO, Dana)', Icons.qr_code_scanner_rounded),
+          _buildPaymentOption('gopay', 'GoPay', Icons.account_balance_wallet_rounded),
+          
+          const SizedBox(height: 16),
+          const Text(
+            'Virtual Account (Bank Transfer)',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          _buildPaymentOption('bca', 'BCA Virtual Account', Icons.account_balance_rounded),
+          _buildPaymentOption('mandiri', 'Mandiri Virtual Account', Icons.account_balance_rounded),
+          _buildPaymentOption('bni', 'BNI Virtual Account', Icons.account_balance_rounded),
+          
+          const SizedBox(height: 16),
+          const Text(
+            'Kartu Kredit / Debit',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          _buildPaymentOption('credit_card', 'Kartu Kredit / Debit', Icons.credit_card_rounded),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentOption(String id, String name, IconData icon) {
+    final isSelected = _selectedPaymentMethodId == id;
+    
+    return GestureDetector(
+      onTap: () => setState(() => _selectedPaymentMethodId = id),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.grey.shade200,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: isSelected ? AppColors.primary : AppColors.textSecondary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.primary)
+            else
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Confirmation Dialog ──────────────────────────────────
+
+  void _showConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Konfirmasi Pembayaran',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Apakah Anda yakin data booking dan metode pembayaran sudah benar?',
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  _buildSummaryRow('Venue', widget.venueName),
+                  _buildSummaryRow('Lapangan', widget.courtName),
+                  _buildSummaryRow('Tanggal', widget.date),
+                  _buildSummaryRow('Waktu', widget.timeRange),
+                  _buildSummaryRow('Total', _formatPrice(widget.price)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        actions: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close dialog
+                  _processPayment(); // Finalize
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Ya, Bayar Sekarang'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('Periksa Kembali',
+                    style: TextStyle(color: Colors.grey, fontSize: 13)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _processPayment() {
+    BookingHistoryPage.mockHistory.insert(0, {
+      'orderId': 'ID${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
+      'venueName': widget.venueName,
+      'courtName': widget.courtName,
+      'date': widget.date,
+      'time': widget.timeRange,
+      'price': widget.price,
+      'status': 'Menunggu Jadwal',
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Pembayaran berhasil! Silakan cek aktivitas.'),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    Navigator.popUntil(context, (route) => route.isFirst);
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Bottom Bar ──────────────────────────────────────────
 
   Widget _buildBottomBar() {
@@ -592,27 +829,8 @@ class _PaymentPageState extends State<PaymentPage> {
 
               // Pay button
               ElevatedButton(
-                onPressed: _isAgreed
-                    ? () {
-                        BookingHistoryPage.mockHistory.insert(0, {
-                          'orderId':
-                              'ID${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
-                          'venueName': widget.venueName,
-                          'courtName': widget.courtName,
-                          'date': widget.date,
-                          'time': widget.timeRange,
-                          'price': widget.price,
-                          'status': 'Menunggu Jadwal',
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                'Pembayaran berhasil! Silakan cek aktivitas.'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                        Navigator.popUntil(context, (route) => route.isFirst);
-                      }
+                onPressed: (_isAgreed && _selectedPaymentMethodId != null)
+                    ? () => _showConfirmationDialog()
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../widgets/shared/venue_date_picker.dart';
 import 'payment_page.dart';
+import '../models/review_model.dart';
 
 class CourtDetailPage extends StatefulWidget {
   final String courtName;
@@ -19,7 +20,10 @@ class CourtDetailPage extends StatefulWidget {
     this.dimensions = 'P 23 X L 10',
     this.courtCategory = 'Outdoor',
     this.floorType = 'Vinyl',
+    this.initialSelectedSlot,
   });
+
+  final String? initialSelectedSlot;
 
   @override
   State<CourtDetailPage> createState() => _CourtDetailPageState();
@@ -80,6 +84,27 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    // Find key for initial selected slot if provided
+    if (widget.initialSelectedSlot != null) {
+      String? foundKey;
+      for (int g = 0; g < _timeGroups.length; g++) {
+        for (int s = 0; s < _timeGroups[g].slots.length; s++) {
+          if (_timeGroups[g].slots[s].time == widget.initialSelectedSlot) {
+            foundKey = '${g}_$s';
+            
+            // Also ensure the group is expanded so the user sees their selection
+            _expandedGroups.add(g);
+            break;
+          }
+        }
+        if (foundKey != null) break;
+      }
+      
+      if (foundKey != null) {
+        _selectedSlots.add(foundKey);
+      }
+    }
   }
 
   @override
@@ -296,6 +321,9 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   // ── Player reviews ───────────────────────────────────────────────────────────
 
   Widget _buildPlayerReviewsSection() {
+    final canReview = Review.canUserReview('Salsabila', widget.courtName);
+    final courtReviews = Review.mockReviews.where((r) => r.courtName == widget.courtName).toList();
+    
     return Container(
       width: double.infinity,
       color: Colors.white,
@@ -303,11 +331,37 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Lapangan ini menurut Players',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Lapangan ini menurut Players',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              if (canReview)
+                TextButton.icon(
+                  onPressed: () => _showReviewDialog(),
+                  icon: const Icon(Icons.rate_review_outlined, size: 16, color: _accent),
+                  label: const Text('Tulis Ulasan', style: TextStyle(fontSize: 12, color: _accent, fontWeight: FontWeight.bold)),
+                )
+              else
+                const Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 14, color: Colors.green),
+                    SizedBox(width: 4),
+                    Text('Sudah diulas', style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+            ],
           ),
           const SizedBox(height: 10),
+          if (courtReviews.isNotEmpty) ...[
+            Text(
+              '⭐ ${Review.getAverageRating(widget.venueName).toStringAsFixed(1)} dari total ${courtReviews.length} ulasan Player',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 12),
+          ],
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -318,6 +372,82 @@ class _CourtDetailPageState extends State<CourtDetailPage>
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showReviewDialog() {
+    double selectedRating = 5;
+    final commentController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Tulis Ulasan Lapangan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) => GestureDetector(
+                  onTap: () => setDialogState(() => selectedRating = index + 1.0),
+                  child: Icon(
+                    index < selectedRating ? Icons.star_rounded : Icons.star_outline_rounded,
+                    color: Colors.orange,
+                    size: 36,
+                  ),
+                )),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commentController,
+                decoration: InputDecoration(
+                  hintText: 'Bagaimana pengalamanmu bermain di sini?',
+                  hintStyle: const TextStyle(fontSize: 13),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (commentController.text.isEmpty) return;
+                
+                setState(() {
+                  Review.mockReviews.add(Review(
+                    username: 'Salsabila',
+                    venueName: widget.venueName,
+                    courtName: widget.courtName,
+                    rating: selectedRating,
+                    comment: commentController.text,
+                    date: DateTime.now(),
+                  ));
+                });
+                
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Ulasan berhasil dikirim!'),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: _accent, foregroundColor: Colors.white),
+              child: const Text('Kirim Ulasan'),
+            ),
+          ],
+        ),
       ),
     );
   }

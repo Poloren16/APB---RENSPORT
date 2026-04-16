@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../models/review_model.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   const BookingHistoryPage({super.key});
@@ -388,22 +389,33 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                   ),
                 ] else if (isPast) ...[
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showReviewDialog(context, item),
-                      icon: const Icon(Icons.star_outline_rounded, size: 18),
-                      label: const Text('Beri Ulasan'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(
-                            color: AppColors.primary, width: 1.2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  Builder(
+                    builder: (context) {
+                      final hasReviewed = !Review.canUserReview('Salsabila', item['courtName'] ?? '');
+                      return SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: hasReviewed ? null : () => _showReviewDialog(context, item),
+                          icon: Icon(
+                            hasReviewed ? Icons.check_circle_rounded : Icons.star_outline_rounded,
+                            size: 18,
+                            color: hasReviewed ? Colors.green : AppColors.primary,
+                          ),
+                          label: Text(hasReviewed ? 'Sudah Diulas' : 'Beri Ulasan'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: hasReviewed ? Colors.green : AppColors.primary,
+                            disabledForegroundColor: Colors.green,
+                            side: BorderSide(
+                                color: hasReviewed ? Colors.green : AppColors.primary, 
+                                width: 1.2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 11),
-                      ),
-                    ),
+                      );
+                    }
                   ),
                 ],
               ],
@@ -547,11 +559,22 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
               onPressed: selectedRating == 0
                   ? null
                   : () {
+                      setState(() {
+                        Review.mockReviews.add(Review(
+                          username: 'Salsabila',
+                          venueName: item['venueName'] ?? 'Venue',
+                          courtName: item['courtName'] ?? 'Court',
+                          rating: selectedRating.toDouble(),
+                          comment: reviewController.text,
+                          date: DateTime.now(),
+                        ));
+                      });
+                      
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Terima kasih atas ulasan Anda!'),
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: Colors.green,
                         ),
                       );
                     },

@@ -3,6 +3,8 @@ import '../theme/app_colors.dart';
 import '../widgets/shared/venue_category_chips.dart';
 import '../widgets/shared/venue_date_picker.dart';
 import 'booking_page.dart';
+import 'court_detail_page.dart';
+import '../models/review_model.dart';
 
 class VenuePage extends StatefulWidget {
   const VenuePage({super.key});
@@ -210,139 +212,159 @@ class _VenuePageState extends State<VenuePage> {
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const BookingPage(
-                  venueName: 'Bandung Elektrik Cigereleng Tennis Court',
-                  venueType: 'Tenis',
-                  venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
-                  venueHours: '06:00 - 22:00',
-                ),
-              ),
-            );
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-          // Main Venue Info
-          Padding(
-            padding: const EdgeInsets.all(15),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(15),
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image, size: 50, color: Colors.grey),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Venue info header zone
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const BookingPage(
+                        venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+                        venueType: 'Tenis',
+                        venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
+                        venueHours: '06:00 - 22:00',
                       ),
                     ),
-                    Positioned(
-                      bottom: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          '3 km',
-                          style: TextStyle(color: Colors.white, fontSize: 10),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
+                  );
+                },
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Bandung Elektrik Cigereleng Tennis Court',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
+                      Stack(
                         children: [
-                          Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
-                          const SizedBox(width: 4),
-                          const Expanded(
-                            child: Text(
-                              'Jl. PLN Cigereleng No.19, Ciseureu...',
-                              style: TextStyle(color: Colors.grey, fontSize: 11),
-                              overflow: TextOverflow.ellipsis,
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(15),
+                            child: Container(
+                              width: 120,
+                              height: 120,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                '3 km',
+                                style: TextStyle(color: Colors.white, fontSize: 10),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.apartment, size: 14, color: Colors.grey[400]),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'Bandung',
-                            style: TextStyle(color: Colors.grey, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'Tenis',
-                            style: TextStyle(color: Colors.grey, fontSize: 11),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Rp125.000 ~ Rp175.000',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Bandung Elektrik Cigereleng Tennis Court',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.star_rounded, size: 16, color: Colors.orange),
+                                const SizedBox(width: 4),
+                                Text(
+                                  Review.getAverageRating('Bandung Elektrik Cigereleng Tennis Court').toStringAsFixed(1),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '(${Review.mockReviews.where((r) => r.venueName == 'Bandung Elektrik Cigereleng Tennis Court').length})',
+                                  style: TextStyle(color: Colors.grey[500], fontSize: 10),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
+                                const SizedBox(width: 4),
+                                const Expanded(
+                                  child: Text(
+                                    'Jl. PLN Cigereleng No.19, Ciseureu...',
+                                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.apartment, size: 14, color: Colors.grey[400]),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'Bandung',
+                                  style: TextStyle(color: Colors.grey, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'Tenis',
+                                  style: TextStyle(color: Colors.grey, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Rp125.000 ~ Rp175.000',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          
-          const Divider(height: 1),
+              ),
+              
+              const Divider(height: 1),
 
-          // Sub-Venue (Courts) List
-          _buildCourtItem('BEC Tennis Court Lap.A'),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 15),
-            child: Divider(height: 1),
-          ),
-          _buildCourtItem('BEC Tennis Court Lap.B'),
-          
-          const SizedBox(height: 10),
-        ],
-      ),
+              // Sub-Venue (Courts) List
+              _buildCourtItem('BEC Tennis Court Lap.A'),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 15),
+                child: Divider(height: 1),
+              ),
+              _buildCourtItem('BEC Tennis Court Lap.B'),
+              
+              const SizedBox(height: 10),
+            ],
           ),
         ),
       ),
@@ -363,9 +385,23 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
+  void _goToCourtDetail(String courtName, {String? initialSlot}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CourtDetailPage(
+          courtName: courtName,
+          venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+          sportType: 'Tenis',
+          initialSelectedSlot: initialSlot,
+        ),
+      ),
+    );
+  }
+
   Widget _buildCourtItem(String name) {
     return InkWell(
-      onTap: _goToBooking,
+      onTap: () => _goToCourtDetail(name),
       child: Padding(
         padding: const EdgeInsets.all(15),
       child: Column(
@@ -423,12 +459,13 @@ class _VenuePageState extends State<VenuePage> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildTimeSlot('14:00', isAvailable: false),
-                _buildTimeSlot('15:00', isAvailable: false),
-                _buildTimeSlot('16:00', isAvailable: false),
-                _buildTimeSlot('17:00', isAvailable: false),
-                _buildTimeSlot('18:00', isAvailable: true),
-                _buildTimeSlot('19:00', isAvailable: true),
+                _buildTimeSlot(name, '08:00', isAvailable: true),
+                _buildTimeSlot(name, '10:00', isAvailable: true),
+                _buildTimeSlot(name, '12:00', isAvailable: false),
+                _buildTimeSlot(name, '14:00', isAvailable: false),
+                _buildTimeSlot(name, '16:00', isAvailable: true),
+                _buildTimeSlot(name, '18:00', isAvailable: true),
+                _buildTimeSlot(name, '20:00', isAvailable: true),
               ],
             ),
           ),
@@ -438,9 +475,17 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildTimeSlot(String time, {required bool isAvailable}) {
+  Widget _buildTimeSlot(String courtName, String time, {required bool isAvailable}) {
+    // Helper to map simplified time to range
+    String timeRange = '$time - ${int.parse(time.split(':')[0]) + 1}:00';
+    if (timeRange.length < 13) {
+      if (int.parse(time.split(':')[0]) + 1 < 10) {
+         timeRange = '$time - 0${int.parse(time.split(':')[0]) + 1}:00';
+      }
+    }
+
     return GestureDetector(
-      onTap: isAvailable ? _goToBooking : null,
+      onTap: isAvailable ? () => _goToCourtDetail(courtName, initialSlot: timeRange) : () {},
       child: Container(
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -454,7 +499,6 @@ class _VenuePageState extends State<VenuePage> {
           style: TextStyle(
             color: isAvailable ? Colors.black : Colors.grey[400],
             fontSize: 12,
-            decoration: isAvailable ? null : TextDecoration.lineThrough,
           ),
         ),
       ),

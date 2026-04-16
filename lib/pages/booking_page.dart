@@ -7,6 +7,7 @@ import '../widgets/booking/court_slots_card.dart';
 import '../widgets/booking/venue_contact_section.dart';
 import 'court_detail_page.dart';
 import 'payment_page.dart';
+import '../models/review_model.dart';
 
 class BookingPage extends StatefulWidget {
   final String venueName;
@@ -96,13 +97,19 @@ class _BookingPageState extends State<BookingPage>
   }
 
   Widget _buildOperationalRow(String day, String hours, bool isHighlighted) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isHighlighted ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: isHighlighted ? Border.all(color: AppColors.primary.withOpacity(0.2)) : null,
+      ),
       child: Row(
         children: [
           Icon(
-            isHighlighted ? Icons.edit_calendar : Icons.calendar_today,
-            size: 18,
+            isHighlighted ? Icons.access_time_filled : Icons.access_time,
+            size: 20,
             color: isHighlighted ? AppColors.primary : Colors.grey.shade600,
           ),
           const SizedBox(width: 14),
@@ -138,7 +145,7 @@ class _BookingPageState extends State<BookingPage>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         final currentDayName = days[_selectedDate.weekday % 7];
         return SafeArea(
           child: Padding(
@@ -321,16 +328,6 @@ class _BookingPageState extends State<BookingPage>
                       ),
                     ),
                   );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                          'Pemesanan berhasil! Silakan lakukan pembayaran.'),
-                      backgroundColor: AppColors.primary,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -398,10 +395,14 @@ class _BookingPageState extends State<BookingPage>
                                   context: context,
                                   initialDate: _selectedDate,
                                   firstDate: DateTime.now(),
-                                  lastDate: DateTime.now().add(const Duration(days: 60)),
+                                  lastDate: DateTime.now().add(const Duration(days: 365)),
                                   builder: (context, child) => Theme(
                                     data: Theme.of(context).copyWith(
-                                      colorScheme: const ColorScheme.light(primary: AppColors.primary),
+                                      colorScheme: const ColorScheme.light(
+                                        primary: AppColors.primary,
+                                        onPrimary: Colors.white,
+                                        onSurface: AppColors.textPrimary,
+                                      ),
                                     ),
                                     child: child!,
                                   ),
@@ -415,13 +416,18 @@ class _BookingPageState extends State<BookingPage>
                               },
                               child: Row(
                                 children: [
-                                  const Icon(Icons.calendar_month, color: AppColors.primary, size: 20),
-                                  const SizedBox(width: 6),
+                                  const Icon(Icons.calendar_month, color: AppColors.primary, size: 22),
+                                  const SizedBox(width: 8),
                                   Text(
                                     _getMonthName(_selectedDate),
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold, 
+                                      fontSize: 18,
+                                      color: AppColors.textPrimary,
+                                    ),
                                   ),
-                                  const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary, size: 20),
                                 ],
                               ),
                             ),
@@ -486,6 +492,11 @@ class _BookingPageState extends State<BookingPage>
                       );
                     },
                   ),
+                ),
+
+                // Player Reviews Section
+                SliverToBoxAdapter(
+                  child: _buildPlayerReviewsSection(),
                 ),
 
                 // Venue Contact and Recommendation Section
@@ -560,6 +571,115 @@ class _BookingPageState extends State<BookingPage>
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayerReviewsSection() {
+    final venueReviews = Review.mockReviews.where((r) => r.venueName == widget.venueName).toList();
+    if (venueReviews.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Ulasan Player',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.star_rounded, color: Colors.orange, size: 18),
+                  const SizedBox(width: 4),
+                  Text(
+                    Review.getAverageRating(widget.venueName).toStringAsFixed(1),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    ' (${venueReviews.length})',
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ListView.separated(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: venueReviews.length > 3 ? 3 : venueReviews.length,
+            separatorBuilder: (_, __) => const Divider(height: 24),
+            itemBuilder: (context, index) {
+              final review = venueReviews[index];
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 12,
+                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        child: Text(
+                          review.username[0],
+                          style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        review.username,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${review.date.day} ${_getMonthName(review.date)}',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: List.generate(5, (i) => Icon(
+                      i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      size: 14,
+                      color: Colors.orange,
+                    )),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    review.comment,
+                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tipe: ${review.courtName.split(' ').last}',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+                  ),
+                ],
+              );
+            },
+          ),
+          if (venueReviews.length > 3)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Center(
+                child: Text(
+                  'Lihat Semua ${venueReviews.length} Ulasan',
+                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
         ],
       ),
     );
