@@ -117,8 +117,8 @@ class AkunPage extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Row(
-                    children: [
+                  Row(
+                    children: const [
                       Icon(Icons.monetization_on, color: AppColors.primary, size: 20),
                       SizedBox(width: 8),
                       Text(
