@@ -3,8 +3,10 @@ import '../../theme/app_colors.dart';
 import '../../models/review_model.dart';
 import '../../data/venue_data.dart';
 import '../../utils/alert_utils.dart';
+import '../../pages/chat_detail_page.dart';
 
 class VenueHeaderSlivers extends StatefulWidget {
+  final String username;
   final String venueName;
   final String venueType;
   final String venueHours;
@@ -14,6 +16,7 @@ class VenueHeaderSlivers extends StatefulWidget {
 
   const VenueHeaderSlivers({
     super.key,
+    required this.username,
     required this.venueName,
     required this.venueType,
     required this.venueHours,
@@ -35,15 +38,16 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
     _isBookmarked = GlobalVenueData.isFavorite(widget.venueName);
   }
 
-  Widget _infoRow(IconData icon, String text, {String? actionText, VoidCallback? onActionTap}) {
+  Widget _infoRow(IconData icon, String text,
+      {String? actionText, VoidCallback? onActionTap}) {
     return Row(
       children: [
         Icon(icon, size: 16, color: AppColors.textSecondary),
         const SizedBox(width: 6),
         Expanded(
           child: Text(text,
-              style: const TextStyle(
-                  fontSize: 13, color: AppColors.textSecondary),
+              style:
+                  const TextStyle(fontSize: 13, color: AppColors.textSecondary),
               overflow: TextOverflow.ellipsis),
         ),
         if (actionText != null)
@@ -137,11 +141,30 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                   });
 
                   AlertUtils.showToast(
-                    context,
-                    _isBookmarked 
-                      ? 'Venue added to favorites' 
-                      : 'Venue removed from favorites'
-                  );
+                      context,
+                      _isBookmarked
+                          ? 'Venue added to favorites'
+                          : 'Venue removed from favorites');
+                },
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: IconButton(
+                icon:
+                    const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ChatDetailPage(
+                                username: widget.username,
+                                venueName: widget.venueName,
+                              )));
                 },
               ),
             ),
@@ -248,48 +271,50 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.star_rounded, size: 16, color: Colors.orange),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        Review.getAverageRating(widget.venueName).toStringAsFixed(1),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: AppColors.textPrimary,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '(${Review.mockReviews.where((r) => r.venueName == widget.venueName).length} reviews)',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
+                                  const Icon(Icons.star_rounded,
+                                      size: 16, color: Colors.orange),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    Review.getAverageRating(widget.venueName)
+                                        .toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: AppColors.textPrimary,
+                                    ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.sports_tennis,
-                                          size: 14, color: AppColors.textSecondary),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        widget.venueType,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '(${Review.mockReviews.where((r) => r.venueName == widget.venueName).length} reviews)',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(Icons.sports_tennis,
+                                      size: 14, color: AppColors.textSecondary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    widget.venueType,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
