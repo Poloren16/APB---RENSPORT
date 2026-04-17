@@ -19,7 +19,14 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    val env = java.util.Properties()
+    val envFile = project.file("../../.env")
+    if (envFile.exists()) {
+        env.load(envFile.inputStream())
+    }
+
     defaultConfig {
+        manifestPlaceholders["MAPS_API_KEY"] = env.getProperty("ANDROID_MAPS_API_KEY") ?: ""
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.rensius"
         // You can update the following values to match your application needs.

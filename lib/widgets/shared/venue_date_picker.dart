@@ -23,7 +23,7 @@ class VenueDatePicker extends StatefulWidget {
   }
 
   static String getDayName(DateTime date) {
-    const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return days[date.weekday % 7];
   }
 

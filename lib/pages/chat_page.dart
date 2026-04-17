@@ -102,6 +102,7 @@ class _ChatPageState extends State<ChatPage> {
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min, // Prevents overflow
                     children: [
                       Text(
                         _formatTime(lastMsg.timestamp),
@@ -113,8 +114,8 @@ class _ChatPageState extends State<ChatPage> {
                       ),
                       if (unreadCount > 0)
                         Container(
-                          margin: const EdgeInsets.only(top: 6),
-                          padding: const EdgeInsets.all(6),
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.all(5),
                           decoration: const BoxDecoration(
                             color: AppColors.primary,
                             shape: BoxShape.circle,

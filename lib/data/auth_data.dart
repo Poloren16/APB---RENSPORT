@@ -20,6 +20,7 @@ class UserAccount {
   final String? profileImagePath;
   final String gender; // 'Male', 'Female', 'Not Set'
   final String dateOfBirth; // String format 'yyyy-MM-dd'
+  final int points;
 
   UserAccount({
     required this.username,
@@ -36,6 +37,7 @@ class UserAccount {
     this.profileImagePath,
     this.gender = 'Not Set',
     this.dateOfBirth = '',
+    this.points = 0,
   });
 
   Map<String, dynamic> toMap() {
@@ -54,6 +56,7 @@ class UserAccount {
       'profileImagePath': profileImagePath,
       'gender': gender,
       'dateOfBirth': dateOfBirth,
+      'points': points,
     };
   }
 
@@ -73,6 +76,7 @@ class UserAccount {
       profileImagePath: map['profileImagePath'],
       gender: map['gender'] ?? 'Not Set',
       dateOfBirth: map['dateOfBirth'] ?? '',
+      points: map['points'] ?? 0,
     );
   }
 }
@@ -179,6 +183,7 @@ class GlobalAuthData {
     String? newProfileImage,
     String? newGender,
     String? newDOB,
+    int? newPoints,
   }) async {
     final index = accounts.indexWhere((a) => a.username == username);
     if (index != -1) {
@@ -198,6 +203,7 @@ class GlobalAuthData {
         profileImagePath: newProfileImage ?? old.profileImagePath,
         gender: newGender ?? old.gender,
         dateOfBirth: newDOB ?? old.dateOfBirth,
+        points: newPoints ?? old.points,
       );
       await save();
     }

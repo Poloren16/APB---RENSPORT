@@ -19,8 +19,10 @@ class GlobalVenueData {
       'name': 'Rensius Arena',
       'location': 'Jakarta Selatan',
       'type': 'Futsal',
-      'price': 'Rp 150.000 / Jam',
+      'price': 'IDR 150,000 / Hour',
       'status': 'Active',
+      'lat': -6.2297,
+      'lng': 106.8295,
       'courts': [
         {
           'name': 'Lapangan Futsal A',
@@ -41,8 +43,10 @@ class GlobalVenueData {
       'name': 'Gading Sport Center',
       'location': 'Kelapa Gading',
       'type': 'Badminton',
-      'price': 'Rp 80.000 / Jam',
+      'price': 'IDR 80,000 / Hour',
       'status': 'Active',
+      'lat': -6.1601,
+      'lng': 106.9038,
       'courts': [
         {
           'name': 'Lapangan Badminton 1',
@@ -62,8 +66,10 @@ class GlobalVenueData {
       'name': 'Senayan Tennis Court',
       'location': 'Senayan',
       'type': 'Tennis',
-      'price': 'Rp 200.000 / Jam',
+      'price': 'IDR 200,000 / Hour',
       'status': 'Maintenance',
+      'lat': -6.2183,
+      'lng': 106.8020,
       'courts': [
         {
           'name': 'Lapangan Tenis Outdoor',
@@ -83,8 +89,10 @@ class GlobalVenueData {
       'name': 'Bintaro Mini Soccer',
       'location': 'Bintaro',
       'type': 'Mini Soccer',
-      'price': 'Rp 300.000 / Jam',
+      'price': 'IDR 300,000 / Hour',
       'status': 'Active',
+      'lat': -6.2446,
+      'lng': 106.6961,
       'courts': [
         {
           'name': 'Mini Soccer Field',
@@ -104,21 +112,23 @@ class GlobalVenueData {
     {
       'name': 'Bandung Elektrik Cigereleng Tennis Court',
       'location': 'Bandung',
-      'type': 'Tenis',
+      'type': 'Tennis',
       'address': 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
       'hours': '06:00 - 22:00',
-      'price': 'Rp 125.000 ~ Rp 175.000',
+      'price': 'IDR 125,000 ~ IDR 175,000',
       'status': 'Active',
+      'lat': -6.9389,
+      'lng': 107.6167,
       'courts': [
         {
           'name': 'BEC Tennis Court Lap.A',
           'size': 'P 23 X L 10',
-          'type': 'Tenis',
+          'type': 'Tennis',
         },
         {
           'name': 'BEC Tennis Court Lap.B',
           'size': 'P 23 X L 10',
-          'type': 'Tenis',
+          'type': 'Tennis',
         }
       ],
       'services': [
@@ -130,8 +140,10 @@ class GlobalVenueData {
       'name': 'ASATU ARENA CIKINI',
       'location': 'Jakarta Pusat',
       'type': 'Mini Soccer',
-      'price': 'Rp 2.200.000 ~ Rp 2.200.000',
+      'price': 'IDR 2,200,000 ~ IDR 2,200,000',
       'status': 'Active',
+      'lat': -6.1887,
+      'lng': 106.8378,
       'courts': [
         {
           'name': 'ASATU Mini Soccer',

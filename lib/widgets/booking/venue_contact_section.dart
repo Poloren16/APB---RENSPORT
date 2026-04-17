@@ -144,7 +144,7 @@ class VenueContactSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Harga mulai dari',
+                  'Price starting from',
                   style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
                 ),
                 Row(
@@ -198,7 +198,7 @@ class VenueContactSection extends StatelessWidget {
                   GestureDetector(
                     onTap: () {},
                     child: const Row(children: [
-                      Text('Selengkapnya Tentang Venue',
+                      Text('More About Venue',
                           style: TextStyle(
                               fontSize: 12,
                               color: AppColors.primary,
@@ -237,7 +237,7 @@ class VenueContactSection extends StatelessWidget {
 
         Container(height: 8, color: AppColors.background),
 
-        // ── Rekomendasi Venue ─────────────────────────
+        // ── Venue Recommendation ─────────────────────────
         Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 20, 0, 20),
@@ -249,7 +249,7 @@ class VenueContactSection extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Rekomendasi Venue',
+                    const Text('Venue Recommendation',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -258,7 +258,7 @@ class VenueContactSection extends StatelessWidget {
                     GestureDetector(
                       onTap: () {},
                       child: const Row(children: [
-                        Text('Lihat lebih banyak',
+                        Text('View more',
                             style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.primary,
@@ -279,7 +279,7 @@ class VenueContactSection extends StatelessWidget {
                     _venueRecommendationCard(
                         name: 'Persada Sports Facilities',
                         address: 'Jl. Raya Protokol Ha...',
-                        types: 'Mini Soccer, Tenis, Pad...',
+                        types: 'Mini Soccer, Tennis, Pad...',
                         price: 225000,
                         distance: '114 km'),
                     _venueRecommendationCard(
@@ -291,7 +291,7 @@ class VenueContactSection extends StatelessWidget {
                     _venueRecommendationCard(
                         name: 'Ujung Berung Sports Center',
                         address: 'Jl. AH Nasution No.23...',
-                        types: 'Futsal, Tenis Meja...',
+                        types: 'Futsal, Tennis Meja...',
                         price: 90000,
                         distance: '12 km'),
                   ],
