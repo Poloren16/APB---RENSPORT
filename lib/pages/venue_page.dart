@@ -6,9 +6,13 @@ import 'booking_page.dart';
 import 'court_detail_page.dart';
 import '../models/review_model.dart';
 import '../utils/booking_utils.dart';
+import '../widgets/empty_state_widget.dart';
+import '../data/venue_data.dart';
 
 class VenuePage extends StatefulWidget {
-  const VenuePage({super.key});
+  final bool initialShowFavorites;
+
+  const VenuePage({super.key, this.initialShowFavorites = false});
 
   @override
   State<VenuePage> createState() => _VenuePageState();
@@ -16,7 +20,7 @@ class VenuePage extends StatefulWidget {
 
 class _VenuePageState extends State<VenuePage> {
   DateTime _selectedDate = DateTime.now();
-  String _selectedCategory = 'Semua';
+  late String _selectedCategory;
 
   static const List<CategoryItem> _categories = [
     CategoryItem('All'),
@@ -24,6 +28,12 @@ class _VenuePageState extends State<VenuePage> {
     CategoryItem('Mini Soccer', Icons.sports_soccer),
     CategoryItem('Soccer', Icons.sports_soccer),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = widget.initialShowFavorites ? 'Favorite' : 'Semua';
+  }
 
   static String _monthName(int month) {
     const names = [
@@ -33,8 +43,27 @@ class _VenuePageState extends State<VenuePage> {
     ];
     return names[month];
   }
+
   @override
   Widget build(BuildContext context) {
+    bool isShowingFavorites = _selectedCategory == 'Favorite';
+    List<Map<String, dynamic>> displayedVenues = isShowingFavorites 
+        ? GlobalVenueData.favorites 
+        : [
+            {
+              'name': 'Bandung Elektrik Cigereleng Tennis Court',
+              'type': 'Tenis',
+              'address': 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
+              'hours': '06:00 - 22:00',
+              'price': 'Rp125.000 ~ Rp175.000',
+              'distance': '3 km',
+              'courts': [
+                {'name': 'BEC Tennis Court Lap.A', 'type': 'Tenis', 'size': 'P 23 X L 10'},
+                {'name': 'BEC Tennis Court Lap.B', 'type': 'Tenis', 'size': 'P 23 X L 10'},
+              ]
+            }
+          ];
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,8 +86,10 @@ class _VenuePageState extends State<VenuePage> {
                   children: [
                     const Icon(Icons.stadium, color: Colors.white, size: 30),
                     const SizedBox(width: 10),
-                    const Expanded(
+                    Expanded(
                       child: Text(
+                        isShowingFavorites ? 'Venue Favorit Kamu' : 'Temukan Beragam Venue!',
+                        style: const TextStyle(
                         'Discover Various Venues!',
                         style: TextStyle(
                           color: Colors.white,
@@ -72,7 +103,7 @@ class _VenuePageState extends State<VenuePage> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.shopping_basket_outlined, color: Colors.white),
@@ -105,7 +136,7 @@ class _VenuePageState extends State<VenuePage> {
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -189,7 +220,44 @@ class _VenuePageState extends State<VenuePage> {
           // Venue Card Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _buildDetailedVenueCard(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                    children: [
+                      TextSpan(text: isShowingFavorites ? 'Favorit ' : 'Rekomendasi '),
+                      TextSpan(text: 'Venue', style: const TextStyle(color: AppColors.primary)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isShowingFavorites 
+                      ? 'Daftar venue yang telah kamu tandai!' 
+                      : 'Temukan venue terbaik untuk bermain!',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+                const SizedBox(height: 20),
+                if (isShowingFavorites && displayedVenues.isEmpty)
+                  EmptyStateWidget(
+                    message: 'Belum ada venue favorit',
+                    subMessage: 'Tandai venue favoritmu untuk menemukannya di sini dengan mudah!',
+                    onActionPressed: () => setState(() => _selectedCategory = 'Semua'),
+                    actionLabel: 'Cari Venue',
+                    actionIcon: Icons.search_rounded,
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: displayedVenues.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 20),
+                    itemBuilder: (context, index) => _buildDetailedVenueCard(displayedVenues[index]),
+                  ),
+              ],
+            ),
           ),
           
           const SizedBox(height: 30),
@@ -198,7 +266,10 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildDetailedVenueCard() {
+  Widget _buildDetailedVenueCard(Map<String, dynamic> venue) {
+    final String venueName = venue['name'] ?? 'Unknown Venue';
+    final List<dynamic> courts = venue['courts'] ?? [];
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -227,6 +298,11 @@ class _VenuePageState extends State<VenuePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
+                      builder: (context) => BookingPage(
+                        venueName: venueName,
+                        venueType: venue['type'] ?? 'Olahraga',
+                        venueAddress: venue['address'] ?? venue['location'] ?? '',
+                        venueHours: venue['hours'] ?? '06:00 - 22:00',
                       builder: (context) => const BookingPage(
                         venueName: 'Bandung Elektrik Cigereleng Tennis Court',
                         venueType: 'Tennis',
@@ -259,12 +335,12 @@ class _VenuePageState extends State<VenuePage> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
+                                color: Colors.black.withValues(alpha: 0.6),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text(
-                                '3 km',
-                                style: TextStyle(color: Colors.white, fontSize: 10),
+                              child: Text(
+                                venue['distance'] ?? '3 km',
+                                style: const TextStyle(color: Colors.white, fontSize: 10),
                               ),
                             ),
                           ),
@@ -275,9 +351,9 @@ class _VenuePageState extends State<VenuePage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Bandung Elektrik Cigereleng Tennis Court',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            Text(
+                              venueName,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -287,7 +363,7 @@ class _VenuePageState extends State<VenuePage> {
                                 const Icon(Icons.star_rounded, size: 16, color: Colors.orange),
                                 const SizedBox(width: 4),
                                 Text(
-                                  Review.getAverageRating('Bandung Elektrik Cigereleng Tennis Court').toStringAsFixed(1),
+                                  Review.getAverageRating(venueName).toStringAsFixed(1),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
@@ -296,7 +372,7 @@ class _VenuePageState extends State<VenuePage> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '(${Review.mockReviews.where((r) => r.venueName == 'Bandung Elektrik Cigereleng Tennis Court').length})',
+                                  '(${Review.mockReviews.where((r) => r.venueName == venueName).length})',
                                   style: TextStyle(color: Colors.grey[500], fontSize: 10),
                                 ),
                               ],
@@ -306,10 +382,10 @@ class _VenuePageState extends State<VenuePage> {
                               children: [
                                 Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
                                 const SizedBox(width: 4),
-                                const Expanded(
+                                Expanded(
                                   child: Text(
-                                    'Jl. PLN Cigereleng No.19, Ciseureu...',
-                                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                                    venue['address'] ?? venue['location'] ?? '',
+                                    style: const TextStyle(color: Colors.grey, fontSize: 11),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -320,9 +396,9 @@ class _VenuePageState extends State<VenuePage> {
                               children: [
                                 Icon(Icons.apartment, size: 14, color: Colors.grey[400]),
                                 const SizedBox(width: 4),
-                                const Text(
-                                  'Bandung',
-                                  style: TextStyle(color: Colors.grey, fontSize: 11),
+                                Text(
+                                  venue['location']?.split(',').last.trim() ?? 'Kota',
+                                  style: const TextStyle(color: Colors.grey, fontSize: 11),
                                 ),
                               ],
                             ),
@@ -331,6 +407,9 @@ class _VenuePageState extends State<VenuePage> {
                               children: [
                                 Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
                                 const SizedBox(width: 4),
+                                Text(
+                                  venue['type'] ?? 'Olahraga',
+                                  style: const TextStyle(color: Colors.grey, fontSize: 11),
                                 const Text(
                                   'Tennis',
                                   style: TextStyle(color: Colors.grey, fontSize: 11),
@@ -338,6 +417,9 @@ class _VenuePageState extends State<VenuePage> {
                               ],
                             ),
                             const SizedBox(height: 8),
+                            Text(
+                              venue['price'] ?? 'Hubungi Pengelola',
+                              style: const TextStyle(
                             const Text(
                               'IDR 125,000 ~ IDR 175,000',
                               style: TextStyle(
@@ -354,15 +436,18 @@ class _VenuePageState extends State<VenuePage> {
                 ),
               ),
               
-              const Divider(height: 1),
-
-              // Sub-Venue (Courts) List
-              _buildCourtItem('BEC Tennis Court Lap.A'),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 15),
-                child: Divider(height: 1),
-              ),
-              _buildCourtItem('BEC Tennis Court Lap.B'),
+              if (courts.isNotEmpty) ...[
+                const Divider(height: 1),
+                ...courts.map((court) => Column(
+                  children: [
+                    _buildCourtItem(venueName, court),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 15),
+                      child: Divider(height: 1),
+                    ),
+                  ],
+                )).toList(),
+              ],
               
               const SizedBox(height: 10),
             ],
@@ -372,6 +457,7 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
+  void _goToCourtDetail(String venueName, String courtName, String sportType, {String? initialSlot}) {
   void _goToBooking() {
     Navigator.push(
       context,
@@ -392,6 +478,8 @@ class _VenuePageState extends State<VenuePage> {
       MaterialPageRoute(
         builder: (context) => CourtDetailPage(
           courtName: courtName,
+          venueName: venueName,
+          sportType: sportType,
           venueName: 'Bandung Elektrik Cigereleng Tennis Court',
           sportType: 'Tennis',
           initialSelectedSlot: initialSlot,
@@ -400,9 +488,12 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildCourtItem(String name) {
+  Widget _buildCourtItem(String venueName, Map<String, dynamic> court) {
+    final String courtName = court['name'] ?? 'Unknown Court';
+    final String sportType = court['type'] ?? 'Tenis';
+
     return InkWell(
-      onTap: () => _goToCourtDetail(name),
+      onTap: () => _goToCourtDetail(venueName, courtName, sportType),
       child: Padding(
         padding: const EdgeInsets.all(15),
       child: Column(
@@ -425,7 +516,7 @@ class _VenuePageState extends State<VenuePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      name,
+                      courtName,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                     const SizedBox(height: 4),
@@ -433,6 +524,11 @@ class _VenuePageState extends State<VenuePage> {
                       children: [
                         Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
                         const SizedBox(width: 4),
+                        Text(sportType, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                        const SizedBox(width: 10),
+                        Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
+                        const SizedBox(width: 4),
+                        Text(court['size'] ?? 'Standar', style: const TextStyle(color: Colors.grey, fontSize: 11)),
                         const Text('Tennis', style: TextStyle(color: Colors.grey, fontSize: 11)),
                         const SizedBox(width: 10),
                         Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
@@ -460,15 +556,15 @@ class _VenuePageState extends State<VenuePage> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildTimeSlot(name, '08:00', isAvailable: true),
-                _buildTimeSlot(name, '10:00', isAvailable: true),
-                _buildTimeSlot(name, '11:00', isAvailable: true),
-                _buildTimeSlot(name, '12:00', isAvailable: true),
-                _buildTimeSlot(name, '13:00', isAvailable: true),
-                _buildTimeSlot(name, '14:00', isAvailable: true),
-                _buildTimeSlot(name, '16:00', isAvailable: true),
-                _buildTimeSlot(name, '18:00', isAvailable: true),
-                _buildTimeSlot(name, '20:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, '08:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, '10:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, '11:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, '12:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, '13:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, '14:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, '16:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, '18:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, '20:00', isAvailable: true),
               ],
             ),
           ),
@@ -478,10 +574,10 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildTimeSlot(String courtName, String time, {required bool isAvailable}) {
+  Widget _buildTimeSlot(String venueName, String courtName, String time, {required bool isAvailable}) {
     final dateStr = BookingUtils.formatDate(_selectedDate);
     final isBooked = BookingUtils.isSlotBooked(
-      venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+      venueName: venueName,
       courtName: courtName,
       dateStr: dateStr,
       timeSlot: time,
@@ -496,7 +592,7 @@ class _VenuePageState extends State<VenuePage> {
 
     return GestureDetector(
       onTap: effectiveAvailable
-          ? () => _goToCourtDetail(courtName, initialSlot: timeRange)
+          ? () => _goToCourtDetail(venueName, courtName, 'Tenis', initialSlot: timeRange)
           : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),

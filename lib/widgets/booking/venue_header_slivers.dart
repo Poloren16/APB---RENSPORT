@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../models/review_model.dart';
+import '../../data/venue_data.dart';
 
-class VenueHeaderSlivers extends StatelessWidget {
+class VenueHeaderSlivers extends StatefulWidget {
   final String venueName;
   final String venueType;
   final String venueHours;
@@ -19,6 +20,19 @@ class VenueHeaderSlivers extends StatelessWidget {
     required this.onShowOperationalHours,
     required this.onOpenMaps,
   });
+
+  @override
+  State<VenueHeaderSlivers> createState() => _VenueHeaderSliversState();
+}
+
+class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
+  late bool _isBookmarked;
+
+  @override
+  void initState() {
+    super.initState();
+    _isBookmarked = GlobalVenueData.isFavorite(widget.venueName);
+  }
 
   Widget _infoRow(IconData icon, String text, {String? actionText, VoidCallback? onActionTap}) {
     return Row(
@@ -100,6 +114,45 @@ class VenueHeaderSlivers extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: IconButton(
+                icon: Icon(
+                  _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: _isBookmarked ? Colors.orange : Colors.white,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isBookmarked = !_isBookmarked;
+                    // Find the venue data and toggle favorite
+                    final venue = GlobalVenueData.venues.firstWhere(
+                      (v) => v['name'] == widget.venueName,
+                      orElse: () => {
+                        'name': widget.venueName,
+                        'type': widget.venueType,
+                        'location': widget.venueAddress.split(',').last.trim(),
+                        'address': widget.venueAddress,
+                        'hours': widget.venueHours,
+                      },
+                    );
+                    GlobalVenueData.toggleFavorite(venue);
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(_isBookmarked 
+                        ? 'Venue ditambahkan ke favorit' 
+                        : 'Venue dihapus dari favorit'),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: IconButton(
                 icon: const Icon(Icons.share, color: Colors.white),
                 onPressed: () {},
               ),
@@ -130,7 +183,7 @@ class VenueHeaderSlivers extends StatelessWidget {
                     children: [
                       const SizedBox(height: 30),
                       Icon(Icons.sports_tennis,
-                          size: 64, color: Colors.white.withOpacity(0.5)),
+                          size: 64, color: Colors.white.withValues(alpha: 0.5)),
                     ],
                   ),
                 ),
@@ -146,7 +199,7 @@ class VenueHeaderSlivers extends StatelessWidget {
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                         colors: [
-                          Colors.black.withOpacity(0.5),
+                          Colors.black.withValues(alpha: 0.5),
                           Colors.transparent,
                         ],
                       ),
@@ -174,10 +227,10 @@ class VenueHeaderSlivers extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: AppColors.primary.withOpacity(0.2)),
+                            color: AppColors.primary.withValues(alpha: 0.2)),
                       ),
                       child: const Icon(Icons.sports_tennis,
                           color: AppColors.primary, size: 24),
@@ -188,7 +241,7 @@ class VenueHeaderSlivers extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            venueName,
+                            widget.venueName,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -204,7 +257,7 @@ class VenueHeaderSlivers extends StatelessWidget {
                                       const Icon(Icons.star_rounded, size: 16, color: Colors.orange),
                                       const SizedBox(width: 4),
                                       Text(
-                                        Review.getAverageRating(venueName).toStringAsFixed(1),
+                                        Review.getAverageRating(widget.venueName).toStringAsFixed(1),
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
@@ -213,7 +266,7 @@ class VenueHeaderSlivers extends StatelessWidget {
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        '(${Review.mockReviews.where((r) => r.venueName == venueName).length} ulasan)',
+                                        '(${Review.mockReviews.where((r) => r.venueName == widget.venueName).length} ulasan)',
                                         style: const TextStyle(
                                           fontSize: 12,
                                           color: AppColors.textSecondary,
@@ -228,7 +281,7 @@ class VenueHeaderSlivers extends StatelessWidget {
                                           size: 14, color: AppColors.textSecondary),
                                       const SizedBox(width: 4),
                                       Text(
-                                        venueType,
+                                        widget.venueType,
                                         style: const TextStyle(
                                           fontSize: 13,
                                           color: AppColors.textSecondary,
@@ -245,12 +298,12 @@ class VenueHeaderSlivers extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 // Info rows
-                _infoRow(Icons.access_time, venueHours,
+                _infoRow(Icons.access_time, widget.venueHours,
                     actionText: 'Lihat Hari Lain',
-                    onActionTap: onShowOperationalHours),
+                    onActionTap: widget.onShowOperationalHours),
                 const SizedBox(height: 6),
-                _infoRow(Icons.location_on_outlined, venueAddress,
-                    actionText: 'Lihat Maps', onActionTap: onOpenMaps),
+                _infoRow(Icons.location_on_outlined, widget.venueAddress,
+                    actionText: 'Lihat Maps', onActionTap: widget.onOpenMaps),
                 const SizedBox(height: 12),
                 // Facilities chips
                 SingleChildScrollView(

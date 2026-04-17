@@ -45,6 +45,17 @@ class _DashboardPageState extends State<DashboardPage> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      // If navigating back to Home (index 0), reset category to 'Semua'
+      if (index == 0) {
+        _selectedCategory = 'Semua';
+      }
+    });
+  }
+
+  // Helper function to switch to Venue tab with specific category
+  void _navigateToVenueWithCategory(String category) {
+    setState(() {
+      _selectedIndex = 1; // Index 1 is VenuePage
     });
   }
 
@@ -52,7 +63,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       _buildHomeContent(),
-      const VenuePage(),
+      VenuePage(initialShowFavorites: _selectedCategory == 'Favorite'),
       BookingHistoryPage(username: widget.username),
       AkunPage(username: widget.username, role: widget.role),
     ];
@@ -148,7 +159,12 @@ class _DashboardPageState extends State<DashboardPage> {
                 VenueCategoryChips(
                   categories: _categories,
                   selectedCategory: _selectedCategory,
-                  onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
+                  onCategorySelected: (cat) {
+                    setState(() => _selectedCategory = cat);
+                    if (cat == 'Favorite') {
+                      _navigateToVenueWithCategory('Favorite');
+                    }
+                  },
                 ),
                 const SizedBox(height: 20),
                 _buildDateSelector(),
@@ -193,7 +209,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildCircleIcon(IconData icon, VoidCallback onTap) {
     return Container(
-      decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
       child: IconButton(icon: Icon(icon, color: AppColors.primary), onPressed: onTap),
     );
   }
@@ -234,7 +250,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 5))],
       ),
       child: Material(
         color: Colors.white,
