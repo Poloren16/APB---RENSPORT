@@ -30,11 +30,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     _cleanupRejectedAccounts();
   }
 
-  void _cleanupRejectedAccounts() {
+  Future<void> _cleanupRejectedAccounts() async {
     // Remove accounts from GlobalAuthData that are currently marked as 'Rejected' in Verification Requests
     for (var req in GlobalVerificationData.requests) {
       if (req.status == 'Rejected' && req.username != null) {
-        GlobalAuthData.deleteAccount(req.username!);
+        await GlobalAuthData.deleteAccount(req.username!);
       }
     }
   }
@@ -359,7 +359,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(Icons.broken_image, size: 48, color: Colors.grey),
-                                  Text('Gambar tidak dapat dimuat', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                  Text('Image could not be loaded', style: TextStyle(color: Colors.grey, fontSize: 12)),
                                 ],
                               ),
                             ),
@@ -374,7 +374,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.image, size: 48, color: Colors.grey),
-                            Text('Tidak ada dokumen', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            Text('No document available', style: TextStyle(color: Colors.grey, fontSize: 12)),
                           ],
                         ),
                     ],
@@ -390,9 +390,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       Navigator.pop(context);
-                      _showRejectDialog(req);
+                      await _showRejectDialog(req);
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
@@ -405,9 +405,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       Navigator.pop(context); // Close Detail Dialog first
-                      _handleStatusChange(req, 'Approved');
+                      await _handleStatusChange(req, 'Approved');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
@@ -437,7 +437,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  void _showRejectDialog(VerificationRequest req) {
+  Future<void> _showRejectDialog(VerificationRequest req) async {
     final controller = TextEditingController();
     showDialog(
       context: context,
@@ -451,9 +451,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context); // Close Reject Dialog first
-              _handleStatusChange(req, 'Rejected', reason: controller.text);
+              await _handleStatusChange(req, 'Rejected', reason: controller.text);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Send Rejection'),
@@ -463,37 +463,39 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  void _handleStatusChange(VerificationRequest req, String newStatus, {String? reason}) {
-    setState(() {
-      GlobalVerificationData.updateRequestStatus(req.id, newStatus, reason: reason);
-    });
+  Future<void> _handleStatusChange(VerificationRequest req, String newStatus, {String? reason}) async {
+    // Show a small processing snackbar or loading state if needed
+    // But for this mock, await the save directly
+    await GlobalVerificationData.updateRequestStatus(req.id, newStatus, reason: reason);
 
     // If Approved, create the actual login account
     if (newStatus == 'Approved' && req.username != null) {
-      GlobalAuthData.registerAccount(UserAccount(
+      await GlobalAuthData.registerAccount(UserAccount(
         username: req.username!,
-        password: req.password ?? '123456', // use saved password or default
+        password: req.password ?? '123456',
         role: req.type,
         applicantName: req.applicantName,
       ));
     } 
     // If Rejected, make sure no account exists (cleanup)
     else if (newStatus == 'Rejected' && req.username != null) {
-      GlobalAuthData.deleteAccount(req.username!);
+      await GlobalAuthData.deleteAccount(req.username!);
     }
 
-    // Clear SnackBar if already showing
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-    // Simulated Notification
-    _showNotificationSimulation(req, newStatus);
-
-    AlertUtils.showResultDialog(
-      context,
-      isSuccess: true,
-      title: newStatus == 'Approved' ? 'Approved' : 'Rejected',
-      message: '${req.applicantName}\'s request has been $newStatus.',
-    );
+    if (mounted) {
+      setState(() {});
+      // Clear SnackBar if already showing
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      // Simulated Notification
+      _showNotificationSimulation(req, newStatus);
+      
+      AlertUtils.showResultDialog(
+        context,
+        isSuccess: true,
+        title: newStatus == 'Approved' ? 'Approved' : 'Rejected',
+        message: '${req.applicantName}\'s request has been $newStatus.',
+      );
+    }
   }
 
   // ACCOUNT MANAGEMENT (NEW)
@@ -891,7 +893,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                '🔄 SIMULASI: Notifikasi $status telah dikirim ke ${req.phoneNumber ?? req.email}',
+                '🔄 SIMULATION: $status notification sent to ${req.phoneNumber ?? req.email}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),

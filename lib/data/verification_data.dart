@@ -24,19 +24,19 @@ class GlobalVerificationData {
     await prefs.setString(_storageKey, encoded);
   }
 
-  static void addRequest(VerificationRequest request) {
+  static Future<void> addRequest(VerificationRequest request) async {
     requests.insert(0, request); // Add to top of list
-    save(); // Trigger async save
+    await save();
   }
 
-  static void updateRequestStatus(String id, String newStatus, {String? reason}) {
+  static Future<void> updateRequestStatus(String id, String newStatus, {String? reason}) async {
     final index = requests.indexWhere((r) => r.id == id);
     if (index != -1) {
       requests[index] = requests[index].copyWith(
         status: newStatus,
         rejectionReason: reason,
       );
-      save(); // Trigger async save
+      await save();
     }
   }
 }

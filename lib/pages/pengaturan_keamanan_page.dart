@@ -35,7 +35,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Pengaturan dan Keamanan',
+          'Security and Settings',
           style: TextStyle(
             color: Colors.black87,
             fontWeight: FontWeight.bold,
@@ -47,7 +47,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
       body: ListView(
         children: [
           const SizedBox(height: 16),
-          _buildSwitchTile('Notifikasi', Icons.notifications, isNotifikasiOn, (value) {
+          _buildSwitchTile('Notifications', Icons.notifications, isNotifikasiOn, (value) {
             setState(() {
               isNotifikasiOn = value;
             });
@@ -55,7 +55,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           const SizedBox(height: 16),
           _buildItem(
             icon: Icons.flag,
-            title: 'Bahasa',
+            title: 'Language',
             subtitle: selectedLanguage,
             onTap: _showLanguagePicker,
             iconColor: Colors.red,
@@ -70,14 +70,14 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           const SizedBox(height: 16),
           _buildItem(
             icon: Icons.phone,
-            title: 'Nomor Telepon',
+            title: 'Phone Number',
             subtitle: currentPhone,
             onTap: _showChangePhoneDialog,
           ),
           const SizedBox(height: 16),
           _buildItem(
             icon: Icons.lock,
-            title: 'Ganti Password',
+            title: 'Change Password',
             subtitle: currentPassword,
             onTap: _showChangePasswordDialog,
           ),
@@ -85,7 +85,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           ListTile(
             leading: const Icon(Icons.delete, color: Colors.red),
             title: const Text(
-              'Hapus Akun',
+              'Delete Account',
               style: TextStyle(color: Colors.red, fontSize: 16),
             ),
             trailing: const Icon(Icons.chevron_right, color: Colors.red, size: 20),
@@ -108,7 +108,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Pilih Bahasa', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Select Language', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               ListTile(
                 title: const Text('Indonesia'),
@@ -139,11 +139,11 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Ganti Email', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: const Text('Change Email', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: emailController,
             decoration: InputDecoration(
-              hintText: 'Email baru',
+              hintText: 'New Email',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             keyboardType: TextInputType.emailAddress,
@@ -151,7 +151,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -159,7 +159,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -173,11 +173,11 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Ganti Nomor Telepon', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: const Text('Change Phone Number', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: phoneController,
             decoration: InputDecoration(
-              hintText: 'Nomor telepon baru',
+              hintText: 'New Phone Number',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             keyboardType: TextInputType.phone,
@@ -185,7 +185,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -193,7 +193,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -207,11 +207,11 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Ganti Password', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: const Text('Change Password', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: passwordController,
             decoration: InputDecoration(
-              hintText: 'Password baru',
+              hintText: 'New Password',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             obscureText: true,
@@ -219,7 +219,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -230,12 +230,12 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
                 AlertUtils.showResultDialog(
                   context,
                   isSuccess: true,
-                  title: 'Password Diperbarui!',
-                  message: 'Password akun Anda telah berhasil diubah secara aman.',
+                  title: 'Password Updated!',
+                  message: 'Your account password has been successfully changed securely.',
                 );
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         );

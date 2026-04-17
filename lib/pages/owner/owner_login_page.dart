@@ -24,7 +24,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
     String password = _passwordController.text.trim();
 
     if (username.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Harap isi username dan password.');
+      setState(() => _errorMessage = 'Please enter username and password.');
       return;
     }
 
@@ -45,10 +45,10 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
           ),
         );
       } else {
-        setState(() => _errorMessage = 'Akun ini bukan kategori Owner/Admin.');
+        setState(() => _errorMessage = 'This account is not an Owner/Admin category.');
       }
     } else {
-      setState(() => _errorMessage = 'Username atau password salah.');
+      setState(() => _errorMessage = 'Incorrect username or password.');
     }
   }
 

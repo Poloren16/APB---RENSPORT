@@ -37,17 +37,17 @@ class _RegisterPageState extends State<RegisterPage> {
     String confirmPass = _confirmPasswordController.text.trim();
 
     if (name.isEmpty || username.isEmpty || email.isEmpty || password.isEmpty) {
-      AlertUtils.showToast(context, 'Harap isi semua field.', isSuccess: false);
+      AlertUtils.showToast(context, 'Please fill in all fields.', isSuccess: false);
       return;
     }
 
     if (password != confirmPass) {
-      AlertUtils.showToast(context, 'Konfirmasi password tidak cocok.', isSuccess: false);
+      AlertUtils.showToast(context, 'Password confirmation does not match.', isSuccess: false);
       return;
     }
 
     if (GlobalAuthData.usernameExists(username)) {
-      AlertUtils.showToast(context, 'Username sudah digunakan.', isSuccess: false);
+      AlertUtils.showToast(context, 'Username already taken.', isSuccess: false);
       return;
     }
 
@@ -60,7 +60,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
     GlobalAuthData.registerAccount(newAccount);
 
-    AlertUtils.showToast(context, 'Registrasi Berhasil! Silakan Login.');
+    AlertUtils.showToast(context, 'Registration Successful! Please Login.');
     Navigator.pop(context);
   }
 

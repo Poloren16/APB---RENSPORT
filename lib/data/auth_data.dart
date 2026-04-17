@@ -45,18 +45,6 @@ class GlobalAuthData {
       role: 'Admin',
       applicantName: 'System Admin',
     ),
-    UserAccount(
-      username: 'user',
-      password: 'user123',
-      role: 'End User',
-      applicantName: 'Regular User',
-    ),
-    UserAccount(
-      username: 'owner1',
-      password: 'password123',
-      role: 'Owner',
-      applicantName: 'Budi Santoso',
-    ),
   ];
 
   static Future<void> init() async {
@@ -66,6 +54,18 @@ class GlobalAuthData {
     if (accountsJson != null) {
       final List<dynamic> decoded = jsonDecode(accountsJson);
       accounts = decoded.map((item) => UserAccount.fromMap(item)).toList();
+      
+      // Cleanup: Remove legacy mock accounts if they exist
+      bool changed = false;
+      if (accounts.any((a) => a.username == 'user')) {
+        accounts.removeWhere((a) => a.username == 'user');
+        changed = true;
+      }
+      if (accounts.any((a) => a.username == 'owner1')) {
+        accounts.removeWhere((a) => a.username == 'owner1');
+        changed = true;
+      }
+      if (changed) await save();
     } else {
       // First time app launch, use default accounts
       accounts = List.from(_defaultAccounts);

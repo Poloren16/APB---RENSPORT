@@ -382,9 +382,9 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                               Icons.my_location,
                               color: AppColors.primary,
                             ),
-                            tooltip: 'Pilih dari Map',
+                            tooltip: 'Choose from Map',
                             onPressed: () async {
-                              // Navigasi ke halaman Map (Simulasi) dan tunggu hasilnya
+                              // Navigate to Map page (Simulation) and wait for result
                               final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -392,7 +392,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                                 ),
                               );
 
-                              // Jika user memilih lokasi, isi otomatis ke controller
+                              // If user selects location, fill automatically to controller
                               if (result != null && result is String) {
                                 locationController.text = result;
                               }
@@ -409,7 +409,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                       const SizedBox(height: 16),
                       _buildDialogTextField(
                         controller: priceController,
-                        label: 'Price (e.g. Rp 100.000 / Jam)',
+                        label: 'Price (e.g. IDR 100,000 / Hour)',
                         icon: Icons.payments,
                       ),
                       const SizedBox(height: 16),
@@ -505,14 +505,14 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    // Validasi minimal form terisi
+                    // Validate minimal form filled
                     if (nameController.text.trim().isEmpty ||
                         locationController.text.trim().isEmpty) {
                       AlertUtils.showResultDialog(
                         context,
                         isSuccess: false,
-                        title: 'Form Belum Lengkap!',
-                        message: 'Nama Venue dan Lokasi wajib diisi untuk melanjutkan.',
+                        title: 'Form Incomplete!',
+                        message: 'Venue Name and Location are required to proceed.',
                       );
                       return;
                     }
@@ -572,10 +572,10 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                     AlertUtils.showResultDialog(
                       context,
                       isSuccess: true,
-                      title: isEditing ? 'Update Berhasil!' : 'Venue Ditambahkan!',
+                      title: isEditing ? 'Update Successful!' : 'Venue Added!',
                       message: isEditing
-                          ? '"${nameController.text.trim()}" telah berhasil diperbarui.'
-                          : '"${nameController.text.trim()}" kini tersedia dalam daftar venue Anda.',
+                          ? '"${nameController.text.trim()}" has been successfully updated.'
+                          : '"${nameController.text.trim()}" is now available in your venue list.',
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -626,10 +626,9 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
     );
   }
 
-  // Dialog Konfirmasi Hapus
+  // Delete Confirmation Dialog
   void _confirmDelete(int index) {
     final venueName = _venues[index]['name'];
-    // ... dialog code remains same
     showDialog(
       context: context,
       builder: (context) {
@@ -652,8 +651,8 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                 AlertUtils.showResultDialog(
                   context,
                   isSuccess: true,
-                  title: 'Dihapus!',
-                  message: '"$venueName" telah berhasil dihapus dari sistem.',
+                  title: 'Deleted!',
+                  message: '"$venueName" has been successfully deleted from the system.',
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -671,8 +670,8 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
   }
 }
 
-// --- HALAMAN SIMULASI GOOGLE MAPS ---
-// Halaman ini bertindak sebagai pemilih lokasi yang akan mengembalikan string ke halaman sebelumnya.
+// --- GOOGLE MAPS SIMULATION PAGE ---
+// This page acts as a location picker that returns a string to the previous page.
 class MapPickerPage extends StatelessWidget {
   const MapPickerPage({super.key});
 
@@ -681,7 +680,7 @@ class MapPickerPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Pilih Lokasi (Khusus Indonesia)',
+          'Select Location (Indonesia Only)',
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: AppColors.primary,
@@ -689,12 +688,12 @@ class MapPickerPage extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          // Background - Menggambarkan UI "Peta"
+          // Background - Depicting "Map" UI
           Container(
-            color: const Color(0xFF81D4FA), // Warna biru laut
+            color: const Color(0xFF81D4FA), // Sea blue color
             child: Stack(
               children: [
-                // Gambar Asli Peta Topografi Indonesia dari Wikimedia Commons
+                // Original Indonesia Topographic Map image from Wikimedia Commons
                 SizedBox(
                   width: double.infinity,
                   height: double.infinity,
@@ -706,7 +705,7 @@ class MapPickerPage extends StatelessWidget {
                       errorBuilder: (context, error, stackTrace) {
                         return const Center(
                           child: Text(
-                            'Gagal memuat gambar peta.\nPastikan Anda terhubung ke internet.',
+                            'Failed to load map image.\nEnsure you are connected to the internet.',
                             textAlign: TextAlign.center,
                             style: TextStyle(color: Colors.black54),
                           ),
@@ -739,7 +738,7 @@ class MapPickerPage extends StatelessWidget {
                         child: const Column(
                           children: [
                             Text(
-                              'Peta Satelit: INDONESIA',
+                              'Satellite Map: INDONESIA',
                               style: TextStyle(
                                 color: Colors.green,
                                 fontSize: 22,
@@ -747,7 +746,7 @@ class MapPickerPage extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              '(Terbatas hanya untuk wilayah Indonesia)',
+                              '(Limited to Indonesia region only)',
                               style: TextStyle(
                                 color: Colors.black87,
                                 fontSize: 16,
@@ -762,16 +761,16 @@ class MapPickerPage extends StatelessWidget {
               ],
             ),
           ),
-          // Area yang bisa di-klik untuk memilih koordinat lokasi
+          // Area clickable to select location coordinates
           Positioned.fill(
             child: GestureDetector(
               onTapDown: (TapDownDetails details) {
-                // Saat user melakukan klik/tap di layar peta, generate coordinate location
+                // When user taps on map screen, generate coordinate location
                 final int mockX = details.localPosition.dx.toInt();
                 final int mockY = details.localPosition.dy.toInt();
 
-                // Menyimulasikan pembatasan koordinat hanya se-Indonesia
-                // (Membagi wilayah berdasarkan koordinat X di layar)
+                // Simulate coordinate restriction to Indonesia only
+                // (Dividing regions based on X coordinate on screen)
                 String region = 'Jakarta';
                 String province = 'DKI Jakarta';
 
@@ -795,7 +794,7 @@ class MapPickerPage extends StatelessWidget {
                 final String generatedAddress =
                     'Jl. Sudirman No. $mockX, $region, $province, Indonesia';
 
-                // Konfirmasi Lokasi
+                // Confirm Location
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -803,34 +802,34 @@ class MapPickerPage extends StatelessWidget {
                       children: const [
                         Icon(Icons.location_on, color: Colors.red),
                         SizedBox(width: 8),
-                        Text('Konfirmasi Titik Peta'),
+                        Text('Confirm Map Point'),
                       ],
                     ),
                     content: Text(
-                      'Apakah Anda yakin memilih lokasi ini?\n\nAlamat:\n$generatedAddress',
+                      'Are you sure you want to select this location?\n\nAddress:\n$generatedAddress',
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
                         child: const Text(
-                          'Batal',
+                          'Cancel',
                           style: TextStyle(color: Colors.grey),
                         ),
                       ),
                       ElevatedButton(
                         onPressed: () {
-                          Navigator.pop(ctx); // Tutup dialog konfirmasi
+                          Navigator.pop(ctx); // Close confirmation dialog
                           Navigator.pop(
                             context,
                             generatedAddress,
-                          ); // Kembali ke halaman utama dengan membawa data lokasi
+                          ); // Return to main page with location data
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                         ),
                         child: const Text(
-                          'Pilih Lokasi',
+                          'Select Location',
                           style: TextStyle(color: Colors.white),
                         ),
                       ),
@@ -840,7 +839,7 @@ class MapPickerPage extends StatelessWidget {
               },
             ),
           ),
-          // Petunjuk
+          // Instructions
           Positioned(
             top: 20,
             left: 20,
@@ -864,7 +863,7 @@ class MapPickerPage extends StatelessWidget {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Sistem Manajemen Venue ini dibatasi hanya untuk wilayah operasi Indonesia. Tap pada layar untuk memilih titik/provinsi Anda.',
+                      'This Venue Management system is limited to Indonesia operation area. Tap the screen to select your point/province.',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,

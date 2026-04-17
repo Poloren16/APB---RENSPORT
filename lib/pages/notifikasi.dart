@@ -54,7 +54,7 @@ class NotifikasiPage extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Notifikasi',
+          'Notifications',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -64,7 +64,7 @@ class NotifikasiPage extends StatelessWidget {
       body: notifications.isEmpty
           ? const Center(
               child: Text(
-                'Belum ada notifikasi.',
+                'No notifications yet.',
                 style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 16,

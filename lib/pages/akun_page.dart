@@ -132,7 +132,7 @@ class AkunPage extends StatelessWidget {
                     ],
                   ),
                   const Text(
-                    'Detail Points',
+                    'Points Details',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -151,23 +151,23 @@ class AkunPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildMenuSection('Pengaturan'),
+                _buildMenuSection('Settings'),
                 _buildListTile(
                   icon: Icons.settings,
-                  title: 'Pengaturan & Keamanan',
+                  title: 'Security & Settings',
                   onTap: () {},
                 ),
                 const Divider(height: 1, color: Color(0xFFEEEEEE)),
                 _buildListTile(
                   icon: Icons.person,
-                  title: 'Detail Profile',
+                  title: 'Profile Details',
                   onTap: () {},
                 ),
                 const Divider(height: 1, color: Color(0xFFEEEEEE)),
                 if (role.toLowerCase() == 'admin' || role.toLowerCase() == 'owner') ...[
                   _buildListTile(
                     icon: role.toLowerCase() == 'admin' ? Icons.admin_panel_settings : Icons.business_center,
-                    title: role.toLowerCase() == 'admin' ? 'Admin Dashboard' : 'Manajemen Venue',
+                    title: role.toLowerCase() == 'admin' ? 'Admin Dashboard' : 'Venue Management',
                     onTap: () {
                       if (role.toLowerCase() == 'admin') {
                         Navigator.push(
@@ -187,7 +187,7 @@ class AkunPage extends StatelessWidget {
                 ],
                 _buildListTile(
                   icon: Icons.logout,
-                  title: 'Keluar Akun',
+                  title: 'Log Out',
                   onTap: () {
                     // Navigate to login
                     Navigator.pushAndRemoveUntil(
