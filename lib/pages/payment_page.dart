@@ -4,6 +4,7 @@ import 'booking_history.dart';
 import '../utils/alert_utils.dart';
 import './receipt_page.dart';
 import '../utils/booking_utils.dart';
+import './payment_instruction_page.dart';
 
 class PaymentPage extends StatefulWidget {
   final String username;
@@ -13,6 +14,7 @@ class PaymentPage extends StatefulWidget {
   final String timeRange;
   final int price;
   final List<Map<String, String>> individualSlots;
+  final String role;
 
   const PaymentPage({
     super.key,
@@ -23,6 +25,7 @@ class PaymentPage extends StatefulWidget {
     this.timeRange = '06:00 - 07:00',
     this.price = 100000,
     this.individualSlots = const [],
+    this.role = 'End User',
   });
 
   @override
@@ -708,41 +711,25 @@ class _PaymentPageState extends State<PaymentPage> {
     if (_selectedPaymentMethodId == 'bni') paymentName = 'BNI Virtual Account';
     if (_selectedPaymentMethodId == 'credit_card') paymentName = 'Kartu Kredit / Debit';
 
-    final newBooking = {
-      'orderId': 'ID${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
-      'venueName': widget.venueName,
-      'courtName': widget.courtName,
-      'date': widget.date,
-      'time': widget.timeRange,
-      'price': widget.price,
-      'paymentMethod': paymentName,
-      'status': 'Awaiting Schedule',
-    };
-    
-    // Perform atomic slot reservation
-    for (var slot in widget.individualSlots) {
-      BookingUtils.reserveSlot(
-        venueName: widget.venueName,
-        courtName: slot['court'] ?? '',
-        dateStr: widget.date,
-        timeSlot: slot['time'] ?? '',
-      );
-    }
-    
-    BookingHistoryPage.mockHistory.insert(0, newBooking);
-    
-    AlertUtils.showResultDialog(
+    final orderId = 'ID${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+
+    Navigator.push(
       context,
-      isSuccess: true,
-      title: 'Payment Successful!',
-      message: 'Your order has been confirmed. You can view the receipt for on-field validation.',
-      onConfirm: () {
-        Navigator.popUntil(context, (route) => route.isFirst);
-        // Navigate to receipt from home (Aktivitas) if possible, 
-        // but since we are popUntil isFirst, we just go back.
-        // Let's just go to Receipt directly then pop to first? 
-        // Better: Go to Receipt, then when "Kembali" is pressed, it goes back.
-      },
+      MaterialPageRoute(
+        builder: (context) => PaymentInstructionPage(
+          paymentMethodId: _selectedPaymentMethodId ?? 'qris',
+          paymentMethodName: paymentName,
+          amount: widget.price,
+          orderId: orderId,
+          venueName: widget.venueName,
+          courtName: widget.courtName,
+          date: widget.date,
+          timeRange: widget.timeRange,
+          individualSlots: widget.individualSlots,
+          username: widget.username,
+          role: widget.role,
+        ),
+      ),
     );
   }
 

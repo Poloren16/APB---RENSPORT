@@ -16,7 +16,7 @@ class GlobalVenueData {
 
   static List<Map<String, dynamic>> venues = [
     {
-      'name': 'Rensport Arena',
+      'name': 'Rensius Arena',
       'location': 'Jakarta Selatan',
       'type': 'Futsal',
       'price': 'Rp 150.000 / Jam',

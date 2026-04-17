@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../utils/alert_utils.dart';
+import '../data/auth_data.dart';
 
 class PengaturanKeamananPage extends StatefulWidget {
-  final String email;
-  const PengaturanKeamananPage({super.key, required this.email});
+  final String username;
+  const PengaturanKeamananPage({super.key, required this.username});
 
   @override
   State<PengaturanKeamananPage> createState() => _PengaturanKeamananPageState();
@@ -12,15 +13,25 @@ class PengaturanKeamananPage extends StatefulWidget {
 
 class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   bool isNotifikasiOn = true;
-  String selectedLanguage = 'Indonesia';
+  String selectedLanguage = 'English';
+  
+  // Real data
   late String currentEmail;
-  String currentPhone = '+62000000000';
+  late String currentPhone;
   String currentPassword = '••••••••••••';
 
   @override
   void initState() {
     super.initState();
-    currentEmail = widget.email;
+    _refreshData();
+  }
+
+  void _refreshData() {
+    final account = GlobalAuthData.getAccount(widget.username);
+    setState(() {
+      currentEmail = account?.email ?? 'Not Set';
+      currentPhone = account?.phoneNumber ?? 'Not Set';
+    });
   }
 
   @override
@@ -36,11 +47,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
         ),
         title: const Text(
           'Security and Settings',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: false,
       ),
@@ -88,7 +95,9 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
               style: TextStyle(color: Colors.red, fontSize: 16),
             ),
             trailing: const Icon(Icons.chevron_right, color: Colors.red, size: 20),
-            onTap: () {},
+            onTap: () async {
+              // Add confirmation dialog if needed
+            },
           ),
         ],
       ),
@@ -98,9 +107,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   void _showLanguagePicker() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -133,7 +140,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   }
 
   void _showChangeEmailDialog() {
-    final TextEditingController emailController = TextEditingController(text: currentEmail);
+    final TextEditingController emailController = TextEditingController(text: currentEmail == 'Not Set' ? '' : currentEmail);
     showDialog(
       context: context,
       builder: (context) {
@@ -153,9 +160,11 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
               child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
-              onPressed: () {
-                setState(() => currentEmail = emailController.text);
-                Navigator.pop(context);
+              onPressed: () async {
+                await GlobalAuthData.updateAccount(widget.username, newEmail: emailController.text.trim());
+                _refreshData();
+                if (mounted) Navigator.pop(context);
+                AlertUtils.showToast(context, 'Email updated successfully!', isSuccess: true);
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               child: const Text('Save', style: TextStyle(color: Colors.white)),
@@ -167,7 +176,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   }
 
   void _showChangePhoneDialog() {
-    final TextEditingController phoneController = TextEditingController(text: currentPhone);
+    final TextEditingController phoneController = TextEditingController(text: currentPhone == 'Not Set' ? '' : currentPhone);
     showDialog(
       context: context,
       builder: (context) {
@@ -187,9 +196,11 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
               child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
-              onPressed: () {
-                setState(() => currentPhone = phoneController.text);
-                Navigator.pop(context);
+              onPressed: () async {
+                await GlobalAuthData.updateAccount(widget.username, newPhone: phoneController.text.trim());
+                _refreshData();
+                if (mounted) Navigator.pop(context);
+                AlertUtils.showToast(context, 'Phone number updated successfully!', isSuccess: true);
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               child: const Text('Save', style: TextStyle(color: Colors.white)),
@@ -221,11 +232,13 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
               child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (passwordController.text.isNotEmpty) {
-                  setState(() => currentPassword = '••••••••••••');
+              onPressed: () async {
+                if (passwordController.text.length < 6) {
+                  AlertUtils.showToast(context, 'Password must be at least 6 characters', isSuccess: false);
+                  return;
                 }
-                Navigator.pop(context);
+                await GlobalAuthData.updateAccount(widget.username, newPassword: passwordController.text);
+                if (mounted) Navigator.pop(context);
                 AlertUtils.showResultDialog(
                   context,
                   isSuccess: true,

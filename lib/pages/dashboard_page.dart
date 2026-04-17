@@ -15,17 +15,29 @@ import '../models/review_model.dart';
 class DashboardPage extends StatefulWidget {
   final String username;
   final String role;
+  final int initialIndex;
 
-  const DashboardPage({super.key, required this.username, required this.role});
+  const DashboardPage({
+    super.key,
+    required this.username,
+    required this.role,
+    this.initialIndex = 0,
+  });
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
   DateTime _selectedDate = DateTime.now();
-  String _selectedCategory = 'Semua';
+  String _selectedCategory = 'All';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+  }
 
   static const List<CategoryItem> _categories = [
     CategoryItem('All'),
@@ -64,7 +76,11 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       _buildHomeContent(),
-      VenuePage(initialShowFavorites: _selectedCategory == 'Favorite'),
+      VenuePage(
+        username: widget.username, 
+        role: widget.role, 
+        initialShowFavorites: _selectedCategory == 'Favorite'
+      ),
       BookingHistoryPage(username: widget.username),
       AkunPage(username: widget.username, role: widget.role),
     ];
@@ -356,6 +372,7 @@ class _DashboardPageState extends State<DashboardPage> {
           MaterialPageRoute(
             builder: (context) => CourtDetailPage(
               username: widget.username,
+              role: widget.role,
               courtName: name,
               venueName: 'Bandung Elektrik Cigereleng Tennis Court',
               sportType: 'Tenis',
@@ -458,6 +475,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   MaterialPageRoute(
                     builder: (context) => CourtDetailPage(
                       username: widget.username,
+                      role: widget.role,
                       courtName: courtName,
                       initialSelectedSlot: timeRange,
                     ),

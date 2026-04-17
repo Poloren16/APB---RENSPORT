@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:rensius/theme/app_colors.dart';
 import 'package:rensius/utils/alert_utils.dart';
 import 'package:rensius/pages/owner/owner_login_page.dart';
@@ -148,86 +149,60 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-      if (pickedFile != null) {
-        setState(() {
-          _imageFile = pickedFile;
-          _documentUploaded = true;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error picking image: $e');
-      if (mounted) {
-        AlertUtils.showToast(context, 'Failed to take image.', isSuccess: false);
-      }
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      maxWidth: 1000,
+      maxHeight: 1000,
+      imageQuality: 85,
+    );
+    if (image != null) {
+      setState(() {
+        _imageFile = image;
+        _documentUploaded = true;
+      });
     }
   }
 
-  void _showImageSourcePicker() {
+  void _showImageSourceDialog() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Select ID Card Photo Source',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildSourceOption(
-                  icon: Icons.camera_alt_rounded,
-                  label: 'Camera',
-                  onTap: () {
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Select ID Photo Source', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildSourceOption(Icons.camera_alt, 'Camera', () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.camera);
-                  },
-                ),
-                _buildSourceOption(
-                  icon: Icons.photo_library_rounded,
-                  label: 'Gallery',
-                  onTap: () {
+                  }),
+                  _buildSourceOption(Icons.photo_library, 'Gallery', () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.gallery);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+                  }),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSourceOption({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
+  Widget _buildSourceOption(IconData icon, String label, VoidCallback onTap) {
+    return InkWell(
       onTap: onTap,
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
             child: Icon(icon, color: AppColors.primary, size: 32),
           ),
           const SizedBox(height: 8),
@@ -484,7 +459,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         const Text('Upload a clear photo of your original ID card.', style: TextStyle(color: Colors.grey)),
         const SizedBox(height: 32),
         GestureDetector(
-          onTap: _showImageSourcePicker,
+          onTap: _showImageSourceDialog,
           child: Container(
             width: double.infinity,
             height: 200,
@@ -495,17 +470,16 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
               border: Border.all(color: _documentUploaded ? AppColors.primary : Colors.grey.shade300, width: 2),
             ),
             child: _imageFile != null
-                ? Image.file(
-                    File(_imageFile!.path),
-                    fit: BoxFit.cover,
-                  )
+                ? (kIsWeb 
+                    ? Image.network(_imageFile!.path, fit: BoxFit.cover)
+                    : Image.file(File(_imageFile!.path), fit: BoxFit.cover))
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.cloud_upload_outlined,
-                        size: 64,
-                        color: Colors.grey.shade400,
+                        size: 48,
+                        color: _documentUploaded ? AppColors.primary : Colors.grey,
                       ),
                       const SizedBox(height: 16),
                       Text(

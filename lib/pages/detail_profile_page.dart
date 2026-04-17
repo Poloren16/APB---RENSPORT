@@ -1,5 +1,11 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/app_colors.dart';
+import '../data/auth_data.dart';
+import '../utils/alert_utils.dart';
+import 'pengaturan_keamanan_page.dart';
 
 class DetailProfilePage extends StatefulWidget {
   final String username;
@@ -13,23 +19,189 @@ class DetailProfilePage extends StatefulWidget {
 
 class _DetailProfilePageState extends State<DetailProfilePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _isEditing = false;
+  
+  // Controllers
+  late TextEditingController _nameController;
+  late TextEditingController _bioController;
+  late TextEditingController _instaController;
+  late TextEditingController _twitterController;
+  late TextEditingController _fbController;
+  
+  String? _profileImagePath;
+  String _gender = 'Not Set';
+  String _dob = '';
+  List<String> _selectedSports = [];
+
+  final ImagePicker _picker = ImagePicker();
+
+  final List<Map<String, dynamic>> _sportsOptions = [
+    {'name': 'Mini Soccer', 'icon': Icons.sports_soccer_outlined},
+    {'name': 'Basketball', 'icon': Icons.sports_basketball_outlined},
+    {'name': 'Tennis', 'icon': Icons.sports_tennis_outlined},
+    {'name': 'Badminton', 'icon': Icons.sports_tennis_rounded}, 
+    {'name': 'Soccer', 'icon': Icons.sports_soccer},
+    {'name': 'Volleyball', 'icon': Icons.sports_volleyball_outlined},
+  ];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadData();
+  }
+
+  void _loadData() {
+    final account = GlobalAuthData.getAccount(widget.username);
+    _nameController = TextEditingController(text: account?.applicantName ?? widget.username);
+    _bioController = TextEditingController(text: account?.bio ?? "");
+    _instaController = TextEditingController(text: account?.instagram ?? "");
+    _twitterController = TextEditingController(text: account?.twitter ?? "");
+    _fbController = TextEditingController(text: account?.facebook ?? "");
+    _selectedSports = List<String>.from(account?.sportsInterests ?? []);
+    _profileImagePath = account?.profileImagePath;
+    _gender = account?.gender ?? 'Not Set';
+    _dob = account?.dateOfBirth ?? '';
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _nameController.dispose();
+    _bioController.dispose();
+    _instaController.dispose();
+    _twitterController.dispose();
+    _fbController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    if (!_isEditing) return;
+    
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      maxWidth: 1000,
+      maxHeight: 1000,
+      imageQuality: 85,
+    );
+    if (image != null) {
+      setState(() {
+        _profileImagePath = image.path;
+      });
+    }
+  }
+
+  void _showImageSourceDialog() {
+    if (!_isEditing) return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Select Profile Photo Source', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildSourceOption(Icons.camera_alt, 'Camera', () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  }),
+                  _buildSourceOption(Icons.photo_library, 'Gallery', () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  }),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSourceOption(IconData icon, String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: AppColors.primary, size: 32),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  bool _validateSocialUrls() {
+    final insta = _instaController.text.trim();
+    if (insta.isNotEmpty && !insta.startsWith('@') && !insta.contains('instagram.com')) {
+      AlertUtils.showToast(context, 'Please enter a valid Instagram handle or URL', isSuccess: false);
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_validateSocialUrls()) return;
+
+    await GlobalAuthData.updateAccount(
+      widget.username,
+      newName: _nameController.text.trim(),
+      newBio: _bioController.text.trim(),
+      newSports: _selectedSports,
+      newInsta: _instaController.text.trim(),
+      newTwitter: _twitterController.text.trim(),
+      newFacebook: _fbController.text.trim(),
+      newProfileImage: _profileImagePath,
+      newGender: _gender,
+      newDOB: _dob,
+    );
+    
+    if (mounted) {
+      AlertUtils.showToast(context, 'Profile updated successfully!', isSuccess: true);
+      setState(() => _isEditing = false);
+    }
+  }
+
+  Future<void> _selectDate() async {
+    if (!_isEditing) return;
+
+    DateTime initialDate = _dob.isNotEmpty ? DateTime.parse(_dob) : DateTime(2000, 1, 1);
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _dob = picked.toString().split(' ')[0];
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    String initial = widget.username.isNotEmpty ? widget.username[0].toUpperCase() : 'U';
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -41,244 +213,437 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
         ),
         title: const Text(
           'Profile',
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit, color: Colors.grey, size: 20),
-            onPressed: () {},
-          ),
+          if (!_isEditing)
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.grey, size: 22),
+              onPressed: () => setState(() => _isEditing = true),
+            ),
         ],
       ),
       body: Column(
         children: [
-          const SizedBox(height: 16),
-          // Avatar
-          Center(
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '${initial}1',
-                style: const TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+          Expanded(
+            child: DefaultTabController(
+              length: 2,
+              child: NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          _buildAvatarSection(),
+                          const SizedBox(height: 24),
+                          _buildTabSection(),
+                        ],
+                      ),
+                    ),
+                  ];
+                },
+                body: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildDetailPersonalTab(),
+                    _buildSocialMediaTab(),
+                  ],
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          TabBar(
-            controller: _tabController,
-            labelColor: Colors.black87,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: AppColors.primary,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            tabs: const [
-              Tab(text: 'Personal Details'),
-              Tab(text: 'Social Media Accounts'),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildDetailPersonalTab(),
-                const Center(child: Text('No social media accounts yet.', style: TextStyle(color: Colors.grey))),
-              ],
-            ),
-          ),
+          if (_isEditing) _buildBottomSaveButton(),
         ],
       ),
     );
   }
 
+  Widget _buildAvatarSection() {
+    return Center(
+      child: Stack(
+        children: [
+          GestureDetector(
+            onTap: _showImageSourceDialog,
+            child: Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(24),
+                image: _profileImagePath != null 
+                    ? DecorationImage(
+                        image: kIsWeb
+                            ? NetworkImage(_profileImagePath!) as ImageProvider
+                            : FileImage(File(_profileImagePath!)),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              alignment: Alignment.center,
+              child: _profileImagePath == null 
+                  ? Text(
+                      _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : 'U',
+                      style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white),
+                    )
+                  : null,
+            ),
+          ),
+          if (_isEditing)
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: _showImageSourceDialog,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)]),
+                  child: const Icon(Icons.camera_alt, size: 20, color: AppColors.primary),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabSection() {
+    return TabBar(
+      controller: _tabController,
+      labelColor: Colors.black87,
+      unselectedLabelColor: Colors.grey,
+      indicatorColor: AppColors.primary,
+      dividerColor: Colors.transparent,
+      labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+      tabs: const [
+        Tab(text: 'Personal Details'),
+        Tab(text: 'Social Media Accounts'),
+      ],
+    );
+  }
+
   Widget _buildDetailPersonalTab() {
-    return ListView(
+    final account = GlobalAuthData.getAccount(widget.username);
+    final userEmail = account?.email ?? widget.email;
+    final userPhone = account?.phoneNumber ?? '+62 000 0000 00';
+
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
-      children: [
-        _buildTextFieldWithLabel('Full Name *', widget.username),
-        const SizedBox(height: 16),
-        _buildTextFieldWithLabel('Username *', widget.username.toLowerCase()),
-        const SizedBox(height: 16),
-        const Text('Gender', style: TextStyle(color: Colors.black54, fontSize: 14)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Radio(value: 1, groupValue: 0, onChanged: (v){}, activeColor: AppColors.primary),
-                    const Text('Male', style: TextStyle(color: Colors.black87)),
-                  ],
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTextFieldWithLabel('Full Name *', _nameController, isReadOnly: !_isEditing),
+          const SizedBox(height: 20),
+          _buildStaticField('Username *', widget.username),
+          const SizedBox(height: 20),
+          
+          const Text('Gender', style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildGenderOption('Male', Icons.male),
+              const SizedBox(width: 16),
+              _buildGenderOption('Female', Icons.female),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          _buildClickableField('Date of Birth', _dob.isEmpty ? 'Select Date' : _dob, Icons.calendar_today, _selectDate),
+          
+          const SizedBox(height: 24),
+          const Text('Sports Interests', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          _buildSportsGrid(),
+          
+          const SizedBox(height: 24),
+          const Text('Bio', style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _bioController,
+            maxLines: 4,
+            readOnly: !_isEditing,
+            decoration: InputDecoration(
+              hintText: "You haven't added a bio yet..",
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              contentPadding: const EdgeInsets.all(16),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: _isEditing ? AppColors.primary : Colors.grey.shade300),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Radio(value: 2, groupValue: 0, onChanged: (v){}, activeColor: AppColors.primary),
-                    const Text('Female', style: TextStyle(color: Colors.black87)),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _buildTextFieldWithLabel('Date of Birth', ''),
-        const SizedBox(height: 16),
-        _buildTextFieldWithLabel('Sports Interests', 'No Sports Categories Selected Yet', filled: true),
-        const SizedBox(height: 16),
-        const Text('Bio', style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        TextField(
-          maxLines: 4,
-          decoration: InputDecoration(
-            hintText: "You haven't added a bio yet..",
-            hintStyle: TextStyle(color: Colors.grey.shade400),
-            contentPadding: const EdgeInsets.all(16),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
             ),
           ),
+          
+        _buildStaticField(
+          'Email', 
+          userEmail, 
+          color: Colors.grey,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => PengaturanKeamananPage(username: widget.username)),
+            );
+          },
         ),
         const SizedBox(height: 16),
-        _buildTextFieldWithLabel('Email', widget.email, bottomInfo: 'You can change your email in the security menu.'),
-        const SizedBox(height: 16),
-        _buildPhoneFieldWithLabel('Phone Number', '+62 000 0000 00', bottomInfo: 'You can change your phone number in the security menu.'),
-        const SizedBox(height: 32),
-      ],
+        _buildStaticField(
+          'Phone Number', 
+          userPhone, 
+          color: Colors.grey,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => PengaturanKeamananPage(username: widget.username)),
+            );
+          },
+        ),
+        ],
+      ),
     );
   }
 
-  Widget _buildTextFieldWithLabel(String label, String hint, {String? bottomInfo, bool filled = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(label.replaceAll(' *', ''), style: const TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
-            if (label.contains('*')) const Text(' *', style: TextStyle(color: Colors.red, fontSize: 14)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          readOnly: true,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey.shade600),
-            fillColor: filled ? Colors.grey.shade100 : Colors.white,
-            filled: filled,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
+  Widget _buildGenderOption(String value, IconData icon) {
+    bool isSelected = _gender == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          if (_isEditing) setState(() => _gender = value);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary.withOpacity(0.05) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isSelected ? AppColors.primary : Colors.grey.shade300, width: isSelected ? 2 : 1),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: isSelected ? AppColors.primary : Colors.grey, size: 20),
+              const SizedBox(width: 8),
+              Text(value, style: TextStyle(color: isSelected ? AppColors.primary : Colors.black87, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+            ],
           ),
         ),
-        if (bottomInfo != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            bottomInfo,
-            style: const TextStyle(color: Colors.black54, fontSize: 12),
-          ),
-        ]
-      ],
+      ),
     );
   }
 
-  Widget _buildPhoneFieldWithLabel(String label, String hint, {String? bottomInfo}) {
+  Widget _buildClickableField(String label, String value, IconData icon, VoidCallback onTap) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border(right: BorderSide(color: Colors.grey.shade300)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300, width: 0.5),
-                      ),
-                      child: Column(
-                        children: [
-                          Expanded(child: Container(color: Colors.red)),
-                          Expanded(child: Container(color: Colors.white)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: TextField(
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    hintText: hint,
-                    hintStyle: TextStyle(color: Colors.grey.shade600),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    border: InputBorder.none,
-                  ),
-                ),
-              ),
-            ],
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              border: Border.all(color: _isEditing ? AppColors.primary : Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(value, style: const TextStyle(fontSize: 15)),
+                Icon(icon, size: 18, color: Colors.grey),
+              ],
+            ),
           ),
         ),
-        if (bottomInfo != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            bottomInfo,
-            style: const TextStyle(color: Colors.black54, fontSize: 12),
-          ),
-        ]
       ],
+    );
+  }
+
+  Widget _buildSportsGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        mainAxisExtent: 64,
+      ),
+      itemCount: _sportsOptions.length,
+      itemBuilder: (context, index) {
+        final option = _sportsOptions[index];
+        bool isSelected = _selectedSports.contains(option['name']);
+        return GestureDetector(
+          onTap: () {
+            if (_isEditing) {
+              setState(() {
+                if (isSelected) {
+                  _selectedSports.remove(option['name']);
+                } else {
+                  _selectedSports.add(option['name']);
+                }
+              });
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: isSelected ? AppColors.primary : Colors.grey.shade200, width: isSelected ? 2 : 1),
+              boxShadow: isSelected ? [BoxShadow(color: AppColors.primary.withOpacity(0.1), blurRadius: 4)] : null,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(option['icon'], color: isSelected ? AppColors.primary : AppColors.primary.withOpacity(0.6), size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    option['name'],
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? AppColors.primary : Colors.black54,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSocialMediaTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          _buildSocialField('Instagram', _instaController, Icons.camera_alt, Colors.pink),
+          const SizedBox(height: 20),
+          _buildSocialField('Twitter (X)', _twitterController, Icons.close, Colors.black),
+          const SizedBox(height: 20),
+          _buildSocialField('Facebook', _fbController, Icons.facebook, Colors.blue),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSocialField(String label, TextEditingController controller, IconData icon, Color iconColor) {
+    Widget prefixIcon = Icon(icon, color: iconColor);
+    if (label == 'Instagram') {
+      prefixIcon = ShaderMask(
+        shaderCallback: (bounds) => const LinearGradient(
+          colors: [Colors.purple, Colors.pink, Colors.orange],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(bounds),
+        child: Icon(icon, color: Colors.white),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          readOnly: !_isEditing,
+          decoration: InputDecoration(
+            hintText: 'Link or username',
+            prefixIcon: prefixIcon,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _isEditing ? AppColors.primary : Colors.grey.shade300),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextFieldWithLabel(String label, TextEditingController controller, {bool isReadOnly = true}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          readOnly: isReadOnly,
+          decoration: InputDecoration(
+            hintText: controller.text,
+            hintStyle: TextStyle(color: Colors.grey.shade600),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _isEditing ? AppColors.primary : Colors.grey.shade300),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStaticField(String label, String value, {Color? color, VoidCallback? onTap}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50, 
+              borderRadius: BorderRadius.circular(12), 
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    value, 
+                    style: TextStyle(color: color ?? Colors.black87, fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (onTap != null)
+                  const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomSaveButton() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4)),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: _saveProfile,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          minimumSize: const Size(double.infinity, 56),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 0,
+        ),
+        child: const Text('Save Changes', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+      ),
     );
   }
 }

@@ -14,14 +14,16 @@ class CourtDetailPage extends StatefulWidget {
   final String dimensions;
   final String courtCategory;
   final String floorType;
+  final String role;
 
   const CourtDetailPage({
     super.key,
     this.username = 'User',
-    this.courtName = 'BEC Tennis Court Lap.A',
+    this.role = 'End User',
+    this.courtName = 'BEC Tennis Court Court A',
     this.venueName = 'Bandung Elektrik Cigereleng Tennis Court',
-    this.sportType = 'Tenis',
-    this.dimensions = 'P 23 X L 10',
+    this.sportType = 'Tennis',
+    this.dimensions = 'L 23 X W 10',
     this.courtCategory = 'Outdoor',
     this.floorType = 'Vinyl',
     this.initialSelectedSlot,
@@ -416,7 +418,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
               TextField(
                 controller: commentController,
                 decoration: InputDecoration(
-                  hintText: 'Bagaimana pengalamanmu bermain di sini?',
+                  hintText: 'How was your experience playing here?',
                   hintStyle: const TextStyle(fontSize: 13),
                   filled: true,
                   fillColor: Colors.grey.shade50,
@@ -453,10 +455,10 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 AlertUtils.showResultDialog(
                   context,
                   isSuccess: true,
-                  title: existingReview == null ? 'Ulasan Terkirim!' : 'Ulasan Diperbarui!',
+                  title: existingReview == null ? 'Review Sent!' : 'Review Updated!',
                   message: existingReview == null 
-                    ? 'Terima kasih telah memberikan ulasan. Ulasanmu sangat membantu pengelola dan pemain lainnya!'
-                    : 'Ulasanmu telah berhasil diperbarui.',
+                    ? 'Thank you for your review. Your review helps other players!'
+                    : 'Your review has been successfully updated.',
                 );
               },
               style: ElevatedButton.styleFrom(backgroundColor: _accent, foregroundColor: Colors.white),
@@ -828,6 +830,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                         context,
                         MaterialPageRoute(
                           builder: (_) => PaymentPage(
+                            username: widget.username,
+                            role: widget.role,
                             venueName: widget.venueName,
                             courtName: widget.courtName,
                             date: dateStr,

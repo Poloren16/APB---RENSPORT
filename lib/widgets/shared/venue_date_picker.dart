@@ -107,7 +107,7 @@ class _VenueDatePickerState extends State<VenueDatePicker> {
                 margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.1)
+                      ? AppColors.primary.withOpacity(0.1)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(15),
                   border: isSelected
