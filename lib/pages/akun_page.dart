@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'login_page.dart';
@@ -5,8 +7,9 @@ import 'admin/admin_dashboard_page.dart';
 import 'management_venue.dart';
 import 'detail_profile_page.dart';
 import 'pengaturan_keamanan_page.dart';
+import '../data/auth_data.dart';
 
-class AkunPage extends StatelessWidget {
+class AkunPage extends StatefulWidget {
   final String username;
   final String role;
 
@@ -17,9 +20,20 @@ class AkunPage extends StatelessWidget {
   });
 
   @override
+  State<AkunPage> createState() => _AkunPageState();
+}
+
+class _AkunPageState extends State<AkunPage> {
+  @override
   Widget build(BuildContext context) {
+    // Fetch real account data
+    final account = GlobalAuthData.getAccount(widget.username);
+    final userEmail = account?.email ?? '${widget.username}@email.com';
+    final applicantName = account?.applicantName ?? widget.username;
+    final profileImagePath = account?.profileImagePath;
+
     // Generate initial letter for avatar
-    String initial = username.isNotEmpty ? username[0].toUpperCase() : 'U';
+    String initial = applicantName.isNotEmpty ? applicantName[0].toUpperCase() : 'U';
 
     return SingleChildScrollView(
       child: Column(
@@ -36,7 +50,7 @@ class AkunPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -44,23 +58,33 @@ class AkunPage extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  // Orange Avatar Box
+                  // Avatar Box
                   Container(
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(16),
+                      image: profileImagePath != null 
+                          ? DecorationImage(
+                              image: kIsWeb
+                                  ? NetworkImage(profileImagePath) as ImageProvider
+                                  : FileImage(File(profileImagePath)),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
                     alignment: Alignment.center,
-                    child: Text(
-                      initial,
-                      style: const TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: profileImagePath == null 
+                        ? Text(
+                            initial,
+                            style: const TextStyle(
+                              fontSize: 40,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 16),
                   // Profile Details
@@ -69,7 +93,7 @@ class AkunPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          username,
+                          applicantName,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -78,7 +102,7 @@ class AkunPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          role,
+                          widget.role,
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.textSecondary,
@@ -86,7 +110,7 @@ class AkunPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '$username@email.com', // dummy email
+                          userEmail,
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.textSecondary,
@@ -99,14 +123,17 @@ class AkunPage extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => DetailProfilePage(
-                                  username: username,
-                                  email: '$username@email.com',
+                                  username: widget.username,
+                                  email: userEmail,
                                 ),
                               ),
-                            );
+                            ).then((_) {
+                              // Refresh UI when coming back from profile
+                              setState(() {});
+                            });
                           },
                           child: const Text(
-                            'DETAIL PROFILE >',
+                            'VIEW PROFILE >',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -122,7 +149,7 @@ class AkunPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // Points Card (like in the image)
+          // Points Card
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Container(
@@ -132,33 +159,40 @@ class AkunPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.monetization_on, color: AppColors.primary, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        '0 Rensius Points',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.monetization_on,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    '0 Rensius Points',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
                   const Text(
                     'Points Details',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary,
                     ),
@@ -168,8 +202,7 @@ class AkunPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          
-          // Menu Options
+          // Menu Section
           Container(
             color: Colors.white,
             child: Column(
@@ -183,27 +216,32 @@ class AkunPage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => PengaturanKeamananPage(email: '$username@email.com'),
+                        builder: (context) => PengaturanKeamananPage(username: widget.username),
                       ),
-                    );
+                    ).then((_) {
+                      setState(() {});
+                    });
                   },
                 ),
                 const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                if (role.toLowerCase() == 'admin' || role.toLowerCase() == 'owner') ...[
+                if (widget.role.toLowerCase() == 'admin' || widget.role.toLowerCase() == 'owner') ...[
                   _buildListTile(
-                    icon: role.toLowerCase() == 'admin' ? Icons.admin_panel_settings : Icons.business_center,
-                    title: role.toLowerCase() == 'admin' ? 'Admin Dashboard' : 'Venue Management',
+                    icon: widget.role.toLowerCase() == 'admin' ? Icons.admin_panel_settings : Icons.business_center,
+                    title: widget.role.toLowerCase() == 'admin' ? 'Admin Dashboard' : 'Venue Management',
                     onTap: () {
-                      if (role.toLowerCase() == 'admin') {
+                      if (widget.role.toLowerCase() == 'admin') {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const AdminDashboardPage()),
+                          MaterialPageRoute(
+                            builder: (context) => const AdminDashboardPage(),
+                          ),
                         );
                       } else {
-                        // Owners go directly to venue management
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const ManagementVenuePage()),
+                          MaterialPageRoute(
+                            builder: (context) => const ManagementVenuePage(),
+                          ),
                         );
                       }
                     },
@@ -214,50 +252,73 @@ class AkunPage extends StatelessWidget {
                   icon: Icons.logout,
                   title: 'Log Out',
                   onTap: () {
-                    _showLogoutDialog(context);
+                    _showLogoutConfirmation(context);
                   },
                 ),
+                const SizedBox(height: 32),
               ],
             ),
           ),
-          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
+  Widget _buildMenuSection(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey.shade400,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.textSecondary, size: 24),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+      onTap: onTap,
+    );
+  }
+
+  void _showLogoutConfirmation(BuildContext context) {
     showDialog(
       context: context,
-      barrierDismissible: true,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Illustration placeholder wrapper (or we can skip it, we will use an icon instead for now)
                 Container(
-                  height: 150,
-                  width: 150,
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: Colors.red.shade50,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.directions_run_rounded,
-                    size: 80,
-                    color: AppColors.primary,
-                  ),
+                  child: const Icon(Icons.logout, color: Colors.red, size: 32),
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Mau keluar dari akun Rensport',
+                  'Log out from Rensius?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,
@@ -267,60 +328,50 @@ class AkunPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Kamu beneran mau keluar dari akun Rensport?\nCepat kembali ya!',
+                  'Are you sure you want to log out from Rensius?\nWe hope to see you back soon!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey,
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 32),
                 Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton(
+                      child: TextButton(
                         onPressed: () => Navigator.pop(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
                         child: const Text(
-                          'Tutup',
+                          'Cancel',
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
+                            color: Colors.grey,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Expanded(
-                      child: OutlinedButton(
+                      child: ElevatedButton(
                         onPressed: () {
-                          // Navigate to login
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(builder: (context) => const LoginPage()),
                             (route) => false,
                           );
                         },
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.red),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 0,
                         ),
                         child: const Text(
-                          'Ya, Keluar',
+                          'Log Out',
                           style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 16,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -333,39 +384,6 @@ class AkunPage extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildMenuSection(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildListTile({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.grey.shade600),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: onTap,
     );
   }
 }

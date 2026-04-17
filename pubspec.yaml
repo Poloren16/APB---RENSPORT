@@ -13,6 +13,9 @@ dependencies:
   url_launcher: ^6.3.2
   image_picker: ^1.2.1
   shared_preferences: ^2.5.3
+  provider: ^6.1.5+1
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

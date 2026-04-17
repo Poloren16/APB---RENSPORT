@@ -12,10 +12,13 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   bool _isPasswordVisible = false;
+  String _selectedCountryCode = '+62';
+  final List<String> _countryCodes = ['+62', '+1', '+60', '+65', '+44', '+81'];
   
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -24,6 +27,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _nameController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -33,21 +37,45 @@ class _RegisterPageState extends State<RegisterPage> {
     String name = _nameController.text.trim();
     String username = _usernameController.text.trim();
     String email = _emailController.text.trim();
+    String phone = _phoneController.text.trim();
     String password = _passwordController.text.trim();
     String confirmPass = _confirmPasswordController.text.trim();
 
-    if (name.isEmpty || username.isEmpty || email.isEmpty || password.isEmpty) {
-      AlertUtils.showToast(context, 'Please fill in all fields.', isSuccess: false);
+    // 1. Minimum Field Validation
+    if (name.isEmpty || username.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
+      _showError('All fields are required.');
       return;
     }
 
+    // 2. Email Validation
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    if (!emailRegex.hasMatch(email)) {
+      _showError('Invalid email format (e.g., name@email.com).');
+      return;
+    }
+
+    // 3. Phone Validation (7-15 digits)
+    final phoneRegex = RegExp(r'^[0-9]{7,15}$');
+    if (!phoneRegex.hasMatch(phone)) {
+      _showError('Phone number must be digits only (7-15 digits).');
+      return;
+    }
+
+    // 4. Password Confirmation
     if (password != confirmPass) {
-      AlertUtils.showToast(context, 'Password confirmation does not match.', isSuccess: false);
+      _showError('Password confirmation does not match.');
       return;
     }
 
+    // 5. Password Length
+    if (password.length < 6) {
+      _showError('Password must be at least 6 characters.');
+      return;
+    }
+
+    // 6. Username Availability
     if (GlobalAuthData.usernameExists(username)) {
-      AlertUtils.showToast(context, 'Username already taken.', isSuccess: false);
+      _showError('Username is already taken. Please choose another.');
       return;
     }
 
@@ -57,11 +85,29 @@ class _RegisterPageState extends State<RegisterPage> {
       password: password,
       role: 'End User',
       applicantName: name,
+      email: email,
+      phoneNumber: '$_selectedCountryCode$phone',
     );
     GlobalAuthData.registerAccount(newAccount);
 
-    AlertUtils.showToast(context, 'Registration Successful! Please Login.');
-    Navigator.pop(context);
+    AlertUtils.showResultDialog(
+      context,
+      isSuccess: true,
+      title: 'Registration Successful!',
+      message: 'Your account has been registered. Please login to enjoy Rensius services.',
+      onConfirm: () {
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  void _showError(String message) {
+    AlertUtils.showResultDialog(
+      context,
+      isSuccess: false,
+      title: 'Invalid Data',
+      message: message,
+    );
   }
 
   @override
@@ -84,7 +130,7 @@ class _RegisterPageState extends State<RegisterPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Create Account',
+                  'Create New Account',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -93,7 +139,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Join RENSIUS to easily book venues and connect with the community.',
+                  'Sign up now to start booking your favorite sports fields!',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -102,39 +148,47 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 32),
                 
                 // Form Fields
+                _buildLabel('Full Name'),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
-                    hintText: 'Full Name',
+                    hintText: 'Enter your name as per ID',
                     prefixIcon: Icon(Icons.person_outline, color: AppColors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 16),
                 
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: const InputDecoration(
-                    hintText: 'Username',
-                    prefixIcon: Icon(Icons.badge_outlined, color: AppColors.textSecondary),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
+                _buildLabel('Email'),
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
-                    hintText: 'Email Address',
+                    hintText: 'name@email.com',
                     prefixIcon: Icon(Icons.email_outlined, color: AppColors.textSecondary),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
+
+                _buildLabel('Phone Number'),
+                _buildPhoneField(),
+                const SizedBox(height: 16),
                 
+                _buildLabel('Username'),
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: const InputDecoration(
+                    hintText: 'Choose a unique username',
+                    prefixIcon: Icon(Icons.badge_outlined, color: AppColors.textSecondary),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                _buildLabel('Password'),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Password',
+                    hintText: 'Minimum 6 characters',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -151,11 +205,12 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
                 
+                _buildLabel('Confirm Password'),
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: !_isPasswordVisible,
                   decoration: const InputDecoration(
-                    hintText: 'Confirm Password',
+                    hintText: 'Repeat your password',
                     prefixIcon: Icon(Icons.lock_outline, color: AppColors.textSecondary),
                   ),
                 ),
@@ -166,8 +221,14 @@ class _RegisterPageState extends State<RegisterPage> {
                   height: 56,
                   child: ElevatedButton(
                     onPressed: _handleRegister,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
                     child: const Text(
-                      'Sign Up',
+                      'Sign Up Now',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -188,7 +249,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         Navigator.pop(context);
                       },
                       child: const Text(
-                        'Login',
+                        'Log In',
                         style: TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
@@ -198,6 +259,50 @@ class _RegisterPageState extends State<RegisterPage> {
                   ],
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoneField() {
+    return TextFormField(
+      controller: _phoneController,
+      keyboardType: TextInputType.phone,
+      decoration: InputDecoration(
+        hintText: '8123456789',
+        prefixIcon: Container(
+          margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            border: Border(right: BorderSide(color: Colors.grey.shade300)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedCountryCode,
+              items: _countryCodes.map((code) => DropdownMenuItem(
+                value: code,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 12.0),
+                  child: Text(code, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                ),
+              )).toList(),
+              onChanged: (val) => setState(() => _selectedCountryCode = val!),
             ),
           ),
         ),

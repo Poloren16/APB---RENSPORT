@@ -10,9 +10,16 @@ import '../widgets/empty_state_widget.dart';
 import '../data/venue_data.dart';
 
 class VenuePage extends StatefulWidget {
+  final String username;
+  final String role;
   final bool initialShowFavorites;
 
-  const VenuePage({super.key, this.initialShowFavorites = false});
+  const VenuePage({
+    super.key, 
+    this.username = 'User', 
+    this.role = 'End User', 
+    this.initialShowFavorites = false
+  });
 
   @override
   State<VenuePage> createState() => _VenuePageState();
@@ -300,6 +307,7 @@ class _VenuePageState extends State<VenuePage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => BookingPage(
+                        username: widget.username,
                         venueName: venueName,
                         venueType: venue['type'] ?? 'Olahraga',
                         venueAddress: venue['address'] ?? venue['location'] ?? '',
@@ -452,6 +460,8 @@ class _VenuePageState extends State<VenuePage> {
       context,
       MaterialPageRoute(
         builder: (context) => CourtDetailPage(
+          username: widget.username,
+          role: widget.role,
           courtName: courtName,
           venueName: venueName,
           sportType: sportType,

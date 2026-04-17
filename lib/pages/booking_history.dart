@@ -243,8 +243,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           hoverColor: AppColors.primary.withValues(alpha: 0.05),
-          highlightColor: AppColors.primary.withValues(alpha: 0.1),
-          splashColor: AppColors.primary.withValues(alpha: 0.1),
+          highlightColor: AppColors.primary.withOpacity(0.1),
+          splashColor: AppColors.primary.withOpacity(0.1),
           onTap: () {},
           child: Padding(
             padding: const EdgeInsets.all(16),

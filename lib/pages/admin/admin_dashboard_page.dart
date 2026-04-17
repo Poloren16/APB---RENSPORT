@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:rensius/theme/app_colors.dart';
 import 'package:rensius/data/verification_data.dart';
 import 'package:rensius/models/verification_model.dart';
@@ -194,37 +195,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  Widget _buildActivityItem(String title, String time) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.blue.shade50, shape: BoxShape.circle),
-            child: const Icon(Icons.notifications_none, color: Colors.blue, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                Text(time, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildVerificationList(String type) {
     final filtered = GlobalVerificationData.requests.where((r) => r.type == type).toList();
 
@@ -314,6 +284,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
+  Widget _buildErrorImage() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.broken_image, size: 48, color: Colors.grey),
+          Text('Image could not be loaded', style: TextStyle(color: Colors.grey, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
   void _showDetailDialog(VerificationRequest req) {
     showDialog(
       context: context,
@@ -351,19 +333,17 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       if (req.documentUrl.isNotEmpty && 
                           (req.documentUrl.contains('/') || req.documentUrl.contains('\\')))
                         Positioned.fill(
-                          child: Image.file(
-                            File(req.documentUrl),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.broken_image, size: 48, color: Colors.grey),
-                                  Text('Image could not be loaded', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                          ),
+                          child: kIsWeb
+                              ? Image.network(
+                                  req.documentUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+                                )
+                              : Image.file(
+                                  File(req.documentUrl),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+                                ),
                         )
                       else if (req.documentUrl.startsWith('assets/'))
                         Positioned.fill(
@@ -763,7 +743,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         child: ElevatedButton(
                           onPressed: () async {
                             Navigator.pop(context);
-                            await GlobalAuthData.updateAccount(acc.username, nameController.text, passwordController.text);
+                            await GlobalAuthData.updateAccount(acc.username, newName: nameController.text, newPassword: passwordController.text);
                             setState(() {}); // Refresh list
                             if (mounted) {
                               AlertUtils.showToast(context, 'Account updated successfully');

@@ -95,7 +95,7 @@ class NotifikasiPage extends StatelessWidget {
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(16),
                       leading: CircleAvatar(
-                        backgroundColor: notif['color'].withValues(alpha: 0.1),
+                        backgroundColor: notif['color'].withOpacity(0.1),
                         radius: 24,
                         child: Icon(
                           notif['icon'],
