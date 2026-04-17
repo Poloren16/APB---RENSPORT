@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -16,13 +19,13 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = "17"
     }
 
-    val env = java.util.Properties()
+    val env = Properties()
     val envFile = project.file("../../.env")
     if (envFile.exists()) {
-        env.load(envFile.inputStream())
+        env.load(FileInputStream(envFile))
     }
 
     defaultConfig {

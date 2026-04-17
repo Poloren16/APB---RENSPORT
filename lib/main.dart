@@ -3,9 +3,13 @@ import 'package:rensius/pages/login_page.dart';
 import 'package:rensius/theme/app_colors.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/data/verification_data.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Environment Variables
+  await dotenv.load(fileName: ".env");
   
   // Initialize Mock Database Persistence
   await GlobalAuthData.init();

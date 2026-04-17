@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rensius/theme/app_colors.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:rensius/data/venue_data.dart';
 import 'package:rensius/utils/alert_utils.dart';
 
@@ -672,206 +673,140 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
 
 // --- GOOGLE MAPS SIMULATION PAGE ---
 // This page acts as a location picker that returns a string to the previous page.
-class MapPickerPage extends StatelessWidget {
+class MapPickerPage extends StatefulWidget {
   const MapPickerPage({super.key});
+
+  @override
+  State<MapPickerPage> createState() => _MapPickerPageState();
+}
+
+class _MapPickerPageState extends State<MapPickerPage> {
+  LatLng _selectedLocation = const LatLng(-6.2088, 106.8456); // Default Jakarta
+  final Set<Marker> _markers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _markers.add(
+      Marker(
+        markerId: const MarkerId('selected_location'),
+        position: _selectedLocation,
+        draggable: true,
+        onDragEnd: (newPosition) {
+          setState(() {
+            _selectedLocation = newPosition;
+          });
+        },
+      ),
+    );
+  }
+
+  void _onTap(LatLng position) {
+    setState(() {
+      _selectedLocation = position;
+      _markers.clear();
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('selected_location'),
+          position: _selectedLocation,
+          draggable: true,
+          onDragEnd: (newPosition) {
+            setState(() {
+              _selectedLocation = newPosition;
+            });
+          },
+        ),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Select Location (Indonesia Only)',
-          style: TextStyle(color: Colors.white),
+          'Select Venue Location',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Stack(
         children: [
-          // Background - Depicting "Map" UI
-          Container(
-            color: const Color(0xFF81D4FA), // Sea blue color
-            child: Stack(
-              children: [
-                // Original Indonesia Topographic Map image from Wikimedia Commons
-                SizedBox(
-                  width: double.infinity,
-                  height: double.infinity,
-                  child: Opacity(
-                    opacity: 0.85,
-                    child: Image.network(
-                      'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Indonesia_relief_location_map.jpg/1024px-Indonesia_relief_location_map.jpg',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Text(
-                            'Failed to load map image.\nEnsure you are connected to the internet.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                // Grid pattern for map feel
-                CustomPaint(size: Size.infinite, painter: GridPainter()),
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.map_outlined,
-                        size: 90,
-                        color: Colors.black.withOpacity(0.4),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.8),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Column(
-                          children: [
-                            Text(
-                              'Satellite Map: INDONESIA',
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              '(Limited to Indonesia region only)',
-                              style: TextStyle(
-                                color: Colors.black87,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: _selectedLocation,
+              zoom: 12,
             ),
+            onMapCreated: (controller) {},
+            onTap: _onTap,
+            markers: _markers,
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
           ),
-          // Area clickable to select location coordinates
-          Positioned.fill(
-            child: GestureDetector(
-              onTapDown: (TapDownDetails details) {
-                // When user taps on map screen, generate coordinate location
-                final int mockX = details.localPosition.dx.toInt();
-                final int mockY = details.localPosition.dy.toInt();
-
-                // Simulate coordinate restriction to Indonesia only
-                // (Dividing regions based on X coordinate on screen)
-                String region = 'Jakarta';
-                String province = 'DKI Jakarta';
-
-                if (mockX < 100) {
-                  region = 'Medan';
-                  province = 'Sumatera Utara';
-                } else if (mockX > 300) {
-                  region = 'Makassar';
-                  province = 'Sulawesi Selatan';
-                } else if (mockY < 200) {
-                  region = 'Pontianak';
-                  province = 'Kalimantan Barat';
-                } else if (mockY > 500) {
-                  region = 'Denpasar';
-                  province = 'Bali';
-                } else {
-                  region = 'Bandung';
-                  province = 'Jawa Barat';
-                }
-
-                final String generatedAddress =
-                    'Jl. Sudirman No. $mockX, $region, $province, Indonesia';
-
-                // Confirm Location
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: Row(
-                      children: const [
-                        Icon(Icons.location_on, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Confirm Map Point'),
-                      ],
-                    ),
-                    content: Text(
-                      'Are you sure you want to select this location?\n\nAddress:\n$generatedAddress',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(ctx); // Close confirmation dialog
-                          Navigator.pop(
-                            context,
-                            generatedAddress,
-                          ); // Return to main page with location data
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                        ),
-                        child: const Text(
-                          'Select Location',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          // Instructions
           Positioned(
-            top: 20,
+            top: 16,
+            left: 16,
+            right: 16,
+            child: Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 4,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.touch_app, color: AppColors.primary),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Tap on the map or drag the marker to set your venue location.',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 32,
             left: 20,
             right: 20,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: const [
-                  Icon(Icons.touch_app, color: AppColors.primary),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'This Venue Management system is limited to Indonesia operation area. Tap the screen to select your point/province.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
+            child: SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Simulate an address for the coordinates because we don't have Geocoding API keys
+                  final String simulatedAddress = 
+                    'Location (${_selectedLocation.latitude.toStringAsFixed(4)}, ${_selectedLocation.longitude.toStringAsFixed(4)})';
+                  
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Confirm Location'),
+                      content: Text('Do you want to use this coordinate for your venue?\n\n$simulatedAddress'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cancel'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            Navigator.pop(context, simulatedAddress);
+                          },
+                          child: const Text('Select'),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text('Use This Location', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
           ),

@@ -10,6 +10,7 @@ import 'payment_page.dart';
 import '../models/review_model.dart';
 import '../utils/booking_utils.dart';
 import '../data/venue_data.dart';
+import 'venue_map_page.dart';
 
 class BookingPage extends StatefulWidget {
   final String username;
@@ -239,10 +240,33 @@ class _BookingPageState extends State<BookingPage>
   }
 
   Future<void> _openMaps() async {
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    if (venueResults.isNotEmpty) {
+      final venue = venueResults.first;
+      final lat = venue['lat'] as double?;
+      final lng = venue['lng'] as double?;
+      
+      if (lat != null && lng != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VenueMapPage(
+              latitude: lat,
+              longitude: lng,
+              venueName: widget.venueName,
+              venueAddress: widget.venueAddress,
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    // Fallback to URL launcher if coordinates are missing
     final query = Uri.encodeComponent(widget.venueName + ' ' + widget.venueAddress);
-    final url = Uri.parse('https://www.openstreetmap.org/search?query=$query');
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
     if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.inAppBrowserView);
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     }
   }
 

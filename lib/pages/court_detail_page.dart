@@ -143,16 +143,13 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       return sum + _timeGroups[g].slots[s].price;
     });
 
-    // Add services price
-    final venue = GlobalVenueData.venues.firstWhere(
-      (v) => v['name'] == widget.venueName,
-      orElse: () => <String, dynamic>{},
-    );
-    final services = venue['services'] as List<dynamic>? ?? [];
-
     _selectedServices.forEach((id, qty) {
-      final service = services.firstWhere((s) => s['id'] == id, orElse: () => null);
-      if (service != null) {
+      final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+      final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+      final services = venue['services'] as List<dynamic>? ?? [];
+      final serviceResults = services.where((s) => s['id'] == id);
+      if (serviceResults.isNotEmpty) {
+        final service = serviceResults.first;
         total += (service['price'] as int) * qty;
       }
     });
@@ -646,7 +643,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 ),
           ] else ...[
             // Service Tab Content
-            _buildServiceSection(),
+            _buildServicesList(),
           ],
 
           const SizedBox(height: 16),
@@ -899,11 +896,9 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     );
   }
 
-  Widget _buildServiceSection() {
-    final venue = GlobalVenueData.venues.firstWhere(
-      (v) => v['name'] == widget.venueName,
-      orElse: () => <String, dynamic>{},
-    );
+  Widget _buildServicesList() {
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
     final services = venue['services'] as List<dynamic>? ?? [];
 
     if (services.isEmpty) {

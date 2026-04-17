@@ -70,8 +70,12 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
       'paymentMethod': widget.paymentMethodName,
       'status': 'Awaiting Schedule',
       'services': widget.selectedServices.isEmpty ? null : widget.selectedServices.entries.map((e) {
-        final venue = GlobalVenueData.venues.firstWhere((v) => v['name'] == widget.venueName, orElse: () => <String, dynamic>{});
-        final service = (venue['services'] as List).firstWhere((s) => s['id'] == e.key);
+        final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+        final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+        final serviceList = (venue['services'] as List<dynamic>? ?? []);
+        final serviceResults = serviceList.where((s) => s['id'] == e.key);
+        if (serviceResults.isEmpty) return 'Unknown Service';
+        final service = serviceResults.first;
         return '${service['name']} (x${e.value})';
       }).join(', '),
     };
