@@ -19,7 +19,7 @@ class PaymentPage extends StatefulWidget {
     this.username = 'User',
     this.venueName = 'Bandung Elektrik Cigereleng Tennis Court',
     this.courtName = 'BEC Tennis Court Lap.A',
-    this.date = 'Senin, 13 April 2026',
+    this.date = 'Monday, 13 April 2026',
     this.timeRange = '06:00 - 07:00',
     this.price = 100000,
     this.individualSlots = const [],
@@ -35,7 +35,7 @@ class _PaymentPageState extends State<PaymentPage> {
   String? _selectedPaymentMethodId;
 
   String _formatPrice(int price) {
-    return 'Rp${price.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}';
+    return 'IDR ${price.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},')}';
   }
 
   @override
@@ -96,7 +96,7 @@ class _PaymentPageState extends State<PaymentPage> {
         onPressed: () => Navigator.pop(context),
       ),
       title: const Text(
-        'Detail Pembayaran',
+        'Payment Details',
         style: TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.w600,
@@ -259,20 +259,20 @@ class _PaymentPageState extends State<PaymentPage> {
                   const SizedBox(height: 10),
                   const Divider(height: 1),
                   const SizedBox(height: 10),
-                  _buildPriceRow('Lapangan', widget.courtName, widget.price),
+                  _buildPriceRow('Court', widget.courtName, widget.price),
                 ],
 
                 const SizedBox(height: 14),
                 const Divider(height: 1, color: Color(0xFFF0F0F0)),
                 const SizedBox(height: 14),
 
-                // Lapangan
-                _buildDetailSection('Lapangan', widget.courtName,
+                // Court
+                _buildDetailSection('Court', widget.courtName,
                     trailingPrice: widget.price),
                 const SizedBox(height: 14),
 
-                // Service Tambahan
-                _buildDetailSection('Service Tambahan', '-'),
+                // Additional Service
+                _buildDetailSection('Additional Service', '-'),
               ],
             ),
           ),
@@ -382,7 +382,7 @@ class _PaymentPageState extends State<PaymentPage> {
       child: OutlinedButton.icon(
         onPressed: () {},
         icon: const Icon(Icons.add_rounded, size: 18),
-        label: const Text('Tambah Service'),
+        label: const Text('Add Service'),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           side: const BorderSide(color: AppColors.primary, width: 1.5),
@@ -425,7 +425,7 @@ class _PaymentPageState extends State<PaymentPage> {
           Row(
             children: [
               const Text(
-                'Detail Transaksi',
+                'Transaction Details',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -434,7 +434,7 @@ class _PaymentPageState extends State<PaymentPage> {
               ),
               const Spacer(),
               const Text(
-                'Batas Pembayaran',
+                'Payment Limit',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
               const SizedBox(width: 6),
@@ -445,7 +445,7 @@ class _PaymentPageState extends State<PaymentPage> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
-                  '30 menit',
+                  '30 minutes',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -461,14 +461,14 @@ class _PaymentPageState extends State<PaymentPage> {
           const SizedBox(height: 14),
 
           // Price rows
-          _buildTransactionRow('Total Harga Lapangan', widget.price),
+          _buildTransactionRow('Total Court Price', widget.price),
           const SizedBox(height: 10),
-          _buildTransactionRow('Biaya Platform', platformFee,
+          _buildTransactionRow('Platform Fee', platformFee,
               isInfo: true, isFree: platformFee == 0),
           const SizedBox(height: 10),
           const Divider(height: 1, color: Color(0xFFF0F0F0)),
           const SizedBox(height: 10),
-          _buildTransactionRow('Total Pembayaran', total, isBold: true),
+          _buildTransactionRow('Total Payment', total, isBold: true),
         ],
       ),
     );
@@ -532,7 +532,7 @@ class _PaymentPageState extends State<PaymentPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Metode Pembayaran',
+            'Payment Method',
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -566,14 +566,14 @@ class _PaymentPageState extends State<PaymentPage> {
           
           const SizedBox(height: 16),
           const Text(
-            'Kartu Kredit / Debit',
+            'Credit / Debit Card',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary),
           ),
           const SizedBox(height: 8),
-          _buildPaymentOption('credit_card', 'Kartu Kredit / Debit', Icons.credit_card_rounded),
+          _buildPaymentOption('credit_card', 'Credit / Debit Card', Icons.credit_card_rounded),
         ],
       ),
     );
@@ -634,7 +634,7 @@ class _PaymentPageState extends State<PaymentPage> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
-          'Konfirmasi Pembayaran',
+          'Confirm Payment',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         content: Column(
@@ -642,7 +642,7 @@ class _PaymentPageState extends State<PaymentPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Apakah Anda yakin data booking dan metode pembayaran sudah benar?',
+              'Are you sure the booking details and payment method are correct?',
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 16),
@@ -655,9 +655,9 @@ class _PaymentPageState extends State<PaymentPage> {
               child: Column(
                 children: [
                   _buildSummaryRow('Venue', widget.venueName),
-                  _buildSummaryRow('Lapangan', widget.courtName),
-                  _buildSummaryRow('Tanggal', widget.date),
-                  _buildSummaryRow('Waktu', widget.timeRange),
+                  _buildSummaryRow('Court', widget.courtName),
+                  _buildSummaryRow('Date', widget.date),
+                  _buildSummaryRow('Time', widget.timeRange),
                   _buildSummaryRow('Total', _formatPrice(widget.price)),
                 ],
               ),
@@ -681,7 +681,7 @@ class _PaymentPageState extends State<PaymentPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('Ya, Bayar Sekarang'),
+                child: const Text('Yes, Pay Now'),
               ),
               const SizedBox(height: 8),
               TextButton(
@@ -689,7 +689,7 @@ class _PaymentPageState extends State<PaymentPage> {
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: const Text('Periksa Kembali',
+                child: const Text('Check Again',
                     style: TextStyle(color: Colors.grey, fontSize: 13)),
               ),
             ],
@@ -716,7 +716,7 @@ class _PaymentPageState extends State<PaymentPage> {
       'time': widget.timeRange,
       'price': widget.price,
       'paymentMethod': paymentName,
-      'status': 'Menunggu Jadwal',
+      'status': 'Awaiting Schedule',
     };
     
     // Perform atomic slot reservation
@@ -734,8 +734,8 @@ class _PaymentPageState extends State<PaymentPage> {
     AlertUtils.showResultDialog(
       context,
       isSuccess: true,
-      title: 'Pembayaran Berhasil!',
-      message: 'Pesananmu telah dikonfirmasi. Kamu bisa melihat receipt untuk validasi di lapangan.',
+      title: 'Payment Successful!',
+      message: 'Your order has been confirmed. You can view the receipt for on-field validation.',
       onConfirm: () {
         Navigator.popUntil(context, (route) => route.isFirst);
         // Navigate to receipt from home (Aktivitas) if possible, 
@@ -807,18 +807,18 @@ class _PaymentPageState extends State<PaymentPage> {
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.textSecondary),
                     children: [
-                      const TextSpan(text: 'Saya setuju dengan '),
+                      const TextSpan(text: 'I agree to the '),
                       TextSpan(
-                        text: 'Syarat dan Ketentuan',
+                        text: 'Terms and Conditions',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,
                           decoration: TextDecoration.underline,
                         ),
                       ),
-                      const TextSpan(text: ' serta '),
+                      const TextSpan(text: ' and '),
                       TextSpan(
-                        text: 'milik Venue',
+                        text: 'Venue Policy',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,
@@ -843,7 +843,7 @@ class _PaymentPageState extends State<PaymentPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Total Harga',
+                    'Total Price',
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
@@ -878,7 +878,7 @@ class _PaymentPageState extends State<PaymentPage> {
                   ),
                 ),
                 child: const Text(
-                  'Bayar',
+                  'Pay Now',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

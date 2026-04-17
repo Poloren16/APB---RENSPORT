@@ -155,8 +155,8 @@ class AkunPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Text(
-                    'Detail Points',
+                  const Text(
+                    'Points Details',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -175,10 +175,10 @@ class AkunPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildMenuSection('Pengaturan'),
+                _buildMenuSection('Settings'),
                 _buildListTile(
                   icon: Icons.settings,
-                  title: 'Pengaturan & Keamanan',
+                  title: 'Security and Settings',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -192,7 +192,7 @@ class AkunPage extends StatelessWidget {
                 if (role.toLowerCase() == 'admin' || role.toLowerCase() == 'owner') ...[
                   _buildListTile(
                     icon: role.toLowerCase() == 'admin' ? Icons.admin_panel_settings : Icons.business_center,
-                    title: role.toLowerCase() == 'admin' ? 'Admin Dashboard' : 'Manajemen Venue',
+                    title: role.toLowerCase() == 'admin' ? 'Admin Dashboard' : 'Venue Management',
                     onTap: () {
                       if (role.toLowerCase() == 'admin') {
                         Navigator.push(
@@ -212,7 +212,7 @@ class AkunPage extends StatelessWidget {
                 ],
                 _buildListTile(
                   icon: Icons.logout,
-                  title: 'Keluar Akun',
+                  title: 'Log Out',
                   onTap: () {
                     _showLogoutDialog(context);
                   },

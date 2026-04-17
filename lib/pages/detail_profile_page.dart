@@ -40,7 +40,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Profil',
+          'Profile',
           style: TextStyle(
             color: Colors.black87,
             fontWeight: FontWeight.bold,
@@ -86,8 +86,8 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
             indicatorColor: AppColors.primary,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             tabs: const [
-              Tab(text: 'Detail Personal'),
-              Tab(text: 'Akun Sosial Media'),
+              Tab(text: 'Personal Details'),
+              Tab(text: 'Social Media Accounts'),
             ],
           ),
           Expanded(
@@ -95,7 +95,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
               controller: _tabController,
               children: [
                 _buildDetailPersonalTab(),
-                const Center(child: Text('Belum ada akun sosial media.', style: TextStyle(color: Colors.grey))),
+                const Center(child: Text('No social media accounts yet.', style: TextStyle(color: Colors.grey))),
               ],
             ),
           ),
@@ -108,11 +108,11 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _buildTextFieldWithLabel('Nama Lengkap *', widget.username),
+        _buildTextFieldWithLabel('Full Name *', widget.username),
         const SizedBox(height: 16),
         _buildTextFieldWithLabel('Username *', widget.username.toLowerCase()),
         const SizedBox(height: 16),
-        const Text('Jenis Kelamin', style: TextStyle(color: Colors.black54, fontSize: 14)),
+        const Text('Gender', style: TextStyle(color: Colors.black54, fontSize: 14)),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -126,7 +126,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
                 child: Row(
                   children: [
                     Radio(value: 1, groupValue: 0, onChanged: (v){}, activeColor: AppColors.primary),
-                    const Text('Laki-laki', style: TextStyle(color: Colors.black87)),
+                    const Text('Male', style: TextStyle(color: Colors.black87)),
                   ],
                 ),
               ),
@@ -142,7 +142,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
                 child: Row(
                   children: [
                     Radio(value: 2, groupValue: 0, onChanged: (v){}, activeColor: AppColors.primary),
-                    const Text('Perempuan', style: TextStyle(color: Colors.black87)),
+                    const Text('Female', style: TextStyle(color: Colors.black87)),
                   ],
                 ),
               ),
@@ -150,16 +150,16 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
           ],
         ),
         const SizedBox(height: 16),
-        _buildTextFieldWithLabel('Tanggal Lahir', ''),
+        _buildTextFieldWithLabel('Date of Birth', ''),
         const SizedBox(height: 16),
-        _buildTextFieldWithLabel('Minat Olahraga', 'Belum ada Kategori Olahraga yang Dipilih', filled: true),
+        _buildTextFieldWithLabel('Sports Interests', 'No Sports Categories Selected Yet', filled: true),
         const SizedBox(height: 16),
         const Text('Bio', style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         TextField(
           maxLines: 4,
           decoration: InputDecoration(
-            hintText: 'Kamu belum menambahkan keterangan bio..',
+            hintText: "You haven't added a bio yet..",
             hintStyle: TextStyle(color: Colors.grey.shade400),
             contentPadding: const EdgeInsets.all(16),
             border: OutlineInputBorder(
@@ -173,9 +173,9 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
           ),
         ),
         const SizedBox(height: 16),
-        _buildTextFieldWithLabel('Email', widget.email, bottomInfo: 'Kamu bisa mengganti emailmu di menu keamanan.'),
+        _buildTextFieldWithLabel('Email', widget.email, bottomInfo: 'You can change your email in the security menu.'),
         const SizedBox(height: 16),
-        _buildPhoneFieldWithLabel('Nomer Telepon', '+62 000 0000 00', bottomInfo: 'Kamu bisa mengganti no HP mu di menu keamanan.'),
+        _buildPhoneFieldWithLabel('Phone Number', '+62 000 0000 00', bottomInfo: 'You can change your phone number in the security menu.'),
         const SizedBox(height: 32),
       ],
     );

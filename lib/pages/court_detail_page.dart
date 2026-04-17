@@ -46,7 +46,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   // ── Data slot waktu ──────────────────────────────────────────────────────────
   static const List<_TimeGroup> _timeGroups = [
     _TimeGroup(
-      period: 'Pagi ke Siang',
+      period: 'Morning to Noon',
       range: '06:00 - 10:00',
       icon: Icons.wb_twilight_rounded,
       slots: [
@@ -57,7 +57,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       ],
     ),
     _TimeGroup(
-      period: 'Siang ke Sore',
+      period: 'Noon to Afternoon',
       range: '10:00 - 16:00',
       icon: Icons.wb_sunny_rounded,
       slots: [
@@ -70,7 +70,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       ],
     ),
     _TimeGroup(
-      period: 'Sore ke Malam',
+      period: 'Afternoon to Evening',
       range: '16:00 - 22:00',
       icon: Icons.nightlight_round,
       slots: [
@@ -120,9 +120,9 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
   String _formatPrice(int price) {
-    return 'Rp${price.toString().replaceAllMapped(
+    return 'IDR ${price.toString().replaceAllMapped(
       RegExp(r'(\d)(?=(\d{3})+$)'),
-      (m) => '${m[1]}.',
+      (m) => '${m[1]},',
     )}';
   }
 
@@ -137,8 +137,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     final now = DateTime.now();
     final end = DateTime(now.year, now.month + 1, 0);
     const m = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return '${now.day} ${m[now.month]} ${now.year} - ${end.day} ${m[end.month]} ${end.year}';
   }
@@ -156,8 +156,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
 
   static String _monthName(int month) {
     const names = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
     return names[month];
   }
@@ -207,7 +207,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
         onPressed: () => Navigator.pop(context),
       ),
       title: const Text(
-        'Detail Lapangan',
+        'Court Details',
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
@@ -294,9 +294,9 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       color: Colors.white,
       child: Row(
         children: [
-          _buildSpecItem('Tipe Lapangan', widget.courtCategory),
+          _buildSpecItem('Court Type', widget.courtCategory),
           Container(width: 1, height: 50, color: Colors.grey.shade200),
-          _buildSpecItem('Tipe Lantai', widget.floorType),
+          _buildSpecItem('Floor Type', widget.floorType),
         ],
       ),
     );
@@ -339,21 +339,21 @@ class _CourtDetailPageState extends State<CourtDetailPage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Lapangan ini menurut Players',
+                'What Players say about this court',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               if (!hasReviewed)
                 TextButton.icon(
                   onPressed: () => _showReviewDialog(context),
                   icon: const Icon(Icons.rate_review_outlined, size: 16, color: _accent),
-                  label: const Text('Tulis Ulasan', style: TextStyle(fontSize: 12, color: _accent, fontWeight: FontWeight.bold)),
+                  label: const Text('Write a Review', style: TextStyle(fontSize: 12, color: _accent, fontWeight: FontWeight.bold)),
                 ),
             ],
           ),
           const SizedBox(height: 10),
           if (venueReviews.isNotEmpty) ...[
             Text(
-              '⭐ ${Review.getAverageRating(widget.venueName).toStringAsFixed(1)} dari total ${venueReviews.length} ulasan Player',
+              '⭐ ${Review.getAverageRating(widget.venueName).toStringAsFixed(1)} from total ${venueReviews.length} Player reviews',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 12),
@@ -362,9 +362,9 @@ class _CourtDetailPageState extends State<CourtDetailPage>
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildReviewChip('🏟️', 'Fasilitas Bagus', 3),
-              _buildReviewChip('👍', 'Tempat Bersih', 3),
-              _buildReviewChip('⚡', 'Fasilitas Lengkap', 2),
+              _buildReviewChip('🏟️', 'Great Facilities', 3),
+              _buildReviewChip('👍', 'Clean Venue', 3),
+              _buildReviewChip('⚡', 'Complete Facilities', 2),
             ],
           ),
           const SizedBox(height: 16),
@@ -374,7 +374,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
             return OutlinedButton.icon(
               onPressed: () => _showReviewDialog(context, existingReview: existingReview),
               icon: Icon(hasReviewed ? Icons.edit_note_rounded : Icons.star_outline_rounded, size: 20),
-              label: Text(hasReviewed ? 'Edit Ulasan' : 'Beri Ulasan'),
+              label: Text(hasReviewed ? 'Edit Review' : 'Give Review'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: _accent,
                 side: const BorderSide(color: _accent, width: 1.5),
@@ -397,7 +397,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Tulis Ulasan Lapangan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          title: const Text('Write Court Review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -429,19 +429,17 @@ class _CourtDetailPageState extends State<CourtDetailPage>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               onPressed: () {
                 if (commentController.text.isEmpty) return;
                 
                 setState(() {
-                  // Jika sedang mengedit ulasan lama, buang yang lama dulu
                   if (existingReview != null) {
                     Review.mockReviews.remove(existingReview);
                   }
                   
-                  // Masukkan ulasan baru di urutan paling atas
                   Review.mockReviews.insert(0, Review(
                     username: widget.username,
                     venueName: widget.venueName,
@@ -462,7 +460,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 );
               },
               style: ElevatedButton.styleFrom(backgroundColor: _accent, foregroundColor: Colors.white),
-              child: Text(existingReview == null ? 'Kirim Ulasan' : 'Simpan Perubahan'),
+              child: Text(existingReview == null ? 'Submit Review' : 'Save Changes'),
             ),
           ],
         ),
@@ -517,7 +515,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
                 tabs: const [
-                  Tab(text: 'Harian'),
+                  Tab(text: 'Daily'),
                   Tab(text: 'Membership'),
                 ],
               ),
@@ -528,9 +526,9 @@ class _CourtDetailPageState extends State<CourtDetailPage>
           const Divider(height: 1),
           const SizedBox(height: 12),
 
-          // "Pilih Jadwal Booking" header
+          // "Choose Booking Schedule" header
           const Text(
-            'Pilih Jadwal Booking',
+            'Choose Booking Schedule',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
 
@@ -563,7 +561,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                     _expandedGroups.clear();
                   }),
                   child: const Text(
-                    'Reset & Mulai Ulang',
+                    'Reset & Restart',
                     style: TextStyle(
                         color: _accent,
                         fontSize: 13,
@@ -601,7 +599,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                     const TextStyle(fontSize: 12, color: Colors.black54),
                 children: [
                   const TextSpan(
-                    text: '*Periode Tanggal Booking: ',
+                    text: '*Booking Date Period: ',
                     style: TextStyle(
                         color: _accent, fontWeight: FontWeight.w500),
                   ),
@@ -666,7 +664,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                   ),
                   const Spacer(),
                   Text(
-                    '$available Jadwal Tersedia',
+                    '$available Available Slots',
                     style: TextStyle(
                         fontSize: 12, color: Colors.grey.shade400),
                   ),
@@ -796,8 +794,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
           Expanded(
             child: Text(
               hasSelection
-                  ? '${_selectedSlots.length} slot dipilih • ${_formatPrice(_totalPrice)}'
-                  : 'Silahkan pilih jadwal booking',
+                  ? '${_selectedSlots.length} slots selected • ${_formatPrice(_totalPrice)}'
+                  : 'Please select a booking slot',
               style: TextStyle(
                 fontSize: 13,
                 color: hasSelection
@@ -833,7 +831,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                             venueName: widget.venueName,
                             courtName: widget.courtName,
                             date: dateStr,
-                            timeRange: '${selectedTimes.length} Slot Waktu (${selectedTimes.join(', ')})',
+                            timeRange: '${selectedTimes.length} Time Slots (${selectedTimes.join(', ')})',
                             price: _totalPrice,
                             individualSlots: individualSlots,
                           ),
@@ -854,7 +852,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
               ),
               icon: const Icon(Icons.shopping_cart_rounded, size: 16),
               label: Text(
-                hasSelection ? 'Pesan Sekarang' : 'Belum Dipilih',
+                hasSelection ? 'Book Now' : 'None Selected',
                 style: const TextStyle(
                     fontSize: 13, fontWeight: FontWeight.w600),
               ),

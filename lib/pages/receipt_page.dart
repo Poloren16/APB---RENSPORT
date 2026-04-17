@@ -8,10 +8,10 @@ class ReceiptPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Format price to Rp 00.000 format
+    // Format price to IDR format
     String formatPrice(dynamic price) {
-      if (price == null) return 'Rp0';
-      return 'Rp${price.toString().replaceAllMapped(RegExp(r"(\d)(?=(\d{3})+$)"), (m) => "${m[1]}.")}';
+      if (price == null) return 'IDR 0';
+      return 'IDR ${price.toString().replaceAllMapped(RegExp(r"(\d)(?=(\d{3})+$)"), (m) => "${m[1]},")}';
     }
 
     return Scaffold(
@@ -118,19 +118,19 @@ class ReceiptPage extends StatelessWidget {
                         child: Column(
                           children: [
                             _buildInfoRow('Venue', booking['venueName'] ?? '-', isBold: true),
-                            _buildInfoRow('Jenis Lapangan', booking['courtName'] ?? '-'),
-                            _buildInfoRow('Tanggal Main', booking['date'] ?? '-'),
-                            _buildInfoRow('Waktu / Durasi', booking['time'] ?? '-'),
+                            _buildInfoRow('Court Type', booking['courtName'] ?? '-'),
+                            _buildInfoRow('Booking Date', booking['date'] ?? '-'),
+                            _buildInfoRow('Time / Duration', booking['time'] ?? '-'),
                             const SizedBox(height: 16),
                             const Divider(height: 1),
                             const SizedBox(height: 16),
-                            _buildInfoRow('Metode Pembayaran', booking['paymentMethod'] ?? 'Virtual Account'),
-                            _buildInfoRow('Status Pesanan', 'Sudah Dibayar', statusColor: Colors.green),
+                            _buildInfoRow('Payment Method', booking['paymentMethod'] ?? 'Virtual Account'),
+                            _buildInfoRow('Order Status', 'Paid', statusColor: Colors.green),
                           ],
                         ),
                       ),
 
-                      // Footer Section (Simplifeid)
+                      // Footer Section (Simplified)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
@@ -182,7 +182,7 @@ class ReceiptPage extends StatelessWidget {
             
             // Helpful text
             Text(
-              'Tunjukkan e-receipt ini kepada petugas lapangan saat tiba di lokasi untuk validasi pesanan.',
+              'Show this e-receipt to the field staff upon arrival at the location for order validation.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary.withOpacity(0.7),
@@ -205,7 +205,7 @@ class ReceiptPage extends StatelessWidget {
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                child: const Text('Kembali ke Aktivitas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text('Back to Activities', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
           ],

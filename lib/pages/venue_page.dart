@@ -23,10 +23,10 @@ class _VenuePageState extends State<VenuePage> {
   late String _selectedCategory;
 
   static const List<CategoryItem> _categories = [
-    CategoryItem('Semua'),
+    CategoryItem('All'),
     CategoryItem('Favorite', Icons.bookmark_outline),
     CategoryItem('Mini Soccer', Icons.sports_soccer),
-    CategoryItem('Sepak Bola', Icons.sports_soccer),
+    CategoryItem('Soccer', Icons.sports_soccer),
   ];
 
   @override
@@ -38,8 +38,8 @@ class _VenuePageState extends State<VenuePage> {
   static String _monthName(int month) {
     const names = [
       '',
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
     return names[month];
   }
@@ -90,6 +90,8 @@ class _VenuePageState extends State<VenuePage> {
                       child: Text(
                         isShowingFavorites ? 'Venue Favorit Kamu' : 'Temukan Beragam Venue!',
                         style: const TextStyle(
+                        'Discover Various Venues!',
+                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -142,7 +144,7 @@ class _VenuePageState extends State<VenuePage> {
                   ),
                   child: TextField(
                     decoration: InputDecoration(
-                      hintText: 'Cari Venue',
+                      hintText: 'Search Venue',
                       prefixIcon: const Icon(Icons.search),
                       filled: true,
                       fillColor: Colors.white,
@@ -198,7 +200,7 @@ class _VenuePageState extends State<VenuePage> {
                     GestureDetector(
                       onTap: () => setState(() => _selectedDate = DateTime.now()),
                       child: const Text(
-                        'Reset & Mulai Ulang',
+                        'Reset & Restart',
                         style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -301,6 +303,11 @@ class _VenuePageState extends State<VenuePage> {
                         venueType: venue['type'] ?? 'Olahraga',
                         venueAddress: venue['address'] ?? venue['location'] ?? '',
                         venueHours: venue['hours'] ?? '06:00 - 22:00',
+                      builder: (context) => const BookingPage(
+                        venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+                        venueType: 'Tennis',
+                        venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
+                        venueHours: '06:00 - 22:00',
                       ),
                     ),
                   );
@@ -403,6 +410,9 @@ class _VenuePageState extends State<VenuePage> {
                                 Text(
                                   venue['type'] ?? 'Olahraga',
                                   style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                const Text(
+                                  'Tennis',
+                                  style: TextStyle(color: Colors.grey, fontSize: 11),
                                 ),
                               ],
                             ),
@@ -410,6 +420,9 @@ class _VenuePageState extends State<VenuePage> {
                             Text(
                               venue['price'] ?? 'Hubungi Pengelola',
                               style: const TextStyle(
+                            const Text(
+                              'IDR 125,000 ~ IDR 175,000',
+                              style: TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -445,6 +458,21 @@ class _VenuePageState extends State<VenuePage> {
   }
 
   void _goToCourtDetail(String venueName, String courtName, String sportType, {String? initialSlot}) {
+  void _goToBooking() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const BookingPage(
+          venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+          venueType: 'Tennis',
+          venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
+          venueHours: '06:00 - 22:00',
+        ),
+      ),
+    );
+  }
+
+  void _goToCourtDetail(String courtName, {String? initialSlot}) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -452,6 +480,8 @@ class _VenuePageState extends State<VenuePage> {
           courtName: courtName,
           venueName: venueName,
           sportType: sportType,
+          venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+          sportType: 'Tennis',
           initialSelectedSlot: initialSlot,
         ),
       ),
@@ -499,11 +529,16 @@ class _VenuePageState extends State<VenuePage> {
                         Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
                         const SizedBox(width: 4),
                         Text(court['size'] ?? 'Standar', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                        const Text('Tennis', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                        const SizedBox(width: 10),
+                        Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
+                        const SizedBox(width: 4),
+                        const Text('L 23 X W 10', style: TextStyle(color: Colors.grey, fontSize: 11)),
                       ],
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Selengkapnya >',
+                      'Learn More >',
                       style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -513,7 +548,7 @@ class _VenuePageState extends State<VenuePage> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Pilih jadwal booking:',
+            'Choose booking schedule:',
             style: TextStyle(fontSize: 11, color: Colors.grey),
           ),
           const SizedBox(height: 8),

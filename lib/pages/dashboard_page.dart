@@ -27,17 +27,17 @@ class _DashboardPageState extends State<DashboardPage> {
   String _selectedCategory = 'Semua';
 
   static const List<CategoryItem> _categories = [
-    CategoryItem('Semua'),
+    CategoryItem('All'),
     CategoryItem('Favorite', Icons.bookmark_outline),
     CategoryItem('Mini Soccer', Icons.sports_soccer),
-    CategoryItem('Sepak Bola', Icons.sports_soccer),
+    CategoryItem('Soccer', Icons.sports_soccer),
   ];
 
   static String _monthName(int month) {
     const names = [
       '',
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
     return names[month];
   }
@@ -79,7 +79,7 @@ class _DashboardPageState extends State<DashboardPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
-            label: 'Beranda',
+            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.stadium_outlined),
@@ -89,12 +89,12 @@ class _DashboardPageState extends State<DashboardPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.sports_basketball_outlined),
             activeIcon: Icon(Icons.sports_basketball),
-            label: 'Aktivitas',
+            label: 'Activities',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
-            label: 'Akun',
+            label: 'Account',
           ),
         ],
         currentIndex: _selectedIndex,
@@ -128,12 +128,12 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Halo, ${widget.username}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text('Hello, ${widget.username}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       Row(
                         children: [
                           Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
-                          Text('Lokasimu', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                          Text('Your Location', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                         ],
                       ),
                     ],
@@ -189,13 +189,13 @@ class _DashboardPageState extends State<DashboardPage> {
                   text: const TextSpan(
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
                     children: [
-                      TextSpan(text: 'Rekomendasi '),
+                      TextSpan(text: 'Recommended '),
                       TextSpan(text: 'Venue', style: TextStyle(color: AppColors.primary)),
                     ],
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text('Temukan venue terbaik untuk bermain!', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                Text('Find the best venues to play!', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                 const SizedBox(height: 20),
                 _buildVenueCard(),
                 const SizedBox(height: 20),
@@ -217,7 +217,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildSearchBar() {
     return TextField(
       decoration: InputDecoration(
-        hintText: 'Cari Venue',
+        hintText: 'Search Venue',
         prefixIcon: const Icon(Icons.search),
         filled: true,
         fillColor: Colors.grey[100],
@@ -240,7 +240,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         GestureDetector(
           onTap: () => setState(() => _selectedDate = DateTime.now()),
-          child: const Text('Reset & Mulai Ulang', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
+          child: const Text('Reset & Restart', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
         ),
       ],
     );
@@ -282,7 +282,7 @@ class _DashboardPageState extends State<DashboardPage> {
             builder: (context) => BookingPage(
               username: widget.username,
               venueName: 'Bandung Elektrik Cigereleng Tennis Court',
-              venueType: 'Tenis',
+              venueType: 'Tennis',
               venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
               venueHours: '06:00 - 22:00',
             ),
@@ -310,9 +310,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 4),
                   _buildIconText(Icons.location_on, 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung'),
                   const SizedBox(height: 4),
-                  _buildIconText(Icons.sports_tennis, 'Tenis'),
+                  _buildIconText(Icons.sports_tennis, 'Tennis'),
                   const SizedBox(height: 8),
-                  const Text('Rp100.000 ~ Rp125.000', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
+                  const Text('IDR 100,000 ~ IDR 125,000', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
                 ],
               ),
             ),
@@ -330,7 +330,7 @@ class _DashboardPageState extends State<DashboardPage> {
         const SizedBox(width: 4),
         Text(Review.getAverageRating(venueName).toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
         const SizedBox(width: 4),
-        Text('(${Review.mockReviews.where((r) => r.venueName == venueName).length} ulasan)', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+        Text('(${Review.mockReviews.where((r) => r.venueName == venueName).length} reviews)', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
       ],
     );
   }
@@ -373,7 +373,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ],
             ),
             const SizedBox(height: 12),
-            const Text('Pilih jadwal booking:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const Text('Choose booking schedule:', style: TextStyle(fontSize: 11, color: Colors.grey)),
             const SizedBox(height: 8),
             _buildTimeSlotsRow(name),
           ],
@@ -399,15 +399,15 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
             const SizedBox(width: 4),
-            const Text('Tenis', style: TextStyle(color: Colors.grey, fontSize: 11)),
+            const Text('Tennis', style: TextStyle(color: Colors.grey, fontSize: 11)),
             const SizedBox(width: 10),
             Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
             const SizedBox(width: 4),
-            const Text('P 23 X L 10', style: TextStyle(color: Colors.grey, fontSize: 11)),
+            const Text('L 23 X W 10', style: TextStyle(color: Colors.grey, fontSize: 11)),
           ],
         ),
         const SizedBox(height: 4),
-        const Text('Selengkapnya >', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
+        const Text('Learn More >', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
       ],
     );
   }

@@ -36,7 +36,7 @@ class _BookingPageState extends State<BookingPage>
   DateTime _selectedDate = DateTime.now();
   final Set<String> _selectedSlots = {};
 
-  final List<String> _tabs = ['Pilih Jadwal', 'Service'];
+  final List<String> _tabs = ['Select Schedule', 'Service'];
 
   // Slot waktu
   final List<Map<String, dynamic>> _timeSlots = [
@@ -80,7 +80,7 @@ class _BookingPageState extends State<BookingPage>
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (m) => '${m[1]}.',
     );
-    return 'Rp$formatted';
+    return 'IDR $formatted';
   }
 
   int get _totalSelected => _selectedSlots.length;
@@ -93,8 +93,8 @@ class _BookingPageState extends State<BookingPage>
 
   String _getMonthName(DateTime date) {
     const months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return months[date.month - 1];
   }
@@ -148,7 +148,7 @@ class _BookingPageState extends State<BookingPage>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         final currentDayName = days[_selectedDate.weekday % 7];
         return SafeArea(
           child: Padding(
@@ -158,7 +158,7 @@ class _BookingPageState extends State<BookingPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Jam Operasional',
+                  'Operational Hours',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -168,16 +168,16 @@ class _BookingPageState extends State<BookingPage>
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 16),
-                _buildOperationalRow('Minggu', '06:00 - 22:00', currentDayName == 'Minggu'),
-                _buildOperationalRow('Senin', '06:00 - 22:00', currentDayName == 'Senin'),
-                _buildOperationalRow('Selasa', '06:00 - 22:00', currentDayName == 'Selasa'),
-                _buildOperationalRow('Rabu', '06:00 - 21:00', currentDayName == 'Rabu'),
-                _buildOperationalRow('Kamis', '06:00 - 22:00', currentDayName == 'Kamis'),
-                _buildOperationalRow('Jumat', '06:00 - 22:00', currentDayName == 'Jumat'),
-                _buildOperationalRow('Sabtu', '06:00 - 22:00', currentDayName == 'Sabtu'),
+                _buildOperationalRow('Sunday', '06:00 - 22:00', currentDayName == 'Sunday'),
+                _buildOperationalRow('Monday', '06:00 - 22:00', currentDayName == 'Monday'),
+                _buildOperationalRow('Tuesday', '06:00 - 22:00', currentDayName == 'Tuesday'),
+                _buildOperationalRow('Wednesday', '06:00 - 21:00', currentDayName == 'Wednesday'),
+                _buildOperationalRow('Thursday', '06:00 - 22:00', currentDayName == 'Thursday'),
+                _buildOperationalRow('Friday', '06:00 - 22:00', currentDayName == 'Friday'),
+                _buildOperationalRow('Saturday', '06:00 - 22:00', currentDayName == 'Saturday'),
                 const SizedBox(height: 16),
                 Text(
-                  '*Jam buka dapat berubah sewaktu-waktu',
+                  '*Opening hours may change at any time',
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.grey.shade500,
@@ -198,7 +198,7 @@ class _BookingPageState extends State<BookingPage>
                       ),
                     ),
                     child: const Text(
-                      'Oke, Kembali',
+                      'OK, Go Back',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -239,7 +239,7 @@ class _BookingPageState extends State<BookingPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Konfirmasi Pemesanan',
+              'Booking Confirmation',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -265,7 +265,7 @@ class _BookingPageState extends State<BookingPage>
                     size: 16, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
                 Text(
-                  '$_totalSelected slot waktu dipilih',
+                  '$_totalSelected time slots selected',
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ],
@@ -277,7 +277,7 @@ class _BookingPageState extends State<BookingPage>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Total Pembayaran',
+                  'Total Payment',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
@@ -338,7 +338,7 @@ class _BookingPageState extends State<BookingPage>
                         venueName: widget.venueName,
                         courtName: selectedCourts.join(', '),
                         date: dateStr,
-                        timeRange: '${selectedTimes.length} Slot Waktu (${selectedTimes.join(', ')})',
+                        timeRange: '${selectedTimes.length} Time Slots (${selectedTimes.join(', ')})',
                         price: _totalPrice,
                         individualSlots: individualSlots,
                       ),
@@ -349,7 +349,7 @@ class _BookingPageState extends State<BookingPage>
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Konfirmasi & Bayar',
+                child: const Text('Confirm & Pay',
                     style: TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16)),
               ),
@@ -453,7 +453,7 @@ class _BookingPageState extends State<BookingPage>
                                 _selectedSlots.clear();
                               }),
                               child: const Text(
-                                'Reset & Mulai Ulang',
+                                'Reset & Restart',
                                 style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
                               ),
                             ),
@@ -551,7 +551,7 @@ class _BookingPageState extends State<BookingPage>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '$_totalSelected slot dipilih',
+                          '$_totalSelected slots selected',
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -582,7 +582,7 @@ class _BookingPageState extends State<BookingPage>
                       ),
                     ),
                     child: const Text(
-                      'Pesan Sekarang',
+                      'Book Now',
                       style: TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 15),
                     ),
@@ -610,7 +610,7 @@ class _BookingPageState extends State<BookingPage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Ulasan Player',
+                'Player Reviews',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -692,7 +692,7 @@ class _BookingPageState extends State<BookingPage>
                 child: GestureDetector(
                   onTap: () => _showAllReviews(context, venueReviews),
                   child: Text(
-                    'Lihat Semua ${venueReviews.length} Ulasan',
+                    'Show All ${venueReviews.length} Reviews',
                     style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                 ),
@@ -732,7 +732,7 @@ class _BookingPageState extends State<BookingPage>
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Semua Ulasan',
+                  'All Reviews',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

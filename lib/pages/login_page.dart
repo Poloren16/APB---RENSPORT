@@ -23,7 +23,7 @@ class _LoginPageState extends State<LoginPage> {
     String password = _passwordController.text.trim();
 
     if (username.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Harap isi username dan password.');
+      setState(() => _errorMessage = 'Please enter username and password.');
       return;
     }
 
@@ -37,9 +37,9 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     } else if (account != null) {
-      setState(() => _errorMessage = 'Silakan login melalui portal Owner/Admin.');
+      setState(() => _errorMessage = 'Please log in via the Owner/Admin portal.');
     } else {
-      setState(() => _errorMessage = 'Username atau password salah.');
+      setState(() => _errorMessage = 'Incorrect username or password.');
     }
   }
 
@@ -220,7 +220,7 @@ class _LoginPageState extends State<LoginPage> {
                     );
                   },
                   child: const Text(
-                    'Are you a Venue Owner? Login Here',
+                    'Are you a Venue Owner? Login here',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
