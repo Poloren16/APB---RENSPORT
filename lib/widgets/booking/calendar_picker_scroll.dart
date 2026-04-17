@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 
-class CalendarPickerScroll extends StatelessWidget {
+class CalendarPickerScroll extends StatefulWidget {
   final DateTime selectedDate;
   final List<DateTime> weekDates;
   final ValueChanged<DateTime> onDateSelected;
@@ -15,6 +15,64 @@ class CalendarPickerScroll extends StatelessWidget {
     required this.onReset,
   });
 
+  @override
+  State<CalendarPickerScroll> createState() => _CalendarPickerScrollState();
+}
+
+class _CalendarPickerScrollState extends State<CalendarPickerScroll> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected(isAnimated: false));
+  }
+
+  @override
+  void didUpdateWidget(CalendarPickerScroll oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedDate != widget.selectedDate) {
+      _scrollToSelected();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToSelected({bool isAnimated = true}) {
+    if (!_scrollController.hasClients) return;
+
+    final index = widget.weekDates.indexWhere((date) =>
+        date.year == widget.selectedDate.year &&
+        date.month == widget.selectedDate.month &&
+        date.day == widget.selectedDate.day);
+
+    if (index != -1) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      // Item width (52) + margin (8) = 60
+      // Position center of item: (index * 60) + (52 / 2)
+      // Including container left padding: 16
+      // Total center position: 16 + index * 60 + 26 = index * 60 + 42
+      final offset = (index * 60.0 + 42.0) - (screenWidth / 2);
+
+      if (isAnimated) {
+        _scrollController.animateTo(
+          offset.clamp(0.0, _scrollController.position.maxScrollExtent),
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        _scrollController.jumpTo(
+          offset.clamp(0.0, _scrollController.position.maxScrollExtent),
+        );
+      }
+    }
+  }
+
   String _getDayName(DateTime date) {
     const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
     return days[date.weekday % 7];
@@ -22,8 +80,18 @@ class CalendarPickerScroll extends StatelessWidget {
 
   String _getMonthName(DateTime date) {
     const months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember'
     ];
     return months[date.month - 1];
   }
@@ -43,7 +111,7 @@ class CalendarPickerScroll extends StatelessWidget {
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
-                    initialDate: selectedDate,
+                    initialDate: widget.selectedDate,
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 60)),
                     builder: (context, child) {
@@ -58,7 +126,7 @@ class CalendarPickerScroll extends StatelessWidget {
                     },
                   );
                   if (picked != null) {
-                    onDateSelected(picked);
+                    widget.onDateSelected(picked);
                   }
                 },
                 child: Row(
@@ -67,7 +135,7 @@ class CalendarPickerScroll extends StatelessWidget {
                         color: AppColors.primary, size: 20),
                     const SizedBox(width: 6),
                     Text(
-                      _getMonthName(selectedDate),
+                      _getMonthName(widget.selectedDate),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -80,7 +148,7 @@ class CalendarPickerScroll extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: onReset,
+                onPressed: widget.onReset,
                 child: const Text(
                   'Reset & Mulai Ulang',
                   style: TextStyle(
@@ -97,31 +165,29 @@ class CalendarPickerScroll extends StatelessWidget {
           SizedBox(
             height: 72,
             child: ListView.builder(
+              controller: _scrollController,
               scrollDirection: Axis.horizontal,
-              itemCount: weekDates.length,
+              itemCount: widget.weekDates.length,
               itemBuilder: (context, index) {
-                final date = weekDates[index];
-                final isSelected = date.day == selectedDate.day &&
-                                   date.month == selectedDate.month &&
-                                   date.year == selectedDate.year;
+                final date = widget.weekDates[index];
+                final isSelected = date.day == widget.selectedDate.day &&
+                    date.month == widget.selectedDate.month &&
+                    date.year == widget.selectedDate.year;
                 final isToday = date.day == DateTime.now().day &&
-                                date.month == DateTime.now().month &&
-                                date.year == DateTime.now().year;
+                    date.month == DateTime.now().month &&
+                    date.year == DateTime.now().year;
 
                 return GestureDetector(
-                  onTap: () => onDateSelected(date),
+                  onTap: () => widget.onDateSelected(date),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     width: 52,
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary
-                          : Colors.transparent,
+                      color: isSelected ? AppColors.primary : Colors.transparent,
                       borderRadius: BorderRadius.circular(14),
                       border: isToday && !isSelected
-                          ? Border.all(
-                              color: AppColors.primary, width: 1.5)
+                          ? Border.all(color: AppColors.primary, width: 1.5)
                           : null,
                     ),
                     child: Column(
@@ -160,3 +226,4 @@ class CalendarPickerScroll extends StatelessWidget {
     );
   }
 }
+

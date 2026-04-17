@@ -1,34 +1,54 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-import 'dashboard_page.dart';
+import 'package:rensius/theme/app_colors.dart';
+import 'package:rensius/pages/dashboard_page.dart';
+import 'package:rensius/pages/admin/admin_dashboard_page.dart';
+import 'package:rensius/pages/owner/owner_register_page.dart';
+import 'package:rensius/data/auth_data.dart';
 
-class AdminLoginPage extends StatefulWidget {
-  const AdminLoginPage({super.key});
+class OwnerLoginPage extends StatefulWidget {
+  const OwnerLoginPage({super.key});
 
   @override
-  State<AdminLoginPage> createState() => _AdminLoginPageState();
+  State<OwnerLoginPage> createState() => _OwnerLoginPageState();
 }
 
-class _AdminLoginPageState extends State<AdminLoginPage> {
+
+class _OwnerLoginPageState extends State<OwnerLoginPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   String? _errorMessage;
 
   void _handleLogin() {
-    if (_usernameController.text == 'Admin' &&
-        _passwordController.text == 'Admin123') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              const DashboardPage(username: 'Admin', role: 'Admin'),
-        ),
-      );
+    String username = _usernameController.text.trim();
+    String password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Harap isi username dan password.');
+      return;
+    }
+
+    final account = GlobalAuthData.login(username, password);
+
+    if (account != null) {
+      if (account.role == 'Admin') {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const AdminDashboardPage()),
+          (route) => false,
+        );
+      } else if (account.role == 'Owner') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DashboardPage(username: account.applicantName, role: 'Owner'),
+          ),
+        );
+      } else {
+        setState(() => _errorMessage = 'Akun ini bukan kategori Owner/Admin.');
+      }
     } else {
-      setState(() {
-        _errorMessage = 'Invalid admin credentials.';
-      });
+      setState(() => _errorMessage = 'Username atau password salah.');
     }
   }
 
@@ -40,8 +60,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new,
-              color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -54,13 +73,13 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Icon(
-                  Icons.admin_panel_settings,
+                  Icons.business_center_rounded,
                   size: 80,
                   color: AppColors.primary,
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Venue Owner Portal',
+                  'Owner & Admin Portal',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
@@ -70,7 +89,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Login to manage your venues and bookings.',
+                  'Manage your venues, verification, and system settings.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -95,9 +114,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                 TextFormField(
                   controller: _usernameController,
                   decoration: const InputDecoration(
-                    hintText: 'Admin Username',
-                    prefixIcon: Icon(Icons.shield_outlined,
-                        color: AppColors.textSecondary),
+                    hintText: 'Username',
+                    prefixIcon: Icon(Icons.person_outline, color: AppColors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -105,14 +123,11 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Admin Password',
-                    prefixIcon: const Icon(Icons.lock_outline,
-                        color: AppColors.textSecondary),
+                    hintText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isPasswordVisible
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                        _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
                         color: AppColors.textSecondary,
                       ),
                       onPressed: () {
@@ -130,10 +145,36 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                     onPressed: _handleLogin,
                     child: const Text(
                       'Login',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Don't have an owner account?",
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const OwnerRegisterPage(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'Register as Owner',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

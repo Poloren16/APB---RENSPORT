@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-import 'register_page.dart';
-import 'dashboard_page.dart';
-import 'admin_login_page.dart';
+import 'package:rensius/theme/app_colors.dart';
+import 'package:rensius/pages/register_page.dart';
+import 'package:rensius/pages/dashboard_page.dart';
+import 'package:rensius/pages/owner/owner_login_page.dart';
+import 'package:rensius/data/auth_data.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,16 +16,31 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
+  String? _errorMessage;
 
   void _handleUserLogin() {
     String username = _usernameController.text.trim();
-    if (username.isEmpty) username = 'User';
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DashboardPage(username: username, role: 'End User'),
-      ),
-    );
+    String password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Harap isi username dan password.');
+      return;
+    }
+
+    final account = GlobalAuthData.login(username, password);
+
+    if (account != null && account.role == 'End User') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DashboardPage(username: account.applicantName, role: 'End User'),
+        ),
+      );
+    } else if (account != null) {
+      setState(() => _errorMessage = 'Silakan login melalui portal Owner/Admin.');
+    } else {
+      setState(() => _errorMessage = 'Username atau password salah.');
+    }
   }
 
   @override
@@ -74,6 +90,21 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 48),
                 
+                if (_errorMessage != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      border: Border.all(color: Colors.red.shade200),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+
                 // Login Form
                 const Text(
                   'Welcome Back',
@@ -185,7 +216,7 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const AdminLoginPage()),
+                      MaterialPageRoute(builder: (context) => const OwnerLoginPage()),
                     );
                   },
                   child: const Text(

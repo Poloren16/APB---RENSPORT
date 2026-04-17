@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'login_page.dart';
+import 'admin/admin_dashboard_page.dart';
 import 'management_venue.dart';
 
 class AkunPage extends StatelessWidget {
@@ -163,15 +164,23 @@ class AkunPage extends StatelessWidget {
                   onTap: () {},
                 ),
                 const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                if (role.toLowerCase() == 'admin' || role.toLowerCase() == 'superadmin') ...[
+                if (role.toLowerCase() == 'admin' || role.toLowerCase() == 'owner') ...[
                   _buildListTile(
-                    icon: Icons.stadium,
-                    title: 'Management Venue',
+                    icon: role.toLowerCase() == 'admin' ? Icons.admin_panel_settings : Icons.business_center,
+                    title: role.toLowerCase() == 'admin' ? 'Admin Dashboard' : 'Manajemen Venue',
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ManagementVenuePage()),
-                      );
+                      if (role.toLowerCase() == 'admin') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AdminDashboardPage()),
+                        );
+                      } else {
+                        // Owners go directly to venue management
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ManagementVenuePage()),
+                        );
+                      }
                     },
                   ),
                   const Divider(height: 1, color: Color(0xFFEEEEEE)),

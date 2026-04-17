@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
-import 'pages/login_page.dart';
-import 'theme/app_colors.dart';
+import 'package:rensius/pages/login_page.dart';
+import 'package:rensius/theme/app_colors.dart';
+import 'package:rensius/data/auth_data.dart';
+import 'package:rensius/data/verification_data.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Mock Database Persistence
+  await GlobalAuthData.init();
+  await GlobalVerificationData.init();
+  
   runApp(const RensiusApp());
 }
 

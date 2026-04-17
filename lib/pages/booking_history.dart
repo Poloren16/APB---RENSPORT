@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/review_model.dart';
 import '../utils/alert_utils.dart';
-import './receipt_page.dart';
+import 'package:rensius/pages/receipt_page.dart';
+import 'package:rensius/widgets/empty_state_widget.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   final String username;
@@ -169,8 +170,11 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                 controller: _tabController,
                 children: [
                   BookingHistoryPage.mockHistory.isEmpty
-                      ? _buildEmptyState(
-                          message: 'Belum ada daftar pesanan untukmu.')
+                      ? EmptyStateWidget(
+                          message: 'Belum ada daftar pesanan untukmu.',
+                          onActionPressed: () {},
+                          actionLabel: 'Buat Booking',
+                        )
                       : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           itemCount: BookingHistoryPage.mockHistory.length,
@@ -181,7 +185,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                           },
                         ),
                   BookingHistoryPage.mockPastHistory.isEmpty
-                      ? _buildEmptyState(
+                      ? const EmptyStateWidget(
                           message: 'Belum ada riwayat transaksi untukmu.')
                       : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -479,56 +483,6 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     );
   }
 
-  Widget _buildEmptyState({required String message}) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const _SportyEmptyIllustration(),
-            const SizedBox(height: 28),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Data akan muncul di sini ketika tersedia.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary.withValues(alpha: 0.7),
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 24),
-            OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Buat Booking'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary, width: 1.5),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showReviewDialog(BuildContext context, Map<String, dynamic> item, {Review? existingReview}) {
     int selectedRating = existingReview?.rating.toInt() ?? 0;
     final TextEditingController reviewController = TextEditingController(text: existingReview?.comment ?? '');
@@ -649,124 +603,6 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
           ],
         ),
       ),
-    );
-  }
-
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sporty Empty State Illustration with float animation
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _SportyEmptyIllustration extends StatefulWidget {
-  const _SportyEmptyIllustration();
-
-  @override
-  State<_SportyEmptyIllustration> createState() =>
-      _SportyEmptyIllustrationState();
-}
-
-class _SportyEmptyIllustrationState extends State<_SportyEmptyIllustration>
-    with TickerProviderStateMixin {
-  late AnimationController _floatController;
-  late AnimationController _pulseController;
-  late Animation<double> _floatAnimation;
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _shadowAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _floatController = AnimationController(
-      duration: const Duration(milliseconds: 2600),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _floatAnimation = Tween<double>(begin: -10.0, end: 10.0).animate(
-      CurvedAnimation(parent: _floatController, curve: Curves.easeInOut),
-    );
-
-    _pulseAnimation = Tween<double>(begin: 0.92, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    _shadowAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _floatController, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _floatController.dispose();
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([_floatAnimation, _pulseAnimation]),
-      builder: (context, _) {
-        return SizedBox(
-          width: 220,
-          height: 220,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Pulsing background glow
-              Transform.scale(
-                scale: _pulseAnimation.value,
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        AppColors.primary.withValues(alpha: 0.10),
-                        AppColors.primary.withValues(alpha: 0.0),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Floating illustration image
-              Transform.translate(
-                offset: Offset(0, _floatAnimation.value),
-                child: Image.asset(
-                  'assets/images/leaf.png',
-                  width: 190,
-                  height: 190,
-                  fit: BoxFit.contain,
-                ),
-              ),
-
-              // Dynamic shadow
-              Positioned(
-                bottom: 6,
-                child: Transform.scale(
-                  scaleX: _shadowAnimation.value,
-                  child: Container(
-                    width: 80,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(50),
-                      color: AppColors.primary.withValues(alpha: 0.10),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

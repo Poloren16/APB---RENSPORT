@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'package:rensius/data/auth_data.dart';
+import 'package:rensius/utils/alert_utils.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -10,6 +12,57 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   bool _isPasswordVisible = false;
+  
+  final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _handleRegister() {
+    String name = _nameController.text.trim();
+    String username = _usernameController.text.trim();
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+    String confirmPass = _confirmPasswordController.text.trim();
+
+    if (name.isEmpty || username.isEmpty || email.isEmpty || password.isEmpty) {
+      AlertUtils.showToast(context, 'Harap isi semua field.', isSuccess: false);
+      return;
+    }
+
+    if (password != confirmPass) {
+      AlertUtils.showToast(context, 'Konfirmasi password tidak cocok.', isSuccess: false);
+      return;
+    }
+
+    if (GlobalAuthData.usernameExists(username)) {
+      AlertUtils.showToast(context, 'Username sudah digunakan.', isSuccess: false);
+      return;
+    }
+
+    // Register to mock database
+    final newAccount = UserAccount(
+      username: username,
+      password: password,
+      role: 'End User',
+      applicantName: name,
+    );
+    GlobalAuthData.registerAccount(newAccount);
+
+    AlertUtils.showToast(context, 'Registrasi Berhasil! Silakan Login.');
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +103,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 
                 // Form Fields
                 TextFormField(
+                  controller: _nameController,
                   decoration: const InputDecoration(
                     hintText: 'Full Name',
                     prefixIcon: Icon(Icons.person_outline, color: AppColors.textSecondary),
@@ -58,6 +112,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 16),
                 
                 TextFormField(
+                  controller: _usernameController,
                   decoration: const InputDecoration(
                     hintText: 'Username',
                     prefixIcon: Icon(Icons.badge_outlined, color: AppColors.textSecondary),
@@ -66,6 +121,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 16),
                 
                 TextFormField(
+                  controller: _emailController,
                   decoration: const InputDecoration(
                     hintText: 'Email Address',
                     prefixIcon: Icon(Icons.email_outlined, color: AppColors.textSecondary),
@@ -75,6 +131,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 16),
                 
                 TextFormField(
+                  controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
                     hintText: 'Password',
@@ -95,6 +152,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 16),
                 
                 TextFormField(
+                  controller: _confirmPasswordController,
                   obscureText: !_isPasswordVisible,
                   decoration: const InputDecoration(
                     hintText: 'Confirm Password',
@@ -107,7 +165,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: _handleRegister,
                     child: const Text(
                       'Sign Up',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

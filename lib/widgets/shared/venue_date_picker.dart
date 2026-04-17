@@ -3,7 +3,7 @@ import '../../theme/app_colors.dart';
 
 /// Widget kalender horizontal yang dapat digunakan ulang di berbagai halaman.
 /// Menampilkan 14 hari dari awal minggu ini secara dinamis.
-class VenueDatePicker extends StatelessWidget {
+class VenueDatePicker extends StatefulWidget {
   final DateTime selectedDate;
   final ValueChanged<DateTime> onDateSelected;
 
@@ -12,6 +12,9 @@ class VenueDatePicker extends StatelessWidget {
     required this.selectedDate,
     required this.onDateSelected,
   });
+
+  @override
+  State<VenueDatePicker> createState() => _VenueDatePickerState();
 
   static List<DateTime> getWeekDates() {
     final now = DateTime.now();
@@ -26,25 +29,77 @@ class VenueDatePicker extends StatelessWidget {
 
   static bool isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+class _VenueDatePickerState extends State<VenueDatePicker> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected(isAnimated: false));
+  }
+
+  @override
+  void didUpdateWidget(VenueDatePicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!VenueDatePicker.isSameDay(oldWidget.selectedDate, widget.selectedDate)) {
+      _scrollToSelected();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToSelected({bool isAnimated = true}) {
+    if (!_scrollController.hasClients) return;
+
+    final dates = VenueDatePicker.getWeekDates();
+    final index = dates.indexWhere((date) => VenueDatePicker.isSameDay(date, widget.selectedDate));
+
+    if (index != -1) {
+      final viewportWidth = _scrollController.position.viewportDimension;
+      // Item width (55) + margin (12) = 67
+      // Center of item: (index * 67) + (55 / 2) = index * 67 + 27.5
+      final offset = (index * 67.0 + 27.5) - (viewportWidth / 2);
+
+      if (isAnimated) {
+        _scrollController.animateTo(
+          offset.clamp(0.0, _scrollController.position.maxScrollExtent),
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        _scrollController.jumpTo(
+          offset.clamp(0.0, _scrollController.position.maxScrollExtent),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final dates = getWeekDates();
+    final dates = VenueDatePicker.getWeekDates();
     return SizedBox(
       height: 70,
       child: ListView.builder(
+        controller: _scrollController,
         scrollDirection: Axis.horizontal,
         itemCount: dates.length,
         itemBuilder: (context, index) {
           final date = dates[index];
-          final isSelected = isSameDay(date, selectedDate);
+          final isSelected = VenueDatePicker.isSameDay(date, widget.selectedDate);
           
           final now = DateTime.now();
           final today = DateTime(now.year, now.month, now.day);
           final isPast = date.isBefore(today);
 
           return GestureDetector(
-            onTap: isPast ? null : () => onDateSelected(date),
+            onTap: isPast ? null : () => widget.onDateSelected(date),
             child: Opacity(
               opacity: isPast ? 0.4 : 1.0,
               child: Container(
@@ -63,7 +118,7 @@ class VenueDatePicker extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      getDayName(date),
+                      VenueDatePicker.getDayName(date),
                       style: TextStyle(
                         color: isSelected ? AppColors.primary : Colors.grey,
                         fontSize: 12,
@@ -87,3 +142,4 @@ class VenueDatePicker extends StatelessWidget {
     );
   }
 }
+

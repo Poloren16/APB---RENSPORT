@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-import '../data/venue_data.dart';
-import '../utils/alert_utils.dart';
+import 'package:rensius/theme/app_colors.dart';
+import 'package:rensius/data/venue_data.dart';
+import 'package:rensius/utils/alert_utils.dart';
 
 class ManagementVenuePage extends StatefulWidget {
   const ManagementVenuePage({super.key});
