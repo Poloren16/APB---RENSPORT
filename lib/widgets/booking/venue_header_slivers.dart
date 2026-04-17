@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../models/review_model.dart';
 import '../../data/venue_data.dart';
+import '../../pages/chat_detail_page.dart';
 
 class VenueHeaderSlivers extends StatefulWidget {
+  final String username;
   final String venueName;
   final String venueType;
   final String venueHours;
@@ -13,6 +15,7 @@ class VenueHeaderSlivers extends StatefulWidget {
 
   const VenueHeaderSlivers({
     super.key,
+    required this.username,
     required this.venueName,
     required this.venueType,
     required this.venueHours,
@@ -143,6 +146,22 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                       duration: const Duration(seconds: 1),
                     ),
                   );
+                },
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => ChatDetailPage(
+                    username: widget.username,
+                    venueName: widget.venueName,
+                  )));
                 },
               ),
             ),

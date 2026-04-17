@@ -371,6 +371,7 @@ class _BookingPageState extends State<BookingPage>
             child: CustomScrollView(
               slivers: [
                 VenueHeaderSlivers(
+                  username: widget.username,
                   venueName: widget.venueName,
                   venueType: widget.venueType,
                   venueHours: widget.venueHours,

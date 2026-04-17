@@ -9,6 +9,7 @@ import '../widgets/shared/venue_date_picker.dart';
 import '../widgets/shared/venue_category_chips.dart';
 import 'booking_page.dart';
 import 'court_detail_page.dart';
+import 'chat_page.dart';
 import '../models/review_model.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -143,7 +144,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const NotifikasiPage()));
                 }),
                 const SizedBox(width: 8),
-                _buildCircleIcon(Icons.chat_bubble_outline, () {}),
+                _buildCircleIcon(Icons.chat_bubble_outline, () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => ChatPage(username: widget.username, role: widget.role)));
+                }),
               ],
             ),
           ),
