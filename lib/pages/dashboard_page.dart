@@ -11,6 +11,8 @@ import 'booking_page.dart';
 import 'court_detail_page.dart';
 import 'chat_page.dart';
 import '../models/review_model.dart';
+import '../data/chat_data.dart';
+import '../data/notification_data.dart';
 
 class DashboardPage extends StatefulWidget {
   final String username;
@@ -156,13 +158,65 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
                 ),
-                _buildCircleIcon(Icons.notifications_outlined, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const NotifikasiPage()));
-                }),
+                Stack(
+                  children: [
+                    _buildCircleIcon(Icons.notifications_outlined, () async {
+                      await Navigator.push(context, MaterialPageRoute(builder: (context) => NotifikasiPage(username: widget.username, role: widget.role)));
+                      setState(() {});
+                    }),
+                    if (GlobalNotificationData.getUnreadCount(widget.username, widget.role) > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            GlobalNotificationData.getUnreadCount(widget.username, widget.role).toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 const SizedBox(width: 8),
-                _buildCircleIcon(Icons.chat_bubble_outline, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => ChatPage(username: widget.username, role: widget.role)));
-                }),
+                Stack(
+                  children: [
+                    _buildCircleIcon(Icons.chat_bubble_outline, () async {
+                      await Navigator.push(context, MaterialPageRoute(builder: (context) => ChatPage(username: widget.username, role: widget.role)));
+                      setState(() {}); // Refresh badge when returning
+                    }),
+                    if (GlobalChatData.getTotalUnreadCount(widget.username, widget.role) > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            GlobalChatData.getTotalUnreadCount(widget.username, widget.role).toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),

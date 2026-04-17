@@ -1,54 +1,41 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../data/notification_data.dart';
 
-class NotifikasiPage extends StatelessWidget {
-  const NotifikasiPage({super.key});
+class NotifikasiPage extends StatefulWidget {
+  final String username;
+  final String role;
+
+  const NotifikasiPage({
+    super.key,
+    required this.username,
+    required this.role,
+  });
+
+  @override
+  State<NotifikasiPage> createState() => _NotifikasiPageState();
+}
+
+class _NotifikasiPageState extends State<NotifikasiPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Mark as read when opened
+    GlobalNotificationData.markAllAsRead(widget.username, widget.role);
+  }
+
+  String _formatTime(DateTime time) {
+    if (DateTime.now().difference(time).inDays == 0 && DateTime.now().day == time.day) {
+      return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    }
+    return '${time.day}/${time.month}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Dummy notification data matching the context of a sports app
-    final List<Map<String, dynamic>> notifications = [
-      {
-        'title': 'Booking Confirmed!',
-        'message': 'Your booking at Gor Laga Tangkas for Futsal is confirmed.',
-        'time': '2 mins ago',
-        'icon': Icons.check_circle_outline,
-        'color': AppColors.accent,
-        'isRead': false,
-      },
-      {
-        'title': 'New Match Request',
-        'message': 'Budi sent you a request to join the Badminton match.',
-        'time': '1 hour ago',
-        'icon': Icons.person_add_alt_1,
-        'color': AppColors.primary,
-        'isRead': false,
-      },
-      {
-        'title': 'Reminder: Upcoming Match',
-        'message': 'You have a Basketball match scheduled in 2 hours at GOR Padjadjaran.',
-        'time': '2 hours ago',
-        'icon': Icons.sports_basketball,
-        'color': AppColors.primary,
-        'isRead': true,
-      },
-      {
-        'title': 'Promo 50% Off!',
-        'message': 'Book a venue this weekend and get 50% off. Limited time only!',
-        'time': '1 day ago',
-        'icon': Icons.local_offer_outlined,
-        'color': Colors.redAccent,
-        'isRead': true,
-      },
-      {
-        'title': 'Review Your Experience',
-        'message': 'How was your recent visit to Gor Saparua? Leave a review!',
-        'time': '2 days ago',
-        'icon': Icons.star_rate_outlined,
-        'color': Colors.amber,
-        'isRead': true,
-      },
-    ];
+    final List<AppNotification> notifications = 
+        GlobalNotificationData.getNotificationsForUser(widget.username, widget.role);
+
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -80,7 +67,7 @@ class NotifikasiPage extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: notif['isRead']
+                      color: notif.isRead
                           ? AppColors.surface
                           : AppColors.secondary.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(12),
@@ -95,17 +82,17 @@ class NotifikasiPage extends StatelessWidget {
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(16),
                       leading: CircleAvatar(
-                        backgroundColor: notif['color'].withOpacity(0.1),
+                        backgroundColor: notif.color.withOpacity(0.1),
                         radius: 24,
                         child: Icon(
-                          notif['icon'],
-                          color: notif['color'],
+                          notif.icon,
+                          color: notif.color,
                         ),
                       ),
                       title: Text(
-                        notif['title'],
+                        notif.title,
                         style: TextStyle(
-                          fontWeight: notif['isRead']
+                          fontWeight: notif.isRead
                               ? FontWeight.w600
                               : FontWeight.bold,
                           color: AppColors.textPrimary,
@@ -118,7 +105,7 @@ class NotifikasiPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              notif['message'],
+                              notif.message,
                               style: const TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 14,
@@ -127,7 +114,7 @@ class NotifikasiPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              notif['time'],
+                              _formatTime(notif.timestamp),
                               style: TextStyle(
                                 color: AppColors.textSecondary.withValues(alpha: 0.8),
                                 fontSize: 12,

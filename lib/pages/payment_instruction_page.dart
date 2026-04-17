@@ -6,6 +6,7 @@ import './receipt_page.dart';
 import 'booking_history.dart';
 import '../utils/booking_utils.dart';
 import './dashboard_page.dart';
+import '../data/notification_data.dart';
 
 class PaymentInstructionPage extends StatefulWidget {
   final String paymentMethodId;
@@ -77,6 +78,43 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
     }
 
     BookingHistoryPage.mockHistory.insert(0, newBooking);
+
+    // Notify End User
+    GlobalNotificationData.addNotification(
+      AppNotification(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        username: widget.username,
+        title: 'Booking Confirmed!',
+        message: 'Pemesanan lapangan berhasil dilakukan',
+        timestamp: DateTime.now(),
+        icon: Icons.check_circle_outline,
+        color: AppColors.accent,
+      )
+    );
+    GlobalNotificationData.addNotification(
+      AppNotification(
+        id: '${DateTime.now().millisecondsSinceEpoch}_rem',
+        username: widget.username,
+        title: 'Reminder Jadwal',
+        message: 'Reminder 1 jam 15 menit lagi, jam pemesanan lapangan sudah berjalan',
+        timestamp: DateTime.now(),
+        icon: Icons.access_time_rounded,
+        color: AppColors.primary,
+      )
+    );
+
+    // Notify Admin
+    GlobalNotificationData.addNotification(
+      AppNotification(
+        id: '${DateTime.now().millisecondsSinceEpoch}_admin',
+        username: 'admin',
+        title: 'Pemesanan Baru',
+        message: '${widget.username} telah memesan lapangan di ${widget.venueName}',
+        timestamp: DateTime.now(),
+        icon: Icons.receipt_long,
+        color: AppColors.accent,
+      )
+    );
 
     AlertUtils.showResultDialog(
       context,

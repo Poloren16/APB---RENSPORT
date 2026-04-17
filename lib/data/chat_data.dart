@@ -23,20 +23,7 @@ class ChatThread {
 }
 
 class GlobalChatData {
-  static List<ChatThread> threads = [
-    ChatThread(
-      username: 'user',
-      venueName: 'Bandung Elektrik Cigereleng Tennis Court',
-      unreadCounts: {'user': 0, 'owner': 1},
-      messages: [
-        ChatMessage(
-          sender: 'user',
-          text: 'Halo, apakah lapangan A tersedia untuk besok sore?',
-          timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-        ),
-      ],
-    ),
-  ];
+  static List<ChatThread> threads = [];
 
   static ChatThread getThread(String username, String venueName) {
     try {
@@ -80,5 +67,20 @@ class GlobalChatData {
     } else {
       thread.unreadCounts['user'] = 0;
     }
+  }
+
+  static int getTotalUnreadCount(String username, String role) {
+    bool isOwner = role == 'Owner' || role == 'Admin';
+    int total = 0;
+    for (var t in threads) {
+      if (isOwner) {
+        total += t.unreadCounts['owner'] ?? 0;
+      } else {
+        if (t.username == username) {
+          total += t.unreadCounts['user'] ?? 0;
+        }
+      }
+    }
+    return total;
   }
 }
