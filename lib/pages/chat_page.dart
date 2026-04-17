@@ -48,7 +48,7 @@ class _ChatPageState extends State<ChatPage> {
       body: displayThreads.isEmpty
           ? const Center(
               child: Text(
-                'Belum ada pesan',
+                'No messages yet',
                 style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
             )

@@ -106,11 +106,11 @@ class _PaymentPageState extends State<PaymentPage> {
                   _buildAddServiceButton(),
                   const SizedBox(height: 20),
 
-                  // Detail Transaksi
+                  // Transaction Details
                   _buildTransactionDetail(),
                   const SizedBox(height: 16),
 
-                  // Metode Pembayaran
+                  // Payment Method
                   _buildPaymentMethodSection(),
                   const SizedBox(height: 20),
                 ],
@@ -313,7 +313,7 @@ class _PaymentPageState extends State<PaymentPage> {
                     trailingPrice: widget.price),
                 const SizedBox(height: 14),
 
-                // Additional Service Detail
+                // Additional Service Details
                 const SizedBox(height: 14),
                 const Text('Additional Service',
                     style: TextStyle(
@@ -469,7 +469,7 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  // ── Transaction Detail ──────────────────────────────────
+  // ── Transaction Details ──────────────────────────────────
 
   Widget _buildTransactionDetail() {
     const platformFee = 0;

@@ -195,18 +195,6 @@ class VenueContactSection extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       )),
-                  GestureDetector(
-                    onTap: () {},
-                    child: const Row(children: [
-                      Text('More About Venue',
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600)),
-                      Icon(Icons.chevron_right,
-                          size: 15, color: AppColors.primary),
-                    ]),
-                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -223,11 +211,6 @@ class VenueContactSection extends StatelessWidget {
                       icon: Icons.camera_alt,
                       iconColor: const Color(0xFFE1306C),
                       label: 'Instagram',
-                      onTap: () {}),
-                  _contactButton(
-                      icon: Icons.qr_code,
-                      iconColor: AppColors.textPrimary,
-                      label: 'QR Code',
                       onTap: () {}),
                 ],
               ),

@@ -229,7 +229,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 child: TextField(
                   controller: _messageController,
                   decoration: const InputDecoration(
-                    hintText: 'Tulis pesan...',
+                    hintText: 'Type a message...',
                     hintStyle: TextStyle(fontSize: 14),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),

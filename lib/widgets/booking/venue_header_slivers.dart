@@ -168,17 +168,6 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                 },
               ),
             ),
-            Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.share, color: Colors.white),
-                onPressed: () {},
-              ),
-            ),
           ],
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(

@@ -91,7 +91,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
@@ -238,12 +238,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
           color: Colors.black87,
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.share_rounded, color: _accent),
-          onPressed: () {},
-        ),
-      ],
+      actions: const [],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(color: Colors.grey.shade200, height: 1),
@@ -366,12 +361,6 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 'What Players say about this court',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
-              if (!hasReviewed)
-                TextButton.icon(
-                  onPressed: () => _showReviewDialog(context),
-                  icon: const Icon(Icons.rate_review_outlined, size: 16, color: _accent),
-                  label: const Text('Write a Review', style: TextStyle(fontSize: 12, color: _accent, fontWeight: FontWeight.bold)),
-                ),
             ],
           ),
           const SizedBox(height: 10),
@@ -392,21 +381,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
             ],
           ),
           const SizedBox(height: 16),
-          Builder(builder: (context) {
-            final existingReview = Review.findUserReview(widget.username, widget.venueName);
-            final hasReviewed = existingReview != null;
-            return OutlinedButton.icon(
-              onPressed: () => _showReviewDialog(context, existingReview: existingReview),
-              icon: Icon(hasReviewed ? Icons.edit_note_rounded : Icons.star_outline_rounded, size: 20),
-              label: Text(hasReviewed ? 'Edit Review' : 'Give Review'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _accent,
-                side: const BorderSide(color: _accent, width: 1.5),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            );
-          }),
+          const SizedBox(height: 8),
         ],
       ),
     );
@@ -540,7 +515,6 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 dividerColor: Colors.transparent,
                 tabs: const [
                   Tab(text: 'Daily'),
-                  Tab(text: 'Membership'),
                   Tab(text: 'Service'),
                 ],
               ),
@@ -551,7 +525,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
           const Divider(height: 1),
           const SizedBox(height: 12),
 
-          if (_tabController.index < 2) ...[
+          if (_tabController.index == 0) ...[
             // "Choose Booking Schedule" header
             const Text(
               'Choose Booking Schedule',

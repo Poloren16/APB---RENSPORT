@@ -9,7 +9,7 @@ class CategoryItem {
 }
 
 /// Widget chip kategori horizontal yang dapat digunakan ulang.
-/// Dapat menerima daftar [CategoryItem] dan memanggil [onCategorySelected]
+/// Can receive a list of [CategoryItem] and calls [onCategorySelected]
 /// setiap kali user memilih kategori baru.
 class VenueCategoryChips extends StatelessWidget {
   final List<CategoryItem> categories;

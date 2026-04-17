@@ -28,12 +28,7 @@ class ReceiptPage extends StatelessWidget {
           style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined, color: AppColors.primary, size: 22),
-            onPressed: () {},
-          ),
-        ],
+        actions: const [],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
