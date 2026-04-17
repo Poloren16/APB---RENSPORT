@@ -23,10 +23,10 @@ class _VenuePageState extends State<VenuePage> {
   late String _selectedCategory;
 
   static const List<CategoryItem> _categories = [
-    CategoryItem('All'),
+    CategoryItem('Semua'),
     CategoryItem('Favorite', Icons.bookmark_outline),
     CategoryItem('Mini Soccer', Icons.sports_soccer),
-    CategoryItem('Soccer', Icons.sports_soccer),
+    CategoryItem('Sepak Bola', Icons.sports_soccer),
   ];
 
   @override
@@ -38,8 +38,8 @@ class _VenuePageState extends State<VenuePage> {
   static String _monthName(int month) {
     const names = [
       '',
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
     ];
     return names[month];
   }
@@ -47,22 +47,18 @@ class _VenuePageState extends State<VenuePage> {
   @override
   Widget build(BuildContext context) {
     bool isShowingFavorites = _selectedCategory == 'Favorite';
-    List<Map<String, dynamic>> displayedVenues = isShowingFavorites 
-        ? GlobalVenueData.favorites 
-        : [
-            {
-              'name': 'Bandung Elektrik Cigereleng Tennis Court',
-              'type': 'Tenis',
-              'address': 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
-              'hours': '06:00 - 22:00',
-              'price': 'Rp125.000 ~ Rp175.000',
-              'distance': '3 km',
-              'courts': [
-                {'name': 'BEC Tennis Court Lap.A', 'type': 'Tenis', 'size': 'P 23 X L 10'},
-                {'name': 'BEC Tennis Court Lap.B', 'type': 'Tenis', 'size': 'P 23 X L 10'},
-              ]
-            }
-          ];
+    
+    // Logic to determine which venues to show
+    List<Map<String, dynamic>> displayedVenues;
+    if (isShowingFavorites) {
+      displayedVenues = GlobalVenueData.favorites;
+    } else if (_selectedCategory == 'Semua') {
+      displayedVenues = GlobalVenueData.venues;
+    } else {
+      displayedVenues = GlobalVenueData.venues
+          .where((v) => v['type'] == _selectedCategory)
+          .toList();
+    }
 
     return SingleChildScrollView(
       child: Column(
@@ -90,8 +86,6 @@ class _VenuePageState extends State<VenuePage> {
                       child: Text(
                         isShowingFavorites ? 'Venue Favorit Kamu' : 'Temukan Beragam Venue!',
                         style: const TextStyle(
-                        'Discover Various Venues!',
-                        style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -144,7 +138,7 @@ class _VenuePageState extends State<VenuePage> {
                   ),
                   child: TextField(
                     decoration: InputDecoration(
-                      hintText: 'Search Venue',
+                      hintText: 'Cari Venue',
                       prefixIcon: const Icon(Icons.search),
                       filled: true,
                       fillColor: Colors.white,
@@ -200,7 +194,7 @@ class _VenuePageState extends State<VenuePage> {
                     GestureDetector(
                       onTap: () => setState(() => _selectedDate = DateTime.now()),
                       child: const Text(
-                        'Reset & Restart',
+                        'Reset & Mulai Ulang',
                         style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -240,14 +234,21 @@ class _VenuePageState extends State<VenuePage> {
                   style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
                 const SizedBox(height: 20),
-                if (isShowingFavorites && displayedVenues.isEmpty)
-                  EmptyStateWidget(
-                    message: 'Belum ada venue favorit',
-                    subMessage: 'Tandai venue favoritmu untuk menemukannya di sini dengan mudah!',
-                    onActionPressed: () => setState(() => _selectedCategory = 'Semua'),
-                    actionLabel: 'Cari Venue',
-                    actionIcon: Icons.search_rounded,
-                  )
+                if (displayedVenues.isEmpty)
+                  isShowingFavorites 
+                    ? EmptyStateWidget(
+                        message: 'Belum ada venue favorit',
+                        subMessage: 'Tandai venue favoritmu untuk menemukannya di sini dengan mudah!',
+                        onActionPressed: () => setState(() => _selectedCategory = 'Semua'),
+                        actionLabel: 'Cari Venue',
+                        actionIcon: Icons.search_rounded,
+                      )
+                    : Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40),
+                          child: Text('Tidak ada venue ditemukan untuk kategori ini.', style: TextStyle(color: Colors.grey.shade400)),
+                        ),
+                      )
                 else
                   ListView.separated(
                     shrinkWrap: true,
@@ -303,11 +304,6 @@ class _VenuePageState extends State<VenuePage> {
                         venueType: venue['type'] ?? 'Olahraga',
                         venueAddress: venue['address'] ?? venue['location'] ?? '',
                         venueHours: venue['hours'] ?? '06:00 - 22:00',
-                      builder: (context) => const BookingPage(
-                        venueName: 'Bandung Elektrik Cigereleng Tennis Court',
-                        venueType: 'Tennis',
-                        venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
-                        venueHours: '06:00 - 22:00',
                       ),
                     ),
                   );
@@ -410,9 +406,6 @@ class _VenuePageState extends State<VenuePage> {
                                 Text(
                                   venue['type'] ?? 'Olahraga',
                                   style: const TextStyle(color: Colors.grey, fontSize: 11),
-                                const Text(
-                                  'Tennis',
-                                  style: TextStyle(color: Colors.grey, fontSize: 11),
                                 ),
                               ],
                             ),
@@ -420,9 +413,6 @@ class _VenuePageState extends State<VenuePage> {
                             Text(
                               venue['price'] ?? 'Hubungi Pengelola',
                               style: const TextStyle(
-                            const Text(
-                              'IDR 125,000 ~ IDR 175,000',
-                              style: TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -458,21 +448,6 @@ class _VenuePageState extends State<VenuePage> {
   }
 
   void _goToCourtDetail(String venueName, String courtName, String sportType, {String? initialSlot}) {
-  void _goToBooking() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const BookingPage(
-          venueName: 'Bandung Elektrik Cigereleng Tennis Court',
-          venueType: 'Tennis',
-          venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
-          venueHours: '06:00 - 22:00',
-        ),
-      ),
-    );
-  }
-
-  void _goToCourtDetail(String courtName, {String? initialSlot}) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -480,8 +455,6 @@ class _VenuePageState extends State<VenuePage> {
           courtName: courtName,
           venueName: venueName,
           sportType: sportType,
-          venueName: 'Bandung Elektrik Cigereleng Tennis Court',
-          sportType: 'Tennis',
           initialSelectedSlot: initialSlot,
         ),
       ),
@@ -529,16 +502,11 @@ class _VenuePageState extends State<VenuePage> {
                         Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
                         const SizedBox(width: 4),
                         Text(court['size'] ?? 'Standar', style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                        const Text('Tennis', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                        const SizedBox(width: 10),
-                        Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
-                        const SizedBox(width: 4),
-                        const Text('L 23 X W 10', style: TextStyle(color: Colors.grey, fontSize: 11)),
                       ],
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Learn More >',
+                      'Selengkapnya >',
                       style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -548,7 +516,7 @@ class _VenuePageState extends State<VenuePage> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Choose booking schedule:',
+            'Pilih jadwal booking:',
             style: TextStyle(fontSize: 11, color: Colors.grey),
           ),
           const SizedBox(height: 8),
@@ -556,15 +524,15 @@ class _VenuePageState extends State<VenuePage> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildTimeSlot(venueName, courtName, '08:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, '10:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, '11:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, '12:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, '13:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, '14:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, '16:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, '18:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, '20:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, sportType, '08:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, sportType, '10:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, sportType, '11:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, sportType, '12:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, sportType, '13:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, sportType, '14:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, sportType, '16:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, sportType, '18:00', isAvailable: true),
+                _buildTimeSlot(venueName, courtName, sportType, '20:00', isAvailable: true),
               ],
             ),
           ),
@@ -574,7 +542,7 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildTimeSlot(String venueName, String courtName, String time, {required bool isAvailable}) {
+  Widget _buildTimeSlot(String venueName, String courtName, String sportType, String time, {required bool isAvailable}) {
     final dateStr = BookingUtils.formatDate(_selectedDate);
     final isBooked = BookingUtils.isSlotBooked(
       venueName: venueName,
@@ -592,7 +560,7 @@ class _VenuePageState extends State<VenuePage> {
 
     return GestureDetector(
       onTap: effectiveAvailable
-          ? () => _goToCourtDetail(venueName, courtName, 'Tenis', initialSlot: timeRange)
+          ? () => _goToCourtDetail(venueName, courtName, sportType, initialSlot: timeRange)
           : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
