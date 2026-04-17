@@ -58,7 +58,6 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
             title: 'Bahasa',
             subtitle: selectedLanguage,
             onTap: _showLanguagePicker,
-            iconColor: Colors.red,
           ),
           const SizedBox(height: 16),
           _buildItem(
@@ -245,7 +244,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
 
   Widget _buildSwitchTile(String title, IconData icon, bool value, ValueChanged<bool> onChanged) {
     return ListTile(
-      leading: Icon(icon, color: Colors.grey.shade400),
+      leading: Icon(icon, color: AppColors.primary),
       title: Text(title, style: const TextStyle(fontSize: 16, color: Colors.black87)),
       trailing: Switch(
         value: value,
@@ -264,7 +263,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
     Color? iconColor,
   }) {
     return ListTile(
-      leading: Icon(icon, color: iconColor ?? Colors.grey.shade400),
+      leading: Icon(icon, color: iconColor ?? AppColors.primary),
       title: Text(title, style: const TextStyle(fontSize: 16, color: Colors.black87)),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 4.0),
