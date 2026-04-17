@@ -21,7 +21,7 @@ class BookingPage extends StatefulWidget {
     super.key,
     this.username = 'User',
     this.venueName = 'Bandung Elektrik Cigereleng Tennis Court',
-    this.venueType = 'Tenis',
+    this.venueType = 'Tennis',
     this.venueAddress = 'Jl. PLN Cigereleng No.19, Ciseureuh, K...',
     this.venueHours = '06:00 - 22:00',
   });
@@ -59,8 +59,8 @@ class _BookingPageState extends State<BookingPage>
   ];
 
   final List<Map<String, dynamic>> _courts = [
-    {'name': 'BEC Tennis Court Lap.A', 'type': 'Tenis'},
-    {'name': 'BEC Tennis Court Lap.B', 'type': 'Tenis'},
+    {'name': 'BEC Tennis Court Lap.A', 'type': 'Tennis'},
+    {'name': 'BEC Tennis Court Lap.B', 'type': 'Tennis'},
   ];
 
   @override
@@ -224,8 +224,8 @@ class _BookingPageState extends State<BookingPage>
 
   void _showBookingConfirmation(BuildContext context) {
     final monthNames = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     showModalBottomSheet(
       context: context,

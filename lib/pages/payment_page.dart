@@ -504,7 +504,7 @@ class _PaymentPageState extends State<PaymentPage> {
         ],
         const Spacer(),
         Text(
-          isFree ? 'Rp0' : _formatPrice(amount),
+          isFree ? 'IDR 0' : _formatPrice(amount),
           style: TextStyle(
             fontSize: 13,
             fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
@@ -709,7 +709,7 @@ class _PaymentPageState extends State<PaymentPage> {
     if (_selectedPaymentMethodId == 'bca') paymentName = 'BCA Virtual Account';
     if (_selectedPaymentMethodId == 'mandiri') paymentName = 'Mandiri Virtual Account';
     if (_selectedPaymentMethodId == 'bni') paymentName = 'BNI Virtual Account';
-    if (_selectedPaymentMethodId == 'credit_card') paymentName = 'Kartu Kredit / Debit';
+    if (_selectedPaymentMethodId == 'credit_card') paymentName = 'Credit / Debit Card';
 
     final orderId = 'ID${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../models/review_model.dart';
 import '../../data/venue_data.dart';
+import '../../utils/alert_utils.dart';
 
 class VenueHeaderSlivers extends StatefulWidget {
   final String venueName;
@@ -135,13 +136,11 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                     GlobalVenueData.toggleFavorite(venue);
                   });
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(_isBookmarked 
-                        ? 'Venue ditambahkan ke favorit' 
-                        : 'Venue dihapus dari favorit'),
-                      duration: const Duration(seconds: 1),
-                    ),
+                  AlertUtils.showToast(
+                    context,
+                    _isBookmarked 
+                      ? 'Venue added to favorites' 
+                      : 'Venue removed from favorites'
                   );
                 },
               ),
@@ -266,7 +265,7 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
-                                        '(${Review.mockReviews.where((r) => r.venueName == widget.venueName).length} ulasan)',
+                                        '(${Review.mockReviews.where((r) => r.venueName == widget.venueName).length} reviews)',
                                         style: const TextStyle(
                                           fontSize: 12,
                                           color: AppColors.textSecondary,
@@ -299,26 +298,26 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                 const SizedBox(height: 12),
                 // Info rows
                 _infoRow(Icons.access_time, widget.venueHours,
-                    actionText: 'Lihat Hari Lain',
+                    actionText: 'See Other Days',
                     onActionTap: widget.onShowOperationalHours),
                 const SizedBox(height: 6),
                 _infoRow(Icons.location_on_outlined, widget.venueAddress,
-                    actionText: 'Lihat Maps', onActionTap: widget.onOpenMaps),
+                    actionText: 'View Maps', onActionTap: widget.onOpenMaps),
                 const SizedBox(height: 12),
                 // Facilities chips
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _facilityChip(Icons.wc, 'Kamar Mandi'),
+                      _facilityChip(Icons.wc, 'Restroom'),
                       const SizedBox(width: 8),
-                      _facilityChip(Icons.local_parking, 'Parkiran'),
+                      _facilityChip(Icons.local_parking, 'Parking'),
                       const SizedBox(width: 8),
-                      _facilityChip(Icons.restaurant, 'Makanan dan Minuman'),
+                      _facilityChip(Icons.restaurant, 'Food and Drinks'),
                       const SizedBox(width: 8),
-                      _facilityChip(Icons.mosque, 'Tempat Ibadah'),
+                      _facilityChip(Icons.mosque, 'Prayer Room'),
                       const SizedBox(width: 8),
-                      _facilityChip(Icons.rule, 'Aturan Venue'),
+                      _facilityChip(Icons.rule, 'Venue Rules'),
                     ],
                   ),
                 ),
