@@ -7,7 +7,7 @@ import 'booking_history.dart';
 import '../utils/booking_utils.dart';
 import './dashboard_page.dart';
 import '../data/notification_data.dart';
-
+import '../data/auth_data.dart';
 class PaymentInstructionPage extends StatefulWidget {
   final String paymentMethodId;
   final String paymentMethodName;
@@ -77,6 +77,16 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
       );
     }
 
+    // 3. Award Points (1% cashback)
+    final pointsEarned = (widget.amount / 100).floor();
+    final account = GlobalAuthData.getAccount(widget.username);
+    if (account != null) {
+      GlobalAuthData.updateAccount(
+        widget.username,
+        newPoints: account.points + pointsEarned,
+      );
+    }
+
     BookingHistoryPage.mockHistory.insert(0, newBooking);
 
     // Notify End User
@@ -120,7 +130,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
       context,
       isSuccess: true,
       title: 'Payment Confirmed!',
-      message: 'We have received your payment. You can track your booking status in Activities.',
+      message: 'We have received your payment. You earned $pointsEarned Rensius Points! Track your booking status in Activities.',
       onConfirm: () {
         Navigator.pushAndRemoveUntil(
           context,

@@ -62,7 +62,7 @@ class _DashboardPageState extends State<DashboardPage> {
       _selectedIndex = index;
       // If navigating back to Home (index 0), reset category to 'Semua'
       if (index == 0) {
-        _selectedCategory = 'Semua';
+        _selectedCategory = 'All';
       }
     });
   }

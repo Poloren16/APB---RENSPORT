@@ -7,6 +7,7 @@ import 'admin/admin_dashboard_page.dart';
 import 'management_venue.dart';
 import 'detail_profile_page.dart';
 import 'pengaturan_keamanan_page.dart';
+import 'favorite_venues_page.dart';
 import '../data/auth_data.dart';
 
 class AkunPage extends StatefulWidget {
@@ -180,9 +181,9 @@ class _AkunPageState extends State<AkunPage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    '0 Rensius Points',
-                    style: TextStyle(
+                  Text(
+                    '${account?.points ?? 0} Rensius Points',
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
@@ -201,13 +202,30 @@ class _AkunPageState extends State<AkunPage> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
           // Menu Section
           Container(
             color: Colors.white,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildMenuSection('Personal'),
+                _buildListTile(
+                  icon: Icons.bookmark_outline,
+                  title: 'My Favorite Venues',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FavoriteVenuesPage(
+                          username: widget.username,
+                          role: widget.role,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 1, color: Color(0xFFEEEEEE)),
                 _buildMenuSection('Settings'),
                 _buildListTile(
                   icon: Icons.settings,
@@ -266,7 +284,7 @@ class _AkunPageState extends State<AkunPage> {
 
   Widget _buildMenuSection(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Text(
         title,
         style: TextStyle(
