@@ -6,6 +6,7 @@ import './receipt_page.dart';
 import 'booking_history.dart';
 import '../utils/booking_utils.dart';
 import './dashboard_page.dart';
+import '../data/venue_data.dart';
 
 class PaymentInstructionPage extends StatefulWidget {
   final String paymentMethodId;
@@ -31,9 +32,12 @@ class PaymentInstructionPage extends StatefulWidget {
     required this.date,
     required this.timeRange,
     required this.individualSlots,
+    this.selectedServices = const {},
     required this.username,
     this.role = 'End User',
   });
+
+  final Map<String, int> selectedServices;
 
   @override
   State<PaymentInstructionPage> createState() => _PaymentInstructionPageState();
@@ -64,6 +68,11 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
       'price': widget.amount,
       'paymentMethod': widget.paymentMethodName,
       'status': 'Awaiting Schedule',
+      'services': widget.selectedServices.isEmpty ? null : widget.selectedServices.entries.map((e) {
+        final venue = GlobalVenueData.venues.firstWhere((v) => v['name'] == widget.venueName, orElse: () => <String, dynamic>{});
+        final service = (venue['services'] as List).firstWhere((s) => s['id'] == e.key);
+        return '${service['name']} (x${e.value})';
+      }).join(', '),
     };
 
     // Perform atomic slot reservation

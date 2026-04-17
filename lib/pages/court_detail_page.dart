@@ -5,6 +5,7 @@ import 'payment_page.dart';
 import '../models/review_model.dart';
 import '../utils/alert_utils.dart';
 import '../utils/booking_utils.dart';
+import '../data/venue_data.dart';
 
 class CourtDetailPage extends StatefulWidget {
   final String username;
@@ -44,6 +45,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   DateTime _selectedDate = DateTime.now();
   final Set<String> _selectedSlots = {};
   final Set<int> _expandedGroups = {};
+  final Map<String, int> _selectedServices = {};
 
   // ── Data slot waktu ──────────────────────────────────────────────────────────
   static const List<_TimeGroup> _timeGroups = [
@@ -89,7 +91,12 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
     
     // Find key for initial selected slot if provided
     if (widget.initialSelectedSlot != null) {
@@ -128,12 +135,30 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     )}';
   }
 
-  int get _totalPrice => _selectedSlots.fold(0, (sum, key) {
-        final parts = key.split('_');
-        final g = int.tryParse(parts[0]) ?? 0;
-        final s = int.tryParse(parts[1]) ?? 0;
-        return sum + _timeGroups[g].slots[s].price;
-      });
+  int get _totalPrice {
+    int total = _selectedSlots.fold(0, (sum, key) {
+      final parts = key.split('_');
+      final g = int.tryParse(parts[0]) ?? 0;
+      final s = int.tryParse(parts[1]) ?? 0;
+      return sum + _timeGroups[g].slots[s].price;
+    });
+
+    // Add services price
+    final venue = GlobalVenueData.venues.firstWhere(
+      (v) => v['name'] == widget.venueName,
+      orElse: () => <String, dynamic>{},
+    );
+    final services = venue['services'] as List<dynamic>? ?? [];
+
+    _selectedServices.forEach((id, qty) {
+      final service = services.firstWhere((s) => s['id'] == id, orElse: () => null);
+      if (service != null) {
+        total += (service['price'] as int) * qty;
+      }
+    });
+
+    return total;
+  }
 
   String get _bookingPeriod {
     final now = DateTime.now();
@@ -519,6 +544,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 tabs: const [
                   Tab(text: 'Daily'),
                   Tab(text: 'Membership'),
+                  Tab(text: 'Service'),
                 ],
               ),
             ),
@@ -528,95 +554,100 @@ class _CourtDetailPageState extends State<CourtDetailPage>
           const Divider(height: 1),
           const SizedBox(height: 12),
 
-          // "Choose Booking Schedule" header
-          const Text(
-            'Choose Booking Schedule',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Month row + reset
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_month,
-                        size: 18, color: Colors.black54),
-                    const SizedBox(width: 6),
-                    Text(
-                      _monthName(_selectedDate.month),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                    const Icon(Icons.keyboard_arrow_down,
-                        size: 18, color: Colors.black54),
-                  ],
-                ),
-                GestureDetector(
-                  onTap: () => setState(() {
-                    _selectedDate = DateTime.now();
-                    _selectedSlots.clear();
-                    _expandedGroups.clear();
-                  }),
-                  child: const Text(
-                    'Reset & Restart',
-                    style: TextStyle(
-                        color: _accent,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
+          if (_tabController.index < 2) ...[
+            // "Choose Booking Schedule" header
+            const Text(
+              'Choose Booking Schedule',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
-          ),
 
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-          // Date picker (reusable)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: VenueDatePicker(
-              selectedDate: _selectedDate,
-              onDateSelected: (date) => setState(() {
-                _selectedDate = date;
-                _selectedSlots.clear();
-                _expandedGroups.clear();
-              }),
-            ),
-          ),
-
-          const SizedBox(height: 10),
-
-          // Period info
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: RichText(
-              text: TextSpan(
-                style:
-                    const TextStyle(fontSize: 12, color: Colors.black54),
+            // Month row + reset
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const TextSpan(
-                    text: '*Booking Date Period: ',
-                    style: TextStyle(
-                        color: _accent, fontWeight: FontWeight.w500),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_month,
+                          size: 18, color: Colors.black54),
+                      const SizedBox(width: 6),
+                      Text(
+                        _monthName(_selectedDate.month),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      const Icon(Icons.keyboard_arrow_down,
+                          size: 18, color: Colors.black54),
+                    ],
                   ),
-                  TextSpan(text: _bookingPeriod),
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      _selectedDate = DateTime.now();
+                      _selectedSlots.clear();
+                      _expandedGroups.clear();
+                    }),
+                    child: const Text(
+                      'Reset & Restart',
+                      style: TextStyle(
+                          color: _accent,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500),
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
 
-          const SizedBox(height: 8),
+            const SizedBox(height: 12),
 
-          // Time groups
-          ..._timeGroups.asMap().entries.map(
-                (e) => _buildTimeGroup(e.key, e.value),
+            // Date picker (reusable)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: VenueDatePicker(
+                selectedDate: _selectedDate,
+                onDateSelected: (date) => setState(() {
+                  _selectedDate = date;
+                  _selectedSlots.clear();
+                  _expandedGroups.clear();
+                }),
               ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Period info
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: RichText(
+                text: TextSpan(
+                  style:
+                      const TextStyle(fontSize: 12, color: Colors.black54),
+                  children: [
+                    const TextSpan(
+                      text: '*Booking Date Period: ',
+                      style: TextStyle(
+                          color: _accent, fontWeight: FontWeight.w500),
+                    ),
+                    TextSpan(text: _bookingPeriod),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Time groups
+            ..._timeGroups.asMap().entries.map(
+                  (e) => _buildTimeGroup(e.key, e.value),
+                ),
+          ] else ...[
+            // Service Tab Content
+            _buildServiceSection(),
+          ],
 
           const SizedBox(height: 16),
         ],
@@ -838,6 +869,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                             timeRange: '${selectedTimes.length} Time Slots (${selectedTimes.join(', ')})',
                             price: _totalPrice,
                             individualSlots: individualSlots,
+                            selectedServices: _selectedServices,
                           ),
                         ),
                       );
@@ -861,6 +893,128 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                     fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceSection() {
+    final venue = GlobalVenueData.venues.firstWhere(
+      (v) => v['name'] == widget.venueName,
+      orElse: () => <String, dynamic>{},
+    );
+    final services = venue['services'] as List<dynamic>? ?? [];
+
+    if (services.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey.shade300),
+              const SizedBox(height: 12),
+              const Text(
+                'No additional services available at this venue.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: services.map((service) => _buildServiceItem(service as Map<String, dynamic>)).toList(),
+      ),
+    );
+  }
+
+  Widget _buildServiceItem(Map<String, dynamic> service) {
+    final id = service['id'] as String;
+    final name = service['name'] as String;
+    final price = service['price'] as int;
+    final stock = service['stock'] as int;
+    final unit = service['unit'] as String;
+    final currentQty = _selectedServices[id] ?? 0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: _accent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.shopping_bag_outlined, color: _accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                Text(
+                  '${_formatPrice(price)} / $unit',
+                  style: const TextStyle(color: _accent, fontWeight: FontWeight.w600, fontSize: 12),
+                ),
+                Text(
+                  'Stock: $stock',
+                  style: TextStyle(color: stock == 0 ? Colors.red : Colors.grey, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                onPressed: currentQty > 0
+                    ? () {
+                        setState(() {
+                          if (currentQty > 1) {
+                            _selectedServices[id] = currentQty - 1;
+                          } else {
+                            _selectedServices.remove(id);
+                          }
+                        });
+                      }
+                    : null,
+                icon: Icon(Icons.remove_circle_outline, color: currentQty > 0 ? _accent : Colors.grey),
+                iconSize: 22,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$currentQty',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: currentQty < stock
+                    ? () {
+                        setState(() {
+                          _selectedServices[id] = currentQty + 1;
+                        });
+                      }
+                    : null,
+                icon: Icon(Icons.add_circle_outline, color: currentQty < stock ? _accent : Colors.grey),
+                iconSize: 22,
+              ),
+            ],
           ),
         ],
       ),

@@ -306,6 +306,26 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                     ),
                   ],
                 ),
+                if (item['services'] != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.shopping_bag_outlined, size: 14, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          item['services'],
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 12),
                 const Divider(),
                 const SizedBox(height: 12),

@@ -5,6 +5,7 @@ import '../utils/alert_utils.dart';
 import './receipt_page.dart';
 import '../utils/booking_utils.dart';
 import './payment_instruction_page.dart';
+import '../data/venue_data.dart';
 
 class PaymentPage extends StatefulWidget {
   final String username;
@@ -14,6 +15,7 @@ class PaymentPage extends StatefulWidget {
   final String timeRange;
   final int price;
   final List<Map<String, String>> individualSlots;
+  final Map<String, int> selectedServices;
   final String role;
 
   const PaymentPage({
@@ -25,6 +27,7 @@ class PaymentPage extends StatefulWidget {
     this.timeRange = '06:00 - 07:00',
     this.price = 100000,
     this.individualSlots = const [],
+    this.selectedServices = const {},
     this.role = 'End User',
   });
 
@@ -36,6 +39,42 @@ class _PaymentPageState extends State<PaymentPage> {
   bool _isAgreed = false;
   bool _isTimeExpanded = false;
   String? _selectedPaymentMethodId;
+  late Map<String, int> _localSelectedServices;
+  late int _baseCourtPrice;
+  int get _totalPrice {
+    int serviceTotal = 0;
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+    final services = venue['services'] as List<dynamic>? ?? [];
+    _localSelectedServices.forEach((id, qty) {
+      final serviceResults = services.where((s) => s['id'] == id);
+      if (serviceResults.isNotEmpty) {
+        final service = serviceResults.first;
+        serviceTotal += (service['price'] as int) * qty;
+      }
+    });
+    return _baseCourtPrice + serviceTotal;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _localSelectedServices = Map<String, int>.from(widget.selectedServices);
+    
+    // Calculate base court price: widget.price (total) - initial services price
+    int initialServiceTotal = 0;
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+    final services = venue['services'] as List<dynamic>? ?? [];
+    widget.selectedServices.forEach((id, qty) {
+      final serviceResults = services.where((s) => s['id'] == id);
+      if (serviceResults.isNotEmpty) {
+        final service = serviceResults.first;
+        initialServiceTotal += (service['price'] as int) * qty;
+      }
+    });
+    _baseCourtPrice = widget.price - initialServiceTotal;
+  }
 
   String _formatPrice(int price) {
     return 'IDR ${price.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},')}';
@@ -274,8 +313,36 @@ class _PaymentPageState extends State<PaymentPage> {
                     trailingPrice: widget.price),
                 const SizedBox(height: 14),
 
-                // Additional Service
-                _buildDetailSection('Additional Service', '-'),
+                // Additional Service Detail
+                const SizedBox(height: 14),
+                const Text('Additional Service',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    )),
+                const SizedBox(height: 4),
+                if (_localSelectedServices.isEmpty)
+                  const Text('-', style: TextStyle(fontSize: 13, color: AppColors.textSecondary))
+                else
+                  ..._localSelectedServices.entries.map((entry) {
+                    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+                    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+                    final services = venue['services'] as List<dynamic>? ?? [];
+                    final serviceResults = services.where((s) => s['id'] == entry.key);
+                    if (serviceResults.isEmpty) return const SizedBox.shrink();
+                    final service = serviceResults.first;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('${service['name']} (x${entry.value})', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                          Text(_formatPrice(service['price'] * entry.value), style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
               ],
             ),
           ),
@@ -383,7 +450,7 @@ class _PaymentPageState extends State<PaymentPage> {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: () {},
+        onPressed: _showAddServiceSheet,
         icon: const Icon(Icons.add_rounded, size: 18),
         label: const Text('Add Service'),
         style: OutlinedButton.styleFrom(
@@ -406,7 +473,7 @@ class _PaymentPageState extends State<PaymentPage> {
 
   Widget _buildTransactionDetail() {
     const platformFee = 0;
-    final total = widget.price + platformFee;
+    final total = _totalPrice + platformFee;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -464,7 +531,8 @@ class _PaymentPageState extends State<PaymentPage> {
           const SizedBox(height: 14),
 
           // Price rows
-          _buildTransactionRow('Total Court Price', widget.price),
+          _buildTransactionRow('Court Price', _calculateCourtTotal()),
+          ..._buildServiceTransactionRows(),
           const SizedBox(height: 10),
           _buildTransactionRow('Platform Fee', platformFee,
               isInfo: true, isFree: platformFee == 0),
@@ -631,6 +699,31 @@ class _PaymentPageState extends State<PaymentPage> {
 
   // ── Confirmation Dialog ──────────────────────────────────
 
+  int _calculateCourtTotal() {
+    return _baseCourtPrice;
+  }
+
+  List<Widget> _buildServiceTransactionRows() {
+    if (_localSelectedServices.isEmpty) return [];
+    
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+    final services = venue['services'] as List<dynamic>? ?? [];
+    
+    return [
+      const SizedBox(height: 10),
+      ..._localSelectedServices.entries.map((entry) {
+        final serviceResults = services.where((s) => s['id'] == entry.key);
+        if (serviceResults.isEmpty) return const SizedBox.shrink();
+        final service = serviceResults.first;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _buildTransactionRow('${service['name']} (x${entry.value})', service['price'] * entry.value),
+        );
+      }).toList(),
+    ];
+  }
+
   void _showConfirmationDialog() {
     showDialog(
       context: context,
@@ -661,7 +754,7 @@ class _PaymentPageState extends State<PaymentPage> {
                   _buildSummaryRow('Court', widget.courtName),
                   _buildSummaryRow('Date', widget.date),
                   _buildSummaryRow('Time', widget.timeRange),
-                  _buildSummaryRow('Total', _formatPrice(widget.price)),
+                  _buildSummaryRow('Total', _formatPrice(_totalPrice)),
                 ],
               ),
             ),
@@ -719,17 +812,169 @@ class _PaymentPageState extends State<PaymentPage> {
         builder: (context) => PaymentInstructionPage(
           paymentMethodId: _selectedPaymentMethodId ?? 'qris',
           paymentMethodName: paymentName,
-          amount: widget.price,
+          amount: _totalPrice,
           orderId: orderId,
           venueName: widget.venueName,
           courtName: widget.courtName,
           date: widget.date,
           timeRange: widget.timeRange,
           individualSlots: widget.individualSlots,
+          selectedServices: _localSelectedServices,
           username: widget.username,
           role: widget.role,
         ),
       ),
+    );
+  }
+
+  void _showAddServiceSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+            final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+            final services = venue['services'] as List<dynamic>? ?? [];
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.6,
+              minChildSize: 0.4,
+              maxChildSize: 0.9,
+              expand: false,
+              builder: (context, scrollController) {
+                return Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Manage Services',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: services.isEmpty
+                          ? const Center(child: Text('No services available', style: TextStyle(color: Colors.grey)))
+                          : ListView.builder(
+                              controller: scrollController,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: services.length,
+                              itemBuilder: (context, index) {
+                                final service = services[index];
+                                final id = service['id'] as String;
+                                final stock = service['stock'] as int;
+                                final currentQty = _localSelectedServices[id] ?? 0;
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 50,
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.secondary,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(Icons.sports_tennis_rounded, color: AppColors.primary),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(service['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                            Text('${_formatPrice(service['price'])} / ${service['unit']}',
+                                                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12)),
+                                            Text('Stock: $stock', style: TextStyle(color: stock == 0 ? Colors.red : Colors.grey, fontSize: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            onPressed: currentQty > 0
+                                                ? () {
+                                                    setState(() {
+                                                      if (currentQty > 1) {
+                                                        _localSelectedServices[id] = currentQty - 1;
+                                                      } else {
+                                                        _localSelectedServices.remove(id);
+                                                      }
+                                                    });
+                                                    setModalState(() {});
+                                                  }
+                                                : null,
+                                            icon: Icon(Icons.remove_circle_outline, color: currentQty > 0 ? AppColors.primary : Colors.grey),
+                                            iconSize: 22,
+                                          ),
+                                          Text('$currentQty', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                          IconButton(
+                                            onPressed: currentQty < stock
+                                                ? () {
+                                                    setState(() {
+                                                      _localSelectedServices[id] = currentQty + 1;
+                                                    });
+                                                    setModalState(() {});
+                                                  }
+                                                : null,
+                                            icon: Icon(Icons.add_circle_outline, color: currentQty < stock ? AppColors.primary : Colors.grey),
+                                            iconSize: 22,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Update Services', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -837,7 +1082,7 @@ class _PaymentPageState extends State<PaymentPage> {
                     ),
                   ),
                   Text(
-                    _formatPrice(widget.price),
+                    _formatPrice(_totalPrice),
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,

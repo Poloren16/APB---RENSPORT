@@ -121,6 +121,8 @@ class ReceiptPage extends StatelessWidget {
                             _buildInfoRow('Court Type', booking['courtName'] ?? '-'),
                             _buildInfoRow('Booking Date', booking['date'] ?? '-'),
                             _buildInfoRow('Time / Duration', booking['time'] ?? '-'),
+                            if (booking['services'] != null)
+                              _buildInfoRow('Rented Equipment', booking['services']),
                             const SizedBox(height: 16),
                             const Divider(height: 1),
                             const SizedBox(height: 16),

@@ -9,6 +9,7 @@ import 'court_detail_page.dart';
 import 'payment_page.dart';
 import '../models/review_model.dart';
 import '../utils/booking_utils.dart';
+import '../data/venue_data.dart';
 
 class BookingPage extends StatefulWidget {
   final String username;
@@ -35,6 +36,7 @@ class _BookingPageState extends State<BookingPage>
   late TabController _tabController;
   DateTime _selectedDate = DateTime.now();
   final Set<String> _selectedSlots = {};
+  final Map<String, int> _selectedServices = {};
 
   final List<String> _tabs = ['Select Schedule', 'Service'];
 
@@ -67,6 +69,11 @@ class _BookingPageState extends State<BookingPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -85,11 +92,28 @@ class _BookingPageState extends State<BookingPage>
 
   int get _totalSelected => _selectedSlots.length;
   
-  int get _totalPrice => _selectedSlots.fold(0, (sum, key) {
-    final parts = key.split('_');
-    final slotIndex = int.tryParse(parts[0]) ?? 0;
-    return sum + (_timeSlots[slotIndex]['price'] as int);
-  });
+  int get _totalPrice {
+    int total = _selectedSlots.fold(0, (sum, key) {
+      final parts = key.split('_');
+      final slotIndex = int.tryParse(parts[0]) ?? 0;
+      return sum + (_timeSlots[slotIndex]['price'] as int);
+    });
+
+    // Add services price
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+    final services = venue['services'] as List<dynamic>? ?? [];
+    
+    _selectedServices.forEach((id, qty) {
+      final serviceResults = services.where((s) => s['id'] == id);
+      if (serviceResults.isNotEmpty) {
+        final service = serviceResults.first;
+        total += (service['price'] as int) * qty;
+      }
+    });
+
+    return total;
+  }
 
   String _getMonthName(DateTime date) {
     const months = [
@@ -265,7 +289,7 @@ class _BookingPageState extends State<BookingPage>
                     size: 16, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
                 Text(
-                  '$_totalSelected time slots selected',
+                  '${_selectedSlots.length} time slots + ${_selectedServices.values.fold(0, (a, b) => a + b)} items selected',
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ],
@@ -341,6 +365,7 @@ class _BookingPageState extends State<BookingPage>
                         timeRange: '${selectedTimes.length} Time Slots (${selectedTimes.join(', ')})',
                         price: _totalPrice,
                         individualSlots: individualSlots,
+                        selectedServices: Map<String, int>.from(_selectedServices),
                       ),
                     ),
                   );
@@ -397,122 +422,126 @@ class _BookingPageState extends State<BookingPage>
                   ),
                 ),
 
-                // Calendar Section
-                SliverToBoxAdapter(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            GestureDetector(
-                              onTap: () async {
-                                final picked = await showDatePicker(
-                                  context: context,
-                                  initialDate: _selectedDate,
-                                  firstDate: DateTime.now(),
-                                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                                  builder: (context, child) => Theme(
-                                    data: Theme.of(context).copyWith(
-                                      colorScheme: const ColorScheme.light(
-                                        primary: AppColors.primary,
-                                        onPrimary: Colors.white,
-                                        onSurface: AppColors.textPrimary,
+                // Tab Content
+                if (_tabController.index == 0) ...[
+                  // Schedule Tab Content
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              GestureDetector(
+                                onTap: () async {
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: _selectedDate,
+                                    firstDate: DateTime.now(),
+                                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                                    builder: (context, child) => Theme(
+                                      data: Theme.of(context).copyWith(
+                                        colorScheme: const ColorScheme.light(
+                                          primary: AppColors.primary,
+                                          onPrimary: Colors.white,
+                                          onSurface: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      child: child ?? const SizedBox(),
+                                    ),
+                                  );
+                                  if (picked != null) {
+                                    setState(() {
+                                      _selectedDate = picked;
+                                      _selectedSlots.clear();
+                                    });
+                                  }
+                                },
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.calendar_month, color: AppColors.primary, size: 22),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _getMonthName(_selectedDate),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold, 
+                                        fontSize: 18,
+                                        color: AppColors.textPrimary,
                                       ),
                                     ),
-                                    child: child ?? const SizedBox(),
-                                  ),
-                                );
-                                if (picked != null) {
-                                  setState(() {
-                                    _selectedDate = picked;
-                                    _selectedSlots.clear();
-                                  });
-                                }
-                              },
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.calendar_month, color: AppColors.primary, size: 22),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _getMonthName(_selectedDate),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold, 
-                                      fontSize: 18,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary, size: 20),
-                                ],
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary, size: 20),
+                                  ],
+                                ),
                               ),
-                            ),
-                            GestureDetector(
-                              onTap: () => setState(() {
-                                _selectedDate = DateTime.now();
-                                _selectedSlots.clear();
-                              }),
-                              child: const Text(
-                                'Reset & Restart',
-                                style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                              GestureDetector(
+                                onTap: () => setState(() {
+                                  _selectedDate = DateTime.now();
+                                  _selectedSlots.clear();
+                                }),
+                                child: const Text(
+                                  'Reset & Restart',
+                                  style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, bottom: 8),
-                        child: VenueDatePicker(
-                          selectedDate: _selectedDate,
-                          onDateSelected: (date) {
-                            setState(() {
-                              _selectedDate = date;
-                              _selectedSlots.clear();
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Court Headers + Time Slots
-                SliverToBoxAdapter(
-                  child: CourtSlotsCard(
-                    venueName: widget.venueName,
-                    dateStr: BookingUtils.formatDate(_selectedDate),
-                    courts: _courts,
-                    timeSlots: _timeSlots,
-                    selectedSlots: _selectedSlots,
-                    onSlotSelected: (slotKey) {
-                      setState(() {
-                        if (_selectedSlots.contains(slotKey)) {
-                          _selectedSlots.remove(slotKey);
-                        } else {
-                          _selectedSlots.add(slotKey);
-                        }
-                      });
-                    },
-                    formatCurrency: _formatCurrency,
-                    onCourtTap: (court) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CourtDetailPage(
-                            username: widget.username,
-                            courtName: court['name'] as String,
-                            venueName: widget.venueName,
-                            sportType: court['type'] as String,
-                            dimensions: 'P 23 X L 10',
-                            courtCategory: 'Outdoor',
-                            floorType: 'Vinyl',
+                            ],
                           ),
                         ),
-                      );
-                    },
+                        Padding(
+                          padding: const EdgeInsets.only(left: 16, bottom: 8),
+                          child: VenueDatePicker(
+                            selectedDate: _selectedDate,
+                            onDateSelected: (date) {
+                              setState(() {
+                                _selectedDate = date;
+                                _selectedSlots.clear();
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  SliverToBoxAdapter(
+                    child: CourtSlotsCard(
+                      venueName: widget.venueName,
+                      dateStr: BookingUtils.formatDate(_selectedDate),
+                      courts: _courts,
+                      timeSlots: _timeSlots,
+                      selectedSlots: _selectedSlots,
+                      onSlotSelected: (slotKey) {
+                        setState(() {
+                          if (_selectedSlots.contains(slotKey)) {
+                            _selectedSlots.remove(slotKey);
+                          } else {
+                            _selectedSlots.add(slotKey);
+                          }
+                        });
+                      },
+                      formatCurrency: _formatCurrency,
+                      onCourtTap: (court) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CourtDetailPage(
+                              username: widget.username,
+                              courtName: court['name'] as String,
+                              venueName: widget.venueName,
+                              sportType: court['type'] as String,
+                              dimensions: 'P 23 X L 10',
+                              courtCategory: 'Outdoor',
+                              floorType: 'Vinyl',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ] else ...[
+                  // Service Tab Content
+                  _buildServiceSection(),
+                ],
 
                 // Player Reviews Section
                 SliverToBoxAdapter(
@@ -530,7 +559,7 @@ class _BookingPageState extends State<BookingPage>
           ),
 
           // Bottom Booking Bar
-          if (_selectedSlots.isNotEmpty)
+          if (_selectedSlots.isNotEmpty || _selectedServices.isNotEmpty)
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               decoration: BoxDecoration(
@@ -552,7 +581,9 @@ class _BookingPageState extends State<BookingPage>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '$_totalSelected slots selected',
+                          _selectedSlots.isNotEmpty 
+                            ? '${_selectedSlots.length} slots + ${_selectedServices.values.fold(0, (a, b) => a + b)} services'
+                            : '${_selectedServices.values.fold(0, (a, b) => a + b)} services selected',
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
@@ -814,7 +845,125 @@ class _BookingPageState extends State<BookingPage>
       },
     );
   }
+  Widget _buildServiceSection() {
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+    final services = venue['services'] as List<dynamic>? ?? [];
 
+    if (services.isEmpty) {
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+          child: Center(
+            child: Text(
+              'No additional services available at this venue.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final service = services[index];
+            return _buildServiceItem(service);
+          },
+          childCount: services.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServiceItem(Map<String, dynamic> service) {
+    final id = service['id'] as String;
+    final name = service['name'] as String;
+    final price = service['price'] as int;
+    final stock = service['stock'] as int;
+    final unit = service['unit'] as String;
+    final currentQty = _selectedServices[id] ?? 0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: AppColors.secondary,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.sports_tennis_rounded, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                Text(
+                  '${_formatCurrency(price)} / $unit',
+                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12),
+                ),
+                Text(
+                  'Stock: $stock',
+                  style: TextStyle(color: stock == 0 ? Colors.red : Colors.grey, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                onPressed: currentQty > 0
+                    ? () {
+                        setState(() {
+                          if (currentQty > 1) {
+                            _selectedServices[id] = currentQty - 1;
+                          } else {
+                            _selectedServices.remove(id);
+                          }
+                        });
+                      }
+                    : null,
+                icon: Icon(Icons.remove_circle_outline, color: currentQty > 0 ? AppColors.primary : Colors.grey),
+                iconSize: 22,
+              ),
+              Text(
+                '$currentQty',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              IconButton(
+                onPressed: currentQty < stock
+                    ? () {
+                        setState(() {
+                          _selectedServices[id] = currentQty + 1;
+                        });
+                      }
+                    : null,
+                icon: Icon(Icons.add_circle_outline, color: currentQty < stock ? AppColors.primary : Colors.grey),
+                iconSize: 22,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // Sticky tab bar delegate

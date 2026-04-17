@@ -31,6 +31,10 @@ class GlobalVenueData {
             {'time': '18:00', 'isAvailable': true},
           ]
         }
+      ],
+      'services': [
+        {'id': 'f1', 'name': 'Sepatu Futsal', 'price': 20000, 'stock': 12, 'unit': 'Pasang'},
+        {'id': 'f2', 'name': 'Rompi (1 Set)', 'price': 15000, 'stock': 5, 'unit': 'Set'},
       ]
     },
     {
@@ -48,6 +52,10 @@ class GlobalVenueData {
             {'time': '12:00', 'isAvailable': true},
           ]
         }
+      ],
+      'services': [
+        {'id': 'b1', 'name': 'Raket Badminton', 'price': 15000, 'stock': 20, 'unit': 'Pcs'},
+        {'id': 'b2', 'name': 'Sepatu Badminton', 'price': 20000, 'stock': 8, 'unit': 'Pasang'},
       ]
     },
     {
@@ -65,6 +73,10 @@ class GlobalVenueData {
             {'time': '10:00', 'isAvailable': false},
           ]
         }
+      ],
+      'services': [
+        {'id': 't1', 'name': 'Raket Tennis Pro', 'price': 35000, 'stock': 10, 'unit': 'Pcs'},
+        {'id': 't2', 'name': 'Bola Tennis (3 pcs)', 'price': 10000, 'stock': 15, 'unit': 'Slop'},
       ]
     },
     {
@@ -83,6 +95,10 @@ class GlobalVenueData {
             {'time': '21:00', 'isAvailable': true},
           ]
         }
+      ],
+      'services': [
+        {'id': 'ms1', 'name': 'Sepatu Mini Soccer', 'price': 25000, 'stock': 10, 'unit': 'Pasang'},
+        {'id': 'ms2', 'name': 'Kaos Kaki', 'price': 10000, 'stock': 20, 'unit': 'Pasang'},
       ]
     },
     {
@@ -104,6 +120,10 @@ class GlobalVenueData {
           'size': 'P 23 X L 10',
           'type': 'Tenis',
         }
+      ],
+      'services': [
+        {'id': 'bec1', 'name': 'Raket Tenis BEC', 'price': 30000, 'stock': 6, 'unit': 'Pcs'},
+        {'id': 'bec2', 'name': 'Sepatu Tenis BEC', 'price': 25000, 'stock': 4, 'unit': 'Pasang'},
       ]
     },
     {
@@ -118,6 +138,9 @@ class GlobalVenueData {
           'size': 'P 40 X L 32',
           'type': 'Mini Soccer',
         }
+      ],
+      'services': [
+        {'id': 'as1', 'name': 'Sepatu Soccer Pro', 'price': 50000, 'stock': 5, 'unit': 'Pasang'},
       ]
     }
   ];
