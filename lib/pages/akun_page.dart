@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'login_page.dart';
 import 'admin/admin_dashboard_page.dart';
-import 'management_venue.dart';
+import 'owner/management_venue.dart';
 import 'detail_profile_page.dart';
 import 'pengaturan_keamanan_page.dart';
 import 'favorite_venues_page.dart';
