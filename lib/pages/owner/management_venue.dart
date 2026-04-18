@@ -219,11 +219,6 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${venue['type']} • ${venue['price']}',
-                    style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600),
-                  ),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
