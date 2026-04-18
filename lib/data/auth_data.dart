@@ -82,18 +82,35 @@ class UserAccount {
 }
 
 class GlobalAuthData {
-  static const String _storageKey = 'rensius_accounts_v3'; // Bumped version for new schema
+  static const String _storageKey = 'rensius_accounts_v4'; // Bumped version for new default accounts
   static List<UserAccount> accounts = [];
 
   // Initial accounts to be used only if storage is empty
   static final List<UserAccount> _defaultAccounts = [
     UserAccount(
       username: 'admin',
-      password: 'admin123321098890',
+      password: 'admin123',
       role: 'Admin',
       applicantName: 'System Admin',
       email: 'admin@rensius.com',
       phoneNumber: '+6281234567890',
+    ),
+    UserAccount(
+      username: 'user',
+      password: 'user123',
+      role: 'End User',
+      applicantName: 'Muhammad End User',
+      email: 'muhammad@rensius.com',
+      phoneNumber: '+6287711223344',
+      points: 500,
+    ),
+    UserAccount(
+      username: 'owner',
+      password: 'owner123',
+      role: 'Owner',
+      applicantName: 'Budi Venue Owner',
+      email: 'budi@rensius.com',
+      phoneNumber: '+6281122334455',
     ),
   ];
 
@@ -101,29 +118,22 @@ class GlobalAuthData {
     final prefs = await SharedPreferences.getInstance();
     String? accountsJson = prefs.getString(_storageKey);
 
-    // Fallback to older versions for migration
+    // Fallback and Cleanup migration
     if (accountsJson == null) {
-      accountsJson = prefs.getString('rensius_accounts_v2') ?? prefs.getString('rensius_accounts');
-    }
-
-    if (accountsJson != null) {
+      // For development, we'll force the new default accounts by using a new key
+      // or we can check if they exist.
+      accounts = List.from(_defaultAccounts);
+      await save();
+    } else {
       final List<dynamic> decoded = jsonDecode(accountsJson);
       accounts = decoded.map((item) => UserAccount.fromMap(item)).toList();
       
-      // Cleanup: Remove legacy mock accounts if they exist
-      bool changed = false;
-      if (accounts.any((a) => a.username == 'user')) {
-        accounts.removeWhere((a) => a.username == 'user');
-        changed = true;
+      // Ensure dummy accounts exist
+      for (var defAcc in _defaultAccounts) {
+        if (!accounts.any((a) => a.username == defAcc.username)) {
+          accounts.add(defAcc);
+        }
       }
-      if (accounts.any((a) => a.username == 'owner1')) {
-        accounts.removeWhere((a) => a.username == 'owner1');
-        changed = true;
-      }
-      if (changed) await save();
-    } else {
-      // First time app launch, use default accounts
-      accounts = List.from(_defaultAccounts);
       await save();
     }
   }
