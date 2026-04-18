@@ -13,6 +13,7 @@ import 'chat_page.dart';
 import '../models/review_model.dart';
 import '../data/chat_data.dart';
 import '../data/notification_data.dart';
+import '../data/venue_data.dart';
 
 class DashboardPage extends StatefulWidget {
   final String username;
@@ -60,17 +61,15 @@ class _DashboardPageState extends State<DashboardPage> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
-      // If navigating back to Home (index 0), reset category to 'Semua'
       if (index == 0) {
         _selectedCategory = 'All';
       }
     });
   }
 
-  // Helper function to switch to Venue tab with specific category
   void _navigateToVenueWithCategory(String category) {
     setState(() {
-      _selectedIndex = 1; // Index 1 is VenuePage
+      _selectedIndex = 1;
     });
   }
 
@@ -128,6 +127,9 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildHomeContent() {
+    // Show 5 recommended venues
+    final List<Map<String, dynamic>> recommendedVenues = GlobalVenueData.venues.take(5).toList();
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,7 +194,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   children: [
                     _buildCircleIcon(Icons.chat_bubble_outline, () async {
                       await Navigator.push(context, MaterialPageRoute(builder: (context) => ChatPage(username: widget.username, role: widget.role)));
-                      setState(() {}); // Refresh badge when returning
+                      setState(() {});
                     }),
                     if (GlobalChatData.getTotalUnreadCount(widget.username, widget.role) > 0)
                       Positioned(
@@ -270,7 +272,16 @@ class _DashboardPageState extends State<DashboardPage> {
                 const SizedBox(height: 4),
                 Text('Find the best venues to play!', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                 const SizedBox(height: 20),
-                _buildVenueCard(),
+                // Render list of venues
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: recommendedVenues.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 20),
+                  itemBuilder: (context, index) {
+                    return _buildVenueCard(recommendedVenues[index]);
+                  },
+                ),
                 const SizedBox(height: 20),
               ],
             ),
@@ -319,7 +330,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildVenueCard() {
+  Widget _buildVenueCard(Map<String, dynamic> venue) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -333,11 +344,11 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildVenueHeader(),
-              const Divider(height: 1),
-              _buildCourtItem('BEC Tennis Court Lap.A'),
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 15), child: Divider(height: 1)),
-              _buildCourtItem('BEC Tennis Court Lap.B'),
+              _buildVenueHeader(venue),
+              if (venue['courts'] != null && (venue['courts'] as List).isNotEmpty) ...[
+                const Divider(height: 1),
+                ... (venue['courts'] as List).take(1).map((court) => _buildCourtItem(venue, court)),
+              ],
               const SizedBox(height: 10),
             ],
           ),
@@ -346,7 +357,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildVenueHeader() {
+  Widget _buildVenueHeader(Map<String, dynamic> venue) {
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -354,10 +365,10 @@ class _DashboardPageState extends State<DashboardPage> {
           MaterialPageRoute(
             builder: (context) => BookingPage(
               username: widget.username,
-              venueName: 'Bandung Elektrik Cigereleng Tennis Court',
-              venueType: 'Tennis',
-              venueAddress: 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
-              venueHours: '06:00 - 22:00',
+              venueName: venue['name'] ?? 'Venue',
+              venueType: venue['type'] ?? 'General',
+              venueAddress: venue['address'] ?? venue['location'] ?? 'Location',
+              venueHours: venue['hours'] ?? '06:00 - 22:00',
             ),
           ),
         );
@@ -377,15 +388,15 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Bandung Elektrik Cigereleng Tennis Court', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text(venue['name'] ?? 'Venue', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
-                  _buildVenueStats(),
+                  _buildVenueStats(venue['name']),
                   const SizedBox(height: 4),
-                  _buildIconText(Icons.location_on, 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung'),
+                  _buildIconText(Icons.location_on, venue['location'] ?? 'Unknown'),
                   const SizedBox(height: 4),
-                  _buildIconText(Icons.sports_tennis, 'Tennis'),
+                  _buildIconText(Icons.sports_tennis, venue['type'] ?? 'General'),
                   const SizedBox(height: 8),
-                  const Text('IDR 100,000 ~ IDR 125,000', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(venue['price'] ?? 'Contact for price', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
                 ],
               ),
             ),
@@ -395,13 +406,12 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildVenueStats() {
-    final venueName = 'Bandung Elektrik Cigereleng Tennis Court';
+  Widget _buildVenueStats(String? venueName) {
     return Row(
       children: [
         const Icon(Icons.star_rounded, size: 16, color: Colors.orange),
         const SizedBox(width: 4),
-        Text(Review.getAverageRating(venueName).toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
+        Text(Review.getAverageRating(venueName ?? '').toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
         const SizedBox(width: 4),
         Text('(${Review.mockReviews.where((r) => r.venueName == venueName).length} reviews)', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
       ],
@@ -418,7 +428,8 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildCourtItem(String name) {
+  Widget _buildCourtItem(Map<String, dynamic> venue, Map<String, dynamic> court) {
+    final String courtName = court['name'] ?? 'Court';
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -427,9 +438,9 @@ class _DashboardPageState extends State<DashboardPage> {
             builder: (context) => CourtDetailPage(
               username: widget.username,
               role: widget.role,
-              courtName: name,
-              venueName: 'Bandung Elektrik Cigereleng Tennis Court',
-              sportType: 'Tenis',
+              courtName: courtName,
+              venueName: venue['name'] ?? 'Venue',
+              sportType: venue['type'] ?? 'General',
             ),
           ),
         );
@@ -443,13 +454,13 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 _buildSmallImage(),
                 const SizedBox(width: 12),
-                Expanded(child: _buildCourtInfo(name)),
+                Expanded(child: _buildCourtInfo(courtName, venue['type'] ?? 'General', court['size'] ?? 'Standard')),
               ],
             ),
             const SizedBox(height: 12),
             const Text('Choose booking schedule:', style: TextStyle(fontSize: 11, color: Colors.grey)),
             const SizedBox(height: 8),
-            _buildTimeSlotsRow(name),
+            _buildTimeSlotsRow(venue['name'] ?? '', courtName),
           ],
         ),
       ),
@@ -463,7 +474,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildCourtInfo(String name) {
+  Widget _buildCourtInfo(String name, String type, String size) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -473,11 +484,11 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
             const SizedBox(width: 4),
-            const Text('Tennis', style: TextStyle(color: Colors.grey, fontSize: 11)),
+            Text(type, style: const TextStyle(color: Colors.grey, fontSize: 11)),
             const SizedBox(width: 10),
             Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
             const SizedBox(width: 4),
-            const Text('L 23 X W 10', style: TextStyle(color: Colors.grey, fontSize: 11)),
+            Text(size, style: const TextStyle(color: Colors.grey, fontSize: 11)),
           ],
         ),
         const SizedBox(height: 4),
@@ -486,29 +497,29 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildTimeSlotsRow(String courtName) {
+  Widget _buildTimeSlotsRow(String venueName, String courtName) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _buildTimeSlot(courtName, '08:00', isAvailable: true),
-          _buildTimeSlot(courtName, '10:00', isAvailable: true),
-          _buildTimeSlot(courtName, '11:00', isAvailable: true),
-          _buildTimeSlot(courtName, '12:00', isAvailable: true),
-          _buildTimeSlot(courtName, '13:00', isAvailable: true),
-          _buildTimeSlot(courtName, '14:00', isAvailable: true),
-          _buildTimeSlot(courtName, '16:00', isAvailable: true),
-          _buildTimeSlot(courtName, '18:00', isAvailable: true),
-          _buildTimeSlot(courtName, '20:00', isAvailable: true),
+          _buildTimeSlot(venueName, courtName, '08:00', isAvailable: true),
+          _buildTimeSlot(venueName, courtName, '10:00', isAvailable: true),
+          _buildTimeSlot(venueName, courtName, '11:00', isAvailable: true),
+          _buildTimeSlot(venueName, courtName, '12:00', isAvailable: true),
+          _buildTimeSlot(venueName, courtName, '13:00', isAvailable: true),
+          _buildTimeSlot(venueName, courtName, '14:00', isAvailable: true),
+          _buildTimeSlot(venueName, courtName, '16:00', isAvailable: true),
+          _buildTimeSlot(venueName, courtName, '18:00', isAvailable: true),
+          _buildTimeSlot(venueName, courtName, '20:00', isAvailable: true),
         ],
       ),
     );
   }
 
-  Widget _buildTimeSlot(String courtName, String time, {required bool isAvailable}) {
+  Widget _buildTimeSlot(String venueName, String courtName, String time, {required bool isAvailable}) {
     final todayStr = BookingUtils.formatDate(DateTime.now());
     final isBooked = BookingUtils.isSlotBooked(
-      venueName: 'Bandung Elektrik Cigereleng Tennis Court',
+      venueName: venueName,
       courtName: courtName,
       dateStr: todayStr,
       timeSlot: time,
@@ -531,6 +542,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       username: widget.username,
                       role: widget.role,
                       courtName: courtName,
+                      venueName: venueName,
                       initialSelectedSlot: timeRange,
                     ),
                   ),
@@ -549,7 +561,7 @@ class _DashboardPageState extends State<DashboardPage> {
             color: effectiveAvailable ? AppColors.primary : Colors.grey.shade400,
             fontSize: 12,
             fontWeight: effectiveAvailable ? FontWeight.w600 : FontWeight.normal,
-            decoration: null, // No strikethrough
+            decoration: null,
           ),
         ),
       ),
