@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../data/notification_data.dart';
+import '../widgets/empty_state_widget.dart';
 
 class NotifikasiPage extends StatefulWidget {
   final String username;
@@ -41,7 +42,7 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Notifications',
+          'Notifikasi',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -49,14 +50,9 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
         elevation: 0,
       ),
       body: notifications.isEmpty
-          ? const Center(
-              child: Text(
-                'No notifications yet.',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 16,
-                ),
-              ),
+          ? const EmptyStateWidget(
+              message: 'Belum ada notifikasi.',
+              subMessage: 'Kami akan memberitahu Anda ketika ada sesuatu yang penting terjadi.',
             )
           : ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),

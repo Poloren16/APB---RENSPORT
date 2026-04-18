@@ -12,8 +12,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   bool _isPasswordVisible = false;
-  String _selectedCountryCode = '+62';
-  final List<String> _countryCodes = ['+62', '+1', '+60', '+65', '+44', '+81'];
+  // Phone prefix is now fixed to +62
   
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
@@ -43,39 +42,39 @@ class _RegisterPageState extends State<RegisterPage> {
 
     // 1. Minimum Field Validation
     if (name.isEmpty || username.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
-      _showError('All fields are required.');
+      _showError('Semua kolom harus diisi.');
       return;
     }
 
     // 2. Email Validation
     final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
     if (!emailRegex.hasMatch(email)) {
-      _showError('Invalid email format (e.g., name@email.com).');
+      _showError('Format email tidak valid (contoh: nama@email.com).');
       return;
     }
 
     // 3. Phone Validation (7-15 digits)
     final phoneRegex = RegExp(r'^[0-9]{7,15}$');
     if (!phoneRegex.hasMatch(phone)) {
-      _showError('Phone number must be digits only (7-15 digits).');
+      _showError('Nomor telepon harus berupa angka (7-15 digit).');
       return;
     }
 
     // 4. Password Confirmation
     if (password != confirmPass) {
-      _showError('Password confirmation does not match.');
+      _showError('Konfirmasi kata sandi tidak cocok.');
       return;
     }
 
     // 5. Password Length
     if (password.length < 6) {
-      _showError('Password must be at least 6 characters.');
+      _showError('Kata sandi minimal 6 karakter.');
       return;
     }
 
     // 6. Username Availability
     if (GlobalAuthData.usernameExists(username)) {
-      _showError('Username is already taken. Please choose another.');
+      _showError('Nama pengguna sudah digunakan. Silakan pilih yang lain.');
       return;
     }
 
@@ -86,15 +85,15 @@ class _RegisterPageState extends State<RegisterPage> {
       role: 'End User',
       applicantName: name,
       email: email,
-      phoneNumber: '$_selectedCountryCode$phone',
+      phoneNumber: '+62$phone',
     );
     GlobalAuthData.registerAccount(newAccount);
 
     AlertUtils.showResultDialog(
       context,
       isSuccess: true,
-      title: 'Registration Successful!',
-      message: 'Your account has been registered. Please login to enjoy Rensius services.',
+      title: 'Pendaftaran Berhasil!',
+      message: 'Akun Anda telah terdaftar. Silakan masuk untuk menikmati layanan Rensius.',
       onConfirm: () {
         Navigator.pop(context);
       },
@@ -105,7 +104,7 @@ class _RegisterPageState extends State<RegisterPage> {
     AlertUtils.showResultDialog(
       context,
       isSuccess: false,
-      title: 'Invalid Data',
+      title: 'Data Tidak Valid',
       message: message,
     );
   }
@@ -130,7 +129,7 @@ class _RegisterPageState extends State<RegisterPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Create New Account',
+                  'Buat Akun Baru',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -139,7 +138,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Sign up now to start booking your favorite sports fields!',
+                  'Daftar sekarang untuk mulai memesan lapangan olahraga favoritmu!',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -148,11 +147,11 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 32),
                 
                 // Form Fields
-                _buildLabel('Full Name'),
+                _buildLabel('Nama Lengkap'),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
-                    hintText: 'Enter your name as per ID',
+                    hintText: 'Masukkan nama sesuai KTP',
                     prefixIcon: Icon(Icons.person_outline, color: AppColors.textSecondary),
                   ),
                 ),
@@ -169,26 +168,26 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
 
-                _buildLabel('Phone Number'),
+                _buildLabel('Nomor Telepon'),
                 _buildPhoneField(),
                 const SizedBox(height: 16),
                 
-                _buildLabel('Username'),
+                _buildLabel('Nama Pengguna'),
                 TextFormField(
                   controller: _usernameController,
                   decoration: const InputDecoration(
-                    hintText: 'Choose a unique username',
+                    hintText: 'Pilih nama pengguna yang unik',
                     prefixIcon: Icon(Icons.badge_outlined, color: AppColors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 16),
                 
-                _buildLabel('Password'),
+                _buildLabel('Kata Sandi'),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Minimum 6 characters',
+                    hintText: 'Minimal 6 karakter',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -205,12 +204,12 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
                 
-                _buildLabel('Confirm Password'),
+                _buildLabel('Konfirmasi Kata Sandi'),
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: !_isPasswordVisible,
                   decoration: const InputDecoration(
-                    hintText: 'Repeat your password',
+                    hintText: 'Ulangi kata sandi Anda',
                     prefixIcon: Icon(Icons.lock_outline, color: AppColors.textSecondary),
                   ),
                 ),
@@ -228,7 +227,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       elevation: 0,
                     ),
                     child: const Text(
-                      'Sign Up Now',
+                      'Daftar Sekarang',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -241,7 +240,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Already have an account?',
+                      'Sudah punya akun?',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     TextButton(
@@ -249,7 +248,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         Navigator.pop(context);
                       },
                       child: const Text(
-                        'Log In',
+                        'Masuk',
                         style: TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
@@ -287,24 +286,13 @@ class _RegisterPageState extends State<RegisterPage> {
       decoration: InputDecoration(
         hintText: '8123456789',
         prefixIcon: Container(
+          width: 50,
+          alignment: Alignment.center,
           margin: const EdgeInsets.only(right: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             border: Border(right: BorderSide(color: Colors.grey.shade300)),
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedCountryCode,
-              items: _countryCodes.map((code) => DropdownMenuItem(
-                value: code,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 12.0),
-                  child: Text(code, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                ),
-              )).toList(),
-              onChanged: (val) => setState(() => _selectedCountryCode = val!),
-            ),
-          ),
+          child: const Text('+62', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
         ),
       ),
     );

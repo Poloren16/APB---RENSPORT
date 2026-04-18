@@ -24,7 +24,7 @@ class ReceiptPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'E-Receipt',
+          'Kuitansi Pembayaran',
           style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
@@ -66,7 +66,7 @@ class ReceiptPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             const Text(
-                              'Payment Successful',
+                              'Pembayaran Berhasil',
                               style: TextStyle(
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold,
@@ -113,16 +113,16 @@ class ReceiptPage extends StatelessWidget {
                         child: Column(
                           children: [
                             _buildInfoRow('Venue', booking['venueName'] ?? '-', isBold: true),
-                            _buildInfoRow('Court Type', booking['courtName'] ?? '-'),
-                            _buildInfoRow('Booking Date', booking['date'] ?? '-'),
-                            _buildInfoRow('Time / Duration', booking['time'] ?? '-'),
+                            _buildInfoRow('Tipe Lapangan', booking['courtName'] ?? '-'),
+                            _buildInfoRow('Tanggal Pemesanan', booking['date'] ?? '-'),
+                            _buildInfoRow('Waktu / Durasi', booking['time'] ?? '-'),
                             if (booking['services'] != null)
-                              _buildInfoRow('Rented Equipment', booking['services']),
+                              _buildInfoRow('Peralatan Disewa', booking['services']),
                             const SizedBox(height: 16),
                             const Divider(height: 1),
                             const SizedBox(height: 16),
-                            _buildInfoRow('Payment Method', booking['paymentMethod'] ?? 'Virtual Account'),
-                            _buildInfoRow('Order Status', 'Paid', statusColor: Colors.green),
+                            _buildInfoRow('Metode Pembayaran', booking['paymentMethod'] ?? 'Virtual Account'),
+                            _buildInfoRow('Status Pesanan', 'Terbayar', statusColor: Colors.green),
                           ],
                         ),
                       ),
@@ -145,7 +145,7 @@ class ReceiptPage extends StatelessWidget {
                                   Icon(Icons.verified_user_rounded, color: AppColors.primary, size: 20),
                                   SizedBox(width: 10),
                                   Text(
-                                    'Verified Payment',
+                                    'Pembayaran Terverifikasi',
                                     style: TextStyle(
                                       color: AppColors.primary,
                                       fontWeight: FontWeight.bold,
@@ -179,7 +179,7 @@ class ReceiptPage extends StatelessWidget {
             
             // Helpful text
             Text(
-              'Show this e-receipt to the field staff upon arrival at the location for order validation.',
+              'Tunjukkan e-receipt ini kepada staf lapangan saat tiba di lokasi untuk validasi pesanan.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary.withOpacity(0.7),
@@ -202,7 +202,7 @@ class ReceiptPage extends StatelessWidget {
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                child: const Text('Back to Activities', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text('Kembali ke Aktivitas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
           ],

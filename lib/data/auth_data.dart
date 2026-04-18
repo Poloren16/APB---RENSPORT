@@ -93,7 +93,7 @@ class GlobalAuthData {
       role: 'Admin',
       applicantName: 'System Admin',
       email: 'admin@rensius.com',
-      phoneNumber: '081234567890',
+      phoneNumber: '+6281234567890',
     ),
   ];
 

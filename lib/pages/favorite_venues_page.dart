@@ -28,7 +28,7 @@ class _FavoriteVenuesPageState extends State<FavoriteVenuesPage> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'My Favorite Venues',
+          'Venue Favorit Saya',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -37,8 +37,8 @@ class _FavoriteVenuesPageState extends State<FavoriteVenuesPage> {
       ),
       body: favorites.isEmpty
           ? const EmptyStateWidget(
-              message: 'No favorite venues yet',
-              subMessage: 'Bookmark your favorite venues to find them here easily!',
+              message: 'Belum ada venue favorit',
+              subMessage: 'Tandai venue favorit Anda agar dapat menemukannya di sini dengan mudah!',
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -148,7 +148,7 @@ class _FavoriteVenuesPageState extends State<FavoriteVenuesPage> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '(${Review.mockReviews.where((r) => r.venueName == venueName).length} reviews)',
+                            '(${Review.mockReviews.where((r) => r.venueName == venueName).length} ulasan)',
                             style: TextStyle(color: Colors.grey[500], fontSize: 10),
                           ),
                         ],
@@ -169,7 +169,7 @@ class _FavoriteVenuesPageState extends State<FavoriteVenuesPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        venue['price'] ?? 'Contact Manager',
+                        venue['price'] ?? 'Hubungi Manajer',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,

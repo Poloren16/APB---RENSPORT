@@ -35,7 +35,7 @@ class _ChatPageState extends State<ChatPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'Messages',
+          'Pesan',
           style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
@@ -48,7 +48,7 @@ class _ChatPageState extends State<ChatPage> {
       body: displayThreads.isEmpty
           ? const Center(
               child: Text(
-                'No messages yet',
+                'Belum ada pesan',
                 style: TextStyle(color: Colors.grey, fontSize: 16),
               ),
             )

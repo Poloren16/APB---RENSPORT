@@ -28,9 +28,11 @@ class CourtDetailPage extends StatefulWidget {
     this.courtCategory = 'Outdoor',
     this.floorType = 'Vinyl',
     this.initialSelectedSlot,
+    this.initialSelectedDate,
   });
 
   final String? initialSelectedSlot;
+  final DateTime? initialSelectedDate;
 
   @override
   State<CourtDetailPage> createState() => _CourtDetailPageState();
@@ -41,7 +43,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   static const Color _accent = AppColors.primary;
 
   late TabController _tabController;
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
   final Set<String> _selectedSlots = {};
   final Set<int> _expandedGroups = {};
   final Map<String, int> _selectedServices = {};
@@ -89,6 +91,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   @override
   void initState() {
     super.initState();
+    _selectedDate = widget.initialSelectedDate ?? DateTime.now();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -710,11 +713,9 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                       'timeSlot': '${selectedTimes.length} Slot: ${selectedTimes.join(', ')}',
                       'price': _totalPrice,
                     });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Berhasil ditambahkan ke keranjang!'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
+                    AlertUtils.showToast(
+                      context,
+                      'Berhasil ditambahkan ke keranjang!',
                     );
                   }
                 : null,

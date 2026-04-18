@@ -29,7 +29,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
   late TextEditingController _fbController;
   
   String? _profileImagePath;
-  String _gender = 'Not Set';
+  String _gender = 'Belum Diatur';
   String _dob = '';
   List<String> _selectedSports = [];
 
@@ -60,7 +60,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
     _fbController = TextEditingController(text: account?.facebook ?? "");
     _selectedSports = List<String>.from(account?.sportsInterests ?? []);
     _profileImagePath = account?.profileImagePath;
-    _gender = account?.gender ?? 'Not Set';
+    _gender = account?.gender ?? 'Belum Diatur';
     _dob = account?.dateOfBirth ?? '';
   }
 
@@ -103,16 +103,16 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Select Profile Photo Source', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Pilih Sumber Foto Profil', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildSourceOption(Icons.camera_alt, 'Camera', () {
+                  _buildSourceOption(Icons.camera_alt, 'Kamera', () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.camera);
                   }),
-                  _buildSourceOption(Icons.photo_library, 'Gallery', () {
+                  _buildSourceOption(Icons.photo_library, 'Galeri', () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.gallery);
                   }),
@@ -168,7 +168,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
     );
     
     if (mounted) {
-      AlertUtils.showToast(context, 'Profile updated successfully!', isSuccess: true);
+      AlertUtils.showToast(context, 'Profil berhasil diupdate!', isSuccess: true);
       setState(() => _isEditing = false);
     }
   }
@@ -212,7 +212,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Profile',
+          'Profil',
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
@@ -317,8 +317,8 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
       dividerColor: Colors.transparent,
       labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
       tabs: const [
-        Tab(text: 'Personal Details'),
-        Tab(text: 'Social Media Accounts'),
+        Tab(text: 'Detail Pribadi'),
+        Tab(text: 'Akun Media Sosial'),
       ],
     );
   }
@@ -326,33 +326,33 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
   Widget _buildDetailPersonalTab() {
     final account = GlobalAuthData.getAccount(widget.username);
     final userEmail = account?.email ?? widget.email;
-    final userPhone = account?.phoneNumber ?? '+62 000 0000 00';
+    final userPhone = account?.phoneNumber ?? '+62 812 3456 7890';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTextFieldWithLabel('Full Name *', _nameController, isReadOnly: !_isEditing),
+          _buildTextFieldWithLabel('Nama Lengkap *', _nameController, isReadOnly: !_isEditing),
           const SizedBox(height: 20),
           _buildStaticField('Username *', widget.username),
           const SizedBox(height: 20),
           
-          const Text('Gender', style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
+          const Text('Jenis Kelamin', style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
           Row(
             children: [
-              _buildGenderOption('Male', Icons.male),
+              _buildGenderOption('Laki-laki', Icons.male),
               const SizedBox(width: 16),
-              _buildGenderOption('Female', Icons.female),
+              _buildGenderOption('Perempuan', Icons.female),
             ],
           ),
           
           const SizedBox(height: 20),
-          _buildClickableField('Date of Birth', _dob.isEmpty ? 'Select Date' : _dob, Icons.calendar_today, _selectDate),
+          _buildClickableField('Tanggal Lahir', _dob.isEmpty ? 'Pilih Tanggal' : _dob, Icons.calendar_today, _selectDate),
           
           const SizedBox(height: 24),
-          const Text('Sports Interests', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+          const Text('Minat Olahraga', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           _buildSportsGrid(),
           
@@ -364,7 +364,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
             maxLines: 4,
             readOnly: !_isEditing,
             decoration: InputDecoration(
-              hintText: "You haven't added a bio yet..",
+              hintText: "Anda belum menambahkan bio..",
               hintStyle: TextStyle(color: Colors.grey.shade400),
               contentPadding: const EdgeInsets.all(16),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -388,7 +388,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
         ),
         const SizedBox(height: 16),
         _buildStaticField(
-          'Phone Number', 
+          'Nomor Telepon', 
           userPhone, 
           color: Colors.grey,
           onTap: () {
@@ -642,7 +642,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 0,
         ),
-        child: const Text('Save Changes', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        child: const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
       ),
     );
   }

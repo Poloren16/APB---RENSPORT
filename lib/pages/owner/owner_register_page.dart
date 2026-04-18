@@ -243,8 +243,8 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
     AlertUtils.showResultDialog(
       context,
       isSuccess: true,
-      title: 'Registration Successful!',
-      message: 'Your data has been sent to Admin. Please wait for verification within 24 hours.',
+      title: 'Pendaftaran Berhasil',
+      message: 'Data Anda telah dikirim ke Admin. Mohon tunggu verifikasi dalam waktu 24 jam.',
     );
     
     Future.delayed(const Duration(seconds: 2), () {

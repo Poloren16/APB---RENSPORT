@@ -53,35 +53,43 @@ class _KeranjangPageState extends State<KeranjangPage> {
       appBar: AppBar(
         title: const Text(
           'Keranjang Saya',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 18),
         ),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
-        automaticallyImplyLeading: false, // Menghilangkan tombol kembali otomatis
+        titleSpacing: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.textPrimary, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           if (items.isNotEmpty)
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  if (_selectedItems.length == items.length) {
-                    _selectedItems.clear();
-                  } else {
-                    _selectedItems.addAll(List.generate(items.length, (i) => i));
-                  }
-                });
-              },
-              child: Text(
-                _selectedItems.length == items.length ? 'Batal Semua' : 'Pilih Semua',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    if (_selectedItems.length == items.length) {
+                      _selectedItems.clear();
+                    } else {
+                      _selectedItems.addAll(List.generate(items.length, (i) => i));
+                    }
+                  });
+                },
+                child: Text(
+                  _selectedItems.length == items.length ? 'Batal Semua' : 'Pilih Semua',
+                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
+                ),
               ),
             ),
-          // Tombol tutup manual tetap ada untuk kembali ke halaman sebelumnya
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
-            onPressed: () => Navigator.pop(context),
-          ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: Colors.grey.withValues(alpha: 0.1), height: 1),
+        ),
       ),
       body: items.isEmpty
           ? EmptyStateWidget(
@@ -120,18 +128,21 @@ class _KeranjangPageState extends State<KeranjangPage> {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
-        border: isSelected ? Border.all(color: AppColors.primary, width: 1.5) : null,
+        border: Border.all(
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.5) : Colors.grey.withValues(alpha: 0.1),
+          width: 1.5,
+        ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -148,11 +159,13 @@ class _KeranjangPageState extends State<KeranjangPage> {
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.05) : Colors.transparent,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  color: isSelected ? AppColors.primary.withValues(alpha: 0.03) : Colors.transparent,
                   child: Checkbox(
                     value: isSelected,
                     activeColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    side: BorderSide(color: Colors.grey.shade400, width: 1.5),
                     onChanged: (val) {
                       setState(() {
                         if (val == true) {
@@ -189,49 +202,79 @@ class _KeranjangPageState extends State<KeranjangPage> {
                           children: [
                             Text(
                               item['venueName'] ?? 'Nama Venue',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 4),
                             Text(
-                              '${item['courtName'] ?? 'Lapangan'} • ${item['date'] ?? '-'}',
-                              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                              '${item['courtName'] ?? 'Lapangan'}\n${item['date'] ?? '-'}',
+                              style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.3),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
                             if (timeDisplay.isNotEmpty)
                               Wrap(
                                 spacing: 6,
-                                runSpacing: 4,
+                                runSpacing: 6,
                                 children: timeDisplay.split(', ').map((t) => Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(4),
+                                    color: AppColors.primary.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: Text(t, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 10)),
+                                  child: Text(
+                                    t, 
+                                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 11),
+                                  ),
                                 )).toList(),
                               ),
                             if (services != null && services.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              ...services.entries.map((entry) {
-                                final venueResults = GlobalVenueData.venues.where((v) => v['name'] == item['venueName']);
-                                final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-                                final servicesList = venue['services'] as List<dynamic>? ?? [];
-                                final serviceResults = servicesList.where((s) => s['id'] == entry.key);
-                                String sName = serviceResults.isNotEmpty ? serviceResults.first['name'] : entry.key;
-                                return Text('• $sName (x${entry.value})', style: const TextStyle(fontSize: 10, color: Colors.black54));
-                              }).toList(),
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: services.entries.map((entry) {
+                                    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == item['venueName']);
+                                    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+                                    final servicesList = venue['services'] as List<dynamic>? ?? [];
+                                    final serviceResults = servicesList.where((s) => s['id'] == entry.key);
+                                    String sName = serviceResults.isNotEmpty ? serviceResults.first['name'] : entry.key;
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.add_circle_outline, size: 10, color: Colors.grey),
+                                          const SizedBox(width: 4),
+                                          Text('$sName (x${entry.value})', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
                             ],
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             Text(
                               _formatCurrency(item['price'] as int? ?? 0),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.orange),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.orange),
                             ),
                           ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                        icon: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.05),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+                        ),
                         onPressed: () {
+                          // Konfirmasi hapus bisa ditambahkan di sini
                           setState(() {
                             GlobalVenueData.cart.removeAt(index);
                             _selectedItems.remove(index);
@@ -253,35 +296,43 @@ class _KeranjangPageState extends State<KeranjangPage> {
     final int count = _selectedItems.length;
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
+            blurRadius: 20,
             offset: const Offset(0, -5),
           ),
         ],
       ),
       child: SafeArea(
+        top: false,
         child: Row(
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Total ($count Item)',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                Text(
-                  _formatCurrency(_selectedTotalPrice),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
-                ),
-              ],
-            ),
-            const SizedBox(width: 20),
             Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total ($count Item)',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500], fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _formatCurrency(_selectedTotalPrice),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            SizedBox(
+              height: 54,
+              width: 160,
               child: ElevatedButton(
                 onPressed: count > 0 ? () {
                   final List<Map<String, dynamic>> itemsToCheckout = [];
@@ -306,13 +357,15 @@ class _KeranjangPageState extends State<KeranjangPage> {
                 } : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  disabledBackgroundColor: Colors.grey.shade300,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shadowColor: AppColors.primary.withValues(alpha: 0.3),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  disabledBackgroundColor: Colors.grey.shade200,
                 ),
                 child: const Text(
                   'Checkout',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
             ),

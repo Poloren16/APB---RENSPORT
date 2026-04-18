@@ -14,12 +14,16 @@ class VenuePage extends StatefulWidget {
   final String username;
   final String role;
   final bool initialShowFavorites;
+  final String? initialCategory;
+  final DateTime? initialDate;
 
   const VenuePage({
     super.key, 
     this.username = 'User', 
     this.role = 'End User', 
-    this.initialShowFavorites = false
+    this.initialShowFavorites = false,
+    this.initialCategory,
+    this.initialDate,
   });
 
   @override
@@ -27,20 +31,32 @@ class VenuePage extends StatefulWidget {
 }
 
 class _VenuePageState extends State<VenuePage> {
-  DateTime _selectedDate = DateTime.now();
+  late DateTime _selectedDate;
   late String _selectedCategory;
+  final TextEditingController _searchController = TextEditingController();
 
   static const List<CategoryItem> _categories = [
     CategoryItem('Semua'),
-    CategoryItem('Favorite', Icons.bookmark_outline),
+    CategoryItem('Favorit', Icons.bookmark_outline),
     CategoryItem('Mini Soccer', Icons.sports_soccer),
     CategoryItem('Sepak Bola', Icons.sports_soccer),
+    CategoryItem('Badminton', Icons.sports_tennis),
+    CategoryItem('Tennis', Icons.sports_tennis),
+    CategoryItem('Futsal', Icons.sports_soccer),
   ];
 
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.initialShowFavorites ? 'Favorite' : 'Semua';
+    _selectedDate = widget.initialDate ?? DateTime.now();
+    _selectedCategory = widget.initialCategory ?? (widget.initialShowFavorites ? 'Favorit' : 'Semua');
+    _searchController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   static String _monthName(int month) {
@@ -52,9 +68,35 @@ class _VenuePageState extends State<VenuePage> {
     return names[month];
   }
 
+  Future<void> _selectDateViaCalendar() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    bool isShowingFavorites = _selectedCategory == 'Favorite';
+    bool isShowingFavorites = _selectedCategory == 'Favorit' || _selectedCategory == 'Favorite';
     
     // Logic to determine which venues to show
     List<Map<String, dynamic>> displayedVenues;
@@ -68,222 +110,245 @@ class _VenuePageState extends State<VenuePage> {
           .toList();
     }
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Section
-          Stack(
-            children: [
-              Container(
-                height: 130,
-                decoration: const BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
+    // Apply search filter
+    if (_searchController.text.isNotEmpty) {
+      final query = _searchController.text.toLowerCase();
+      displayedVenues = displayedVenues.where((v) {
+        return (v['name'] ?? '').toLowerCase().contains(query) ||
+               (v['location'] ?? '').toLowerCase().contains(query) ||
+               (v['address'] ?? '').toLowerCase().contains(query);
+      }).toList();
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Section
+            Stack(
+              children: [
+                Container(
+                  height: 130,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
                   ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.stadium, color: Colors.white, size: 30),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        isShowingFavorites ? 'Venue Favorit Kamu' : 'Temukan Beragam Venue!',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.stadium, color: Colors.white, size: 30),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          isShowingFavorites ? 'Venue Favorit Kamu' : 'Temukan Beragam Venue!',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => KeranjangPage(
-                              username: widget.username,
-                              role: widget.role,
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => KeranjangPage(
+                                username: widget.username,
+                                role: widget.role,
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                      child: Stack(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-                          ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
+                          );
+                        },
+                        child: Stack(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
                                 shape: BoxShape.circle,
                               ),
-                              constraints: const BoxConstraints(
-                                minWidth: 8,
-                                minHeight: 8,
-                              ),
+                              child: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
                             ),
-                          )
-                        ],
-                      ),
-                    )
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 70, left: 20, right: 20),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
+                            if (GlobalVenueData.cart.isNotEmpty)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 8,
+                                    minHeight: 8,
+                                  ),
+                                ),
+                              )
+                          ],
+                        ),
+                      )
                     ],
                   ),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Cari Venue',
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Categories Section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: VenueCategoryChips(
-              categories: _categories,
-              selectedCategory: _selectedCategory,
-              onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Date Picker Section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_month, color: Colors.grey[600]),
-                        const SizedBox(width: 8),
-                        Text(
-                          _monthName(_selectedDate.month),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                Padding(
+                  padding: const EdgeInsets.only(top: 70, left: 20, right: 20),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
                         ),
-                        Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
                       ],
                     ),
-                    GestureDetector(
-                      onTap: () => setState(() => _selectedDate = DateTime.now()),
-                      child: const Text(
-                        'Reset & Mulai Ulang',
-                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Cari Venue',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchController.text.isNotEmpty 
+                            ? IconButton(icon: const Icon(Icons.clear, size: 20), onPressed: () => _searchController.clear()) 
+                            : null,
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 15),
-                VenueDatePicker(
-                  selectedDate: _selectedDate,
-                  onDateSelected: (date) => setState(() => _selectedDate = date),
+                  ),
                 ),
               ],
             ),
-          ),
-
-          const SizedBox(height: 25),
-
-          // Venue Card Section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+  
+            const SizedBox(height: 20),
+  
+            // Categories Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: VenueCategoryChips(
+                categories: _categories,
+                selectedCategory: _selectedCategory,
+                onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
+              ),
+            ),
+  
+            const SizedBox(height: 20),
+  
+            // Date Picker Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      TextSpan(text: isShowingFavorites ? 'Favorit ' : 'Rekomendasi '),
-                      TextSpan(text: 'Venue', style: const TextStyle(color: AppColors.primary)),
+                      GestureDetector(
+                        onTap: _selectDateViaCalendar,
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_month, color: Colors.grey[600]),
+                            const SizedBox(width: 8),
+                            Text(
+                              _monthName(_selectedDate.month),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _selectedDate = DateTime.now()),
+                        child: const Text(
+                          'Reset & Mulai Ulang',
+                          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isShowingFavorites 
-                      ? 'Daftar venue yang telah kamu tandai!' 
-                      : 'Temukan venue terbaik untuk bermain!',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
-                const SizedBox(height: 20),
-                if (displayedVenues.isEmpty)
-                  isShowingFavorites 
-                    ? EmptyStateWidget(
-                        message: 'Belum ada venue favorit',
-                        subMessage: 'Tandai venue favoritmu untuk menemukannya di sini dengan mudah!',
-                        onActionPressed: () => setState(() => _selectedCategory = 'Semua'),
-                        actionLabel: 'Cari Venue',
-                        actionIcon: Icons.search_rounded,
-                      )
-                    : Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(40),
-                          child: Text('Tidak ada venue ditemukan untuk kategori ini.', style: TextStyle(color: Colors.grey.shade400)),
-                        ),
-                      )
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: displayedVenues.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 20),
-                    itemBuilder: (context, index) => _buildDetailedVenueCard(displayedVenues[index]),
+                  const SizedBox(height: 15),
+                  VenueDatePicker(
+                    selectedDate: _selectedDate,
+                    onDateSelected: (date) => setState(() => _selectedDate = date),
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
-          
-          const SizedBox(height: 30),
-        ],
+  
+            const SizedBox(height: 25),
+  
+            // Venue Card Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                      children: [
+                        TextSpan(text: isShowingFavorites ? 'Favorit ' : 'Rekomendasi '),
+                        TextSpan(text: 'Venue', style: const TextStyle(color: AppColors.primary)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isShowingFavorites 
+                        ? 'Daftar venue yang telah kamu tandai!' 
+                        : 'Temukan venue terbaik untuk bermain!',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  ),
+                  const SizedBox(height: 20),
+                  if (displayedVenues.isEmpty)
+                    isShowingFavorites 
+                      ? EmptyStateWidget(
+                          message: 'Belum ada venue favorit',
+                          subMessage: 'Tandai venue favoritmu untuk menemukannya di sini dengan mudah!',
+                          onActionPressed: () => setState(() => _selectedCategory = 'Semua'),
+                          actionLabel: 'Cari Venue',
+                          actionIcon: Icons.search_rounded,
+                        )
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 40),
+                            child: EmptyStateWidget(
+                              message: 'Tidak ada venue ditemukan untuk kategori ini.',
+                              actionLabel: _selectedCategory != 'Semua' ? 'Tampilkan Semua' : null,
+                              onActionPressed: () => setState(() => _selectedCategory = 'Semua'),
+                            ),
+                          )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: displayedVenues.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 20),
+                      itemBuilder: (context, index) => _buildDetailedVenueCard(displayedVenues[index]),
+                    ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 30),
+          ],
+        ),
       ),
     );
   }
@@ -480,6 +545,7 @@ class _VenuePageState extends State<VenuePage> {
           venueName: venueName,
           sportType: sportType,
           initialSelectedSlot: initialSlot,
+          initialSelectedDate: _selectedDate,
         ),
       ),
     );

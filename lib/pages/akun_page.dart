@@ -134,7 +134,7 @@ class _AkunPageState extends State<AkunPage> {
                             });
                           },
                           child: const Text(
-                            'VIEW PROFILE >',
+                            'LIHAT PROFIL >',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -191,7 +191,7 @@ class _AkunPageState extends State<AkunPage> {
                   ),
                   const Spacer(),
                   const Text(
-                    'Points Details',
+                    'Detail Poin',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -209,10 +209,10 @@ class _AkunPageState extends State<AkunPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildMenuSection('Personal'),
+                _buildMenuSection('Pribadi'),
                 _buildListTile(
                   icon: Icons.bookmark_outline,
-                  title: 'My Favorite Venues',
+                  title: 'Venue Favorit Saya',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -226,10 +226,10 @@ class _AkunPageState extends State<AkunPage> {
                   },
                 ),
                 const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                _buildMenuSection('Settings'),
+                _buildMenuSection('Pengaturan'),
                 _buildListTile(
                   icon: Icons.settings,
-                  title: 'Security and Settings',
+                  title: 'Keamanan dan Pengaturan',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -245,7 +245,7 @@ class _AkunPageState extends State<AkunPage> {
                 if (widget.role.toLowerCase() == 'admin' || widget.role.toLowerCase() == 'owner') ...[
                   _buildListTile(
                     icon: widget.role.toLowerCase() == 'admin' ? Icons.admin_panel_settings : Icons.business_center,
-                    title: widget.role.toLowerCase() == 'admin' ? 'Admin Dashboard' : 'Venue Management',
+                    title: widget.role.toLowerCase() == 'admin' ? 'Dashboard Admin' : 'Manajemen Venue',
                     onTap: () {
                       if (widget.role.toLowerCase() == 'admin') {
                         Navigator.push(
@@ -268,7 +268,7 @@ class _AkunPageState extends State<AkunPage> {
                 ],
                 _buildListTile(
                   icon: Icons.logout,
-                  title: 'Log Out',
+                  title: 'Keluar',
                   onTap: () {
                     _showLogoutConfirmation(context);
                   },
@@ -336,7 +336,7 @@ class _AkunPageState extends State<AkunPage> {
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Log out from Rensius?',
+                  'Keluar dari Rensius?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,
@@ -346,7 +346,7 @@ class _AkunPageState extends State<AkunPage> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Are you sure you want to log out from Rensius?\nWe hope to see you back soon!',
+                  'Apakah Anda yakin ingin keluar dari Rensius?\nKami berharap Anda kembali lagi!',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -360,7 +360,7 @@ class _AkunPageState extends State<AkunPage> {
                       child: TextButton(
                         onPressed: () => Navigator.pop(context),
                         child: const Text(
-                          'Cancel',
+                          'Batal',
                           style: TextStyle(
                             color: Colors.grey,
                             fontWeight: FontWeight.bold,
@@ -387,7 +387,7 @@ class _AkunPageState extends State<AkunPage> {
                           elevation: 0,
                         ),
                         child: const Text(
-                          'Log Out',
+                          'Keluar',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

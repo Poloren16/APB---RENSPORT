@@ -1,13 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_colors.dart';
+import '../../data/venue_data.dart';
+import '../../pages/venue_page.dart';
 
-class VenueContactSection extends StatelessWidget {
+class VenueContactSection extends StatefulWidget {
+  final String username;
+  final String role;
+  final String venueType;
+  final String currentVenueName;
   final String Function(int) formatCurrency;
 
   const VenueContactSection({
     super.key,
+    required this.username,
+    required this.role,
+    required this.venueType,
+    required this.currentVenueName,
     required this.formatCurrency,
   });
+
+  @override
+  State<VenueContactSection> createState() => _VenueContactSectionState();
+}
+
+class _VenueContactSectionState extends State<VenueContactSection> {
+  late PageController _pageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.85);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _launchURL(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
+    }
+  }
 
   Widget _contactButton({
     required IconData icon,
@@ -144,14 +182,14 @@ class VenueContactSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Price starting from',
+                  'Harga mulai dari',
                   style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      formatCurrency(price),
+                      widget.formatCurrency(price),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -177,6 +215,25 @@ class VenueContactSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get recommendations matching the current venue's sport type
+    List<Map<String, dynamic>> allMatches = GlobalVenueData.venues
+        .where((v) => 
+          v['type'] == widget.venueType && 
+          v['name'] != widget.currentVenueName
+        ).toList();
+
+    bool isFallback = false;
+    // Fallback to all venues if no matches for the same sport
+    if (allMatches.isEmpty) {
+      isFallback = true;
+      allMatches = GlobalVenueData.venues
+          .where((v) => v['name'] != widget.currentVenueName)
+          .toList();
+    }
+
+    // Limit the displayed recommendations to 10
+    final List<Map<String, dynamic>> recommendations = allMatches.take(10).toList();
+
     return Column(
       children: [
         // ── Venue Contact ───────────────────────────
@@ -189,7 +246,7 @@ class VenueContactSection extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Venue Contact',
+                  const Text('Kontak Venue',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -206,12 +263,12 @@ class VenueContactSection extends StatelessWidget {
                       icon: Icons.chat,
                       iconColor: const Color(0xFF25D366),
                       label: 'WhatsApp',
-                      onTap: () {}),
+                      onTap: () => _launchURL('https://wa.me/6281279098707')),
                   _contactButton(
                       icon: Icons.camera_alt,
                       iconColor: const Color(0xFFE1306C),
                       label: 'Instagram',
-                      onTap: () {}),
+                      onTap: () => _launchURL('https://www.instagram.com/polorenn16/')),
                 ],
               ),
             ],
@@ -223,62 +280,100 @@ class VenueContactSection extends StatelessWidget {
         // ── Venue Recommendation ─────────────────────────
         Container(
           color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 20, 0, 20),
+          padding: const EdgeInsets.fromLTRB(0, 20, 0, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.only(right: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Venue Recommendation',
+                    const Text('Rekomendasi Venue',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
                         )),
-                    GestureDetector(
-                      onTap: () {},
-                      child: const Row(children: [
-                        Text('View more',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600)),
-                        Icon(Icons.chevron_right,
-                            size: 15, color: AppColors.primary),
-                      ]),
-                    ),
+                    if (_currentPage == recommendations.length - 1 && recommendations.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => VenuePage(
+                                username: widget.username,
+                                role: widget.role,
+                                initialCategory: isFallback ? 'Semua' : widget.venueType,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.arrow_forward_rounded,
+                              size: 18, color: AppColors.primary),
+                        ),
+                      ),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
               SizedBox(
                 height: 220,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    _venueRecommendationCard(
-                        name: 'Persada Sports Facilities',
-                        address: 'Jl. Raya Protokol Ha...',
-                        types: 'Mini Soccer, Tennis, Pad...',
-                        price: 225000,
-                        distance: '114 km'),
-                    _venueRecommendationCard(
-                        name: 'GOR Arcamanik',
-                        address: 'Jl. Pacuan Kuda No.8...',
-                        types: 'Badminton, Basket...',
-                        price: 75000,
-                        distance: '8 km'),
-                    _venueRecommendationCard(
-                        name: 'Ujung Berung Sports Center',
-                        address: 'Jl. AH Nasution No.23...',
-                        types: 'Futsal, Tennis Meja...',
-                        price: 90000,
-                        distance: '12 km'),
-                  ],
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: recommendations.length,
+                  onPageChanged: (int page) {
+                    setState(() {
+                      _currentPage = page;
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    final venue = recommendations[index];
+                    // Handle dynamic price if it's a string like "IDR 150,000 / Hour"
+                    int priceVal = 0;
+                    if (venue['price'] is int) {
+                      priceVal = venue['price'];
+                    } else if (venue['price'] is String) {
+                      final match = RegExp(r'\d+').allMatches(venue['price'].replaceAll(',', ''));
+                      if (match.isNotEmpty) {
+                        priceVal = int.tryParse(match.first.group(0) ?? '0') ?? 0;
+                      }
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: _venueRecommendationCard(
+                          name: venue['name'] ?? 'Unknown',
+                          address: venue['location'] ?? 'Unknown',
+                          types: venue['type'] ?? 'Sports',
+                          price: priceVal,
+                          distance: '3 km'),
+                    );
+                  },
                 ),
+              ),
+              const SizedBox(height: 12),
+              // Paging Indicators (Dots)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(recommendations.length, (index) {
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    height: 8,
+                    width: _currentPage == index ? 24 : 8,
+                    decoration: BoxDecoration(
+                      color: _currentPage == index ? AppColors.primary : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
               ),
             ],
           ),

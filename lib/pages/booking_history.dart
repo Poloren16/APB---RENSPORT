@@ -21,6 +21,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedTab = 0;
+  final TextEditingController _searchController = TextEditingController();
+  String _statusFilter = 'Semua';
 
   @override
   void initState() {
@@ -33,11 +35,13 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
         });
       }
     });
+    _searchController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -64,7 +68,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                   ),
                   const SizedBox(width: 10),
                   const Text(
-                    'Activities',
+                    'Aktivitas',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -106,8 +110,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                   borderSide: BorderSide(color: AppColors.primary, width: 2.5),
                 ),
                 tabs: const [
-                  Tab(text: 'Order List'),
-                  Tab(text: 'Transaction History'),
+                  Tab(text: 'Daftar Pesanan'),
+                  Tab(text: 'Riwayat Transaksi'),
                 ],
               ),
             ),
@@ -134,10 +138,11 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                         ],
                       ),
                       child: TextField(
+                        controller: _searchController,
                         decoration: InputDecoration(
                           hintText: _selectedTab == 0
-                              ? 'Search Booking Name'
-                              : 'Search Transaction',
+                              ? 'Cari Nama Pemesanan'
+                              : 'Cari Transaksi',
                           hintStyle: TextStyle(
                             color: AppColors.textSecondary.withValues(alpha: 0.6),
                             fontSize: 14,
@@ -147,6 +152,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                             color: AppColors.textSecondary.withValues(alpha: 0.6),
                             size: 20,
                           ),
+                          suffixIcon: _searchController.text.isNotEmpty 
+                              ? IconButton(icon: const Icon(Icons.clear, size: 20), onPressed: () => _searchController.clear()) 
+                              : null,
                           border: InputBorder.none,
                           contentPadding:
                               const EdgeInsets.symmetric(vertical: 14),
@@ -155,9 +163,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                     ),
                   ),
                   const SizedBox(width: 10),
-                  _buildIconButton(Icons.tune_rounded),
-                  const SizedBox(width: 8),
-                  _buildIconButton(Icons.filter_list_rounded),
+                  _buildIconButton(Icons.filter_list_rounded, () => _showFilterOptions()),
                 ],
               ),
             ),
@@ -169,33 +175,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  BookingHistoryPage.mockHistory.isEmpty
-                      ? EmptyStateWidget(
-                          message: 'You have no active orders.',
-                          onActionPressed: () {},
-                          actionLabel: 'Create Booking',
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: BookingHistoryPage.mockHistory.length,
-                          itemBuilder: (context, index) {
-                            return _buildHistoryCard(
-                                BookingHistoryPage.mockHistory[index],
-                                index: index);
-                          },
-                        ),
-                  BookingHistoryPage.mockPastHistory.isEmpty
-                      ? const EmptyStateWidget(
-                          message: 'You have no transaction history.')
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: BookingHistoryPage.mockPastHistory.length,
-                          itemBuilder: (context, index) {
-                            return _buildHistoryCard(
-                                BookingHistoryPage.mockPastHistory[index],
-                                isPast: true);
-                          },
-                        ),
+                   _buildOrderList(),
+                   _buildTransactionHistory(),
                 ],
               ),
             ),
@@ -205,22 +186,122 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     );
   }
 
-  Widget _buildIconButton(IconData icon) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+  Widget _buildIconButton(IconData icon, [VoidCallback? onTap]) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: AppColors.primary, size: 20),
       ),
-      child: Icon(icon, color: AppColors.primary, size: 20),
+    );
+  }
+
+  void _showFilterOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Filter Berdasarkan Status', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ...['Semua', 'Pembayaran Berhasil', 'Menunggu Pembayaran', 'Selesai'].map((status) => ListTile(
+                title: Text(status),
+                trailing: _statusFilter == status ? const Icon(Icons.check, color: AppColors.primary) : null,
+                onTap: () {
+                  setState(() => _statusFilter = status);
+                  Navigator.pop(context);
+                },
+              )),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOrderList() {
+    final query = _searchController.text.toLowerCase();
+    final filtered = BookingHistoryPage.mockHistory.where((item) {
+      final matchesSearch = (item['venueName'] ?? '').toLowerCase().contains(query) || 
+                            (item['courtName'] ?? '').toLowerCase().contains(query);
+      final matchesStatus = _statusFilter == 'Semua' || item['status'] == _statusFilter;
+      return matchesSearch && matchesStatus;
+    }).toList();
+
+    if (filtered.isEmpty) {
+      return EmptyStateWidget(
+        message: _searchController.text.isNotEmpty || _statusFilter != 'Semua' 
+            ? 'Tidak ada pesanan yang sesuai filter.'
+            : 'Anda belum memiliki pesanan aktif.',
+        onActionPressed: () {
+           if (_searchController.text.isNotEmpty || _statusFilter != 'Semua') {
+             setState(() {
+               _searchController.clear();
+               _statusFilter = 'Semua';
+             });
+           }
+        },
+        actionLabel: _searchController.text.isNotEmpty || _statusFilter != 'Semua' ? 'Reset Filter' : 'Buat Pesanan',
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: filtered.length,
+      itemBuilder: (context, index) {
+        return _buildHistoryCard(filtered[index], index: index);
+      },
+    );
+  }
+
+  Widget _buildTransactionHistory() {
+    final query = _searchController.text.toLowerCase();
+    final filtered = BookingHistoryPage.mockPastHistory.where((item) {
+      final matchesSearch = (item['venueName'] ?? '').toLowerCase().contains(query) || 
+                            (item['courtName'] ?? '').toLowerCase().contains(query);
+      final matchesStatus = _statusFilter == 'Semua' || item['status'] == _statusFilter;
+      return matchesSearch && matchesStatus;
+    }).toList();
+
+    if (filtered.isEmpty) {
+      return EmptyStateWidget(
+        message: _searchController.text.isNotEmpty || _statusFilter != 'Semua'
+            ? 'Tidak ada riwayat yang sesuai filter.'
+            : 'Anda belum memiliki riwayat transaksi.',
+        onActionPressed: () {
+           if (_searchController.text.isNotEmpty || _statusFilter != 'Semua') {
+             setState(() {
+               _searchController.clear();
+               _statusFilter = 'Semua';
+             });
+           }
+        },
+        actionLabel: _searchController.text.isNotEmpty || _statusFilter != 'Semua' ? 'Reset Filter' : null,
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: filtered.length,
+      itemBuilder: (context, index) {
+        return _buildHistoryCard(filtered[index], isPast: true);
+      },
     );
   }
 
@@ -265,16 +346,16 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: (item['status'] ?? '') == 'Completed'
+                        color: (item['status'] ?? '') == 'Completed' || (item['status'] ?? '') == 'Selesai'
                             ? Colors.grey.shade100
                             : Colors.green.shade50,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        item['status'] ?? '-',
+                        (item['status'] ?? '') == 'Completed' ? 'Selesai' : (item['status'] ?? '-'),
                         style: TextStyle(
                           fontSize: 12,
-                          color: (item['status'] ?? '') == 'Completed'
+                          color: (item['status'] ?? '') == 'Completed' || (item['status'] ?? '') == 'Selesai'
                               ? Colors.grey.shade600
                               : Colors.green.shade600,
                           fontWeight: FontWeight.w600,
@@ -392,7 +473,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                             );
                           },
                           icon: const Icon(Icons.receipt_long_rounded, size: 16),
-                          label: const Text('Invoice'),
+                          label: const Text('E-Kuitansi'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
                             side: const BorderSide(color: AppColors.primary, width: 1.2),
@@ -409,8 +490,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                           onPressed: () {
                             AlertUtils.showConfirmationDialog(
                               context,
-                              title: 'Complete Booking?',
-                              message: 'Are you sure you want to complete this booking and move it to transaction history?',
+                              title: 'Selesaikan Pemesanan?',
+                              message: 'Apakah Anda yakin ingin menyelesaikan pemesanan ini dan memindahkannya ke riwayat transaksi?',
                               onConfirm: () {
                                 setState(() {
                                   final finished =
@@ -420,13 +501,13 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                                 });
                                 AlertUtils.showToast(
                                   context,
-                                  'Booking completed & moved to history!',
+                                  'Pemesanan selesai & dipindahkan ke riwayat!',
                                 );
                               },
                             );
                           },
                           icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
-                          label: const Text('Completed'),
+                          label: const Text('Selesaikan'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
@@ -459,7 +540,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                                 );
                               },
                               icon: const Icon(Icons.receipt_long_rounded, size: 16),
-                              label: const Text('Invoice'),
+                              label: const Text('E-Kuitansi'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.textSecondary,
                                 side: BorderSide(color: Colors.grey.shade300, width: 1.2),
@@ -479,7 +560,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                                 hasReviewed ? Icons.edit_note_rounded : Icons.star_outline_rounded,
                                 size: 18,
                               ),
-                              label: Text(hasReviewed ? 'Edit Review' : 'Give Review'),
+                              label: Text(hasReviewed ? 'Edit Ulasan' : 'Beri Ulasan'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.primary,
                                 side: const BorderSide(color: AppColors.primary, width: 1.2),
@@ -515,7 +596,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
           title: Column(
             children: [
               Text(
-                existingReview == null ? 'Give Review' : 'Edit Review',
+                existingReview == null ? 'Berikan Ulasan' : 'Edit Ulasan',
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
@@ -561,7 +642,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                 controller: reviewController,
                 maxLines: 4,
                 decoration: InputDecoration(
-                  hintText: 'Write your experience here...',
+                  hintText: 'Tulis pengalaman Anda di sini...',
                   hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
                   filled: true,
                   fillColor: Colors.grey.shade50,
@@ -580,7 +661,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600)),
+              child: Text('Batal', style: TextStyle(color: Colors.grey.shade600)),
             ),
             ElevatedButton(
               onPressed: selectedRating == 0
@@ -605,10 +686,10 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                       AlertUtils.showResultDialog(
                         context,
                         isSuccess: true,
-                        title: existingReview == null ? 'Review Sent!' : 'Review Updated!',
+                        title: existingReview == null ? 'Ulasan Terkirim!' : 'Ulasan Diperbarui!',
                         message: existingReview == null 
-                          ? 'Thank you! Your review has been successfully received.'
-                          : 'Your review has been successfully updated.',
+                          ? 'Terima kasih! Ulasan Anda telah berhasil diterima.'
+                          : 'Ulasan Anda telah berhasil diperbarui.',
                       );
                     },
               style: ElevatedButton.styleFrom(
@@ -618,7 +699,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: Text(existingReview == null ? 'Submit Review' : 'Save Changes'),
+              child: Text(existingReview == null ? 'Kirim Ulasan' : 'Simpan Perubahan'),
             ),
           ],
         ),

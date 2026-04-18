@@ -23,7 +23,7 @@ class _LoginPageState extends State<LoginPage> {
     String password = _passwordController.text.trim();
 
     if (username.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Please enter username and password.');
+      setState(() => _errorMessage = 'Harap masukkan nama pengguna dan kata sandi.');
       return;
     }
 
@@ -37,9 +37,9 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     } else if (account != null) {
-      setState(() => _errorMessage = 'Please log in via the Owner/Admin portal.');
+      setState(() => _errorMessage = 'Harap masuk melalui portal Pemilik/Admin.');
     } else {
-      setState(() => _errorMessage = 'Incorrect username or password.');
+      setState(() => _errorMessage = 'Nama pengguna atau kata sandi salah.');
     }
   }
 
@@ -107,7 +107,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 // Login Form
                 const Text(
-                  'Welcome Back',
+                  'Selamat Datang Kembali',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -116,7 +116,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Log in to book venues and meet match partners.',
+                  'Masuk untuk memesan venue dan bertemu rekan tanding.',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -127,7 +127,7 @@ class _LoginPageState extends State<LoginPage> {
                 TextFormField(
                   controller: _usernameController,
                   decoration: const InputDecoration(
-                    hintText: 'Username',
+                    hintText: 'Nama Pengguna',
                     prefixIcon: Icon(Icons.person_outline, color: AppColors.textSecondary),
                   ),
                 ),
@@ -136,7 +136,7 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Password',
+                    hintText: 'Kata Sandi',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -159,7 +159,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: TextButton(
                     onPressed: () {},
                     child: const Text(
-                      'Forgot Password?',
+                      'Lupa Kata Sandi?',
                       style: TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
@@ -175,7 +175,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: _handleUserLogin,
                     child: const Text(
-                      'Login',
+                      'Masuk',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -188,7 +188,7 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      "Don't have an account?",
+                      "Belum punya akun?",
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     TextButton(
@@ -199,7 +199,7 @@ class _LoginPageState extends State<LoginPage> {
                         );
                       },
                       child: const Text(
-                        'Sign Up',
+                        'Daftar Sekarang',
                         style: TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
@@ -220,7 +220,7 @@ class _LoginPageState extends State<LoginPage> {
                     );
                   },
                   child: const Text(
-                    'Are you a Venue Owner? Login here',
+                    'Anda Pemilik Venue? Masuk di sini',
                     style: TextStyle(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w600,

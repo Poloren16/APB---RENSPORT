@@ -68,7 +68,7 @@ class _VenueMapPageState extends State<VenueMapPage> {
           IconButton(
             icon: const Icon(Icons.directions_rounded),
             onPressed: _openInExternalApp,
-            tooltip: 'Open in Google Maps',
+            tooltip: 'Buka di Google Maps',
           ),
         ],
       ),

@@ -82,7 +82,7 @@ class AlertUtils {
                         ),
                       ),
                       child: const Text(
-                        'OK, Got it!',
+                        'Oke, Dimengerti!',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -165,7 +165,7 @@ class AlertUtils {
                       Expanded(
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                          child: const Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -181,7 +181,7 @@ class AlertUtils {
                             elevation: 0,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('Yes, Done', style: TextStyle(fontWeight: FontWeight.bold)),
+                          child: const Text('Ya, Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],

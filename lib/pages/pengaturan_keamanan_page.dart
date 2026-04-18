@@ -13,7 +13,7 @@ class PengaturanKeamananPage extends StatefulWidget {
 
 class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   bool isNotifikasiOn = true;
-  String selectedLanguage = 'English';
+  String selectedLanguage = 'Inggris';
   
   // Real data
   late String currentEmail;
@@ -29,8 +29,8 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   void _refreshData() {
     final account = GlobalAuthData.getAccount(widget.username);
     setState(() {
-      currentEmail = account?.email ?? 'Not Set';
-      currentPhone = account?.phoneNumber ?? 'Not Set';
+      currentEmail = account?.email ?? 'Belum Diatur';
+      currentPhone = account?.phoneNumber ?? 'Belum Diatur';
     });
   }
 
@@ -46,7 +46,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          'Security and Settings',
+          'Keamanan dan Pengaturan',
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: false,
@@ -54,18 +54,13 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
       body: ListView(
         children: [
           const SizedBox(height: 16),
-          _buildSwitchTile('Notifications', Icons.notifications, isNotifikasiOn, (value) {
+          _buildSwitchTile('Notifikasi', Icons.notifications, isNotifikasiOn, (value) {
             setState(() {
               isNotifikasiOn = value;
             });
           }),
           const SizedBox(height: 16),
-          _buildItem(
-            icon: Icons.flag,
-            title: 'Language',
-            subtitle: selectedLanguage,
-            onTap: _showLanguagePicker,
-          ),
+          // Language removed as requested
           const SizedBox(height: 16),
           _buildItem(
             icon: Icons.email,
@@ -76,14 +71,14 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           const SizedBox(height: 16),
           _buildItem(
             icon: Icons.phone,
-            title: 'Phone Number',
+            title: 'Nomor Telepon',
             subtitle: currentPhone,
             onTap: _showChangePhoneDialog,
           ),
           const SizedBox(height: 16),
           _buildItem(
             icon: Icons.lock,
-            title: 'Change Password',
+            title: 'Ubah Kata Sandi',
             subtitle: currentPassword,
             onTap: _showChangePasswordDialog,
           ),
@@ -91,7 +86,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           ListTile(
             leading: const Icon(Icons.delete, color: Colors.red),
             title: const Text(
-              'Delete Account',
+              'Hapus Akun',
               style: TextStyle(color: Colors.red, fontSize: 16),
             ),
             trailing: const Icon(Icons.chevron_right, color: Colors.red, size: 20),
@@ -104,52 +99,19 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
     );
   }
 
-  void _showLanguagePicker() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Select Language', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              ListTile(
-                title: const Text('Indonesia'),
-                trailing: selectedLanguage == 'Indonesia' ? const Icon(Icons.check, color: AppColors.primary) : null,
-                onTap: () {
-                  setState(() => selectedLanguage = 'Indonesia');
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: const Text('English'),
-                trailing: selectedLanguage == 'English' ? const Icon(Icons.check, color: AppColors.primary) : null,
-                onTap: () {
-                  setState(() => selectedLanguage = 'English');
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // _showLanguagePicker removed as requested
 
   void _showChangeEmailDialog() {
-    final TextEditingController emailController = TextEditingController(text: currentEmail == 'Not Set' ? '' : currentEmail);
+    final TextEditingController emailController = TextEditingController(text: currentEmail == 'Belum Diatur' ? '' : currentEmail);
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Change Email', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: const Text('Ubah Email', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: emailController,
             decoration: InputDecoration(
-              hintText: 'New Email',
+              hintText: 'Email Baru',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             keyboardType: TextInputType.emailAddress,
@@ -157,17 +119,17 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               onPressed: () async {
                 await GlobalAuthData.updateAccount(widget.username, newEmail: emailController.text.trim());
                 _refreshData();
                 if (mounted) Navigator.pop(context);
-                AlertUtils.showToast(context, 'Email updated successfully!', isSuccess: true);
+                AlertUtils.showToast(context, 'Email berhasil diperbarui!', isSuccess: true);
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
+              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -176,16 +138,18 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   }
 
   void _showChangePhoneDialog() {
-    final TextEditingController phoneController = TextEditingController(text: currentPhone == 'Not Set' ? '' : currentPhone);
+    final TextEditingController phoneController = TextEditingController(text: currentPhone == 'Belum Diatur' ? '' : currentPhone);
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Change Phone Number', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: const Text('Ubah Nomor Telepon', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: phoneController,
             decoration: InputDecoration(
-              hintText: 'New Phone Number',
+              hintText: 'Nomor Telepon Baru',
+              prefixText: '+62 ',
+              prefixStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             keyboardType: TextInputType.phone,
@@ -193,17 +157,21 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               onPressed: () async {
-                await GlobalAuthData.updateAccount(widget.username, newPhone: phoneController.text.trim());
+                String phoneDigits = phoneController.text.trim();
+                if (phoneDigits.startsWith('+62')) {
+                   phoneDigits = phoneDigits.replaceFirst('+62', '').trim();
+                }
+                await GlobalAuthData.updateAccount(widget.username, newPhone: '+62$phoneDigits');
                 _refreshData();
                 if (mounted) Navigator.pop(context);
-                AlertUtils.showToast(context, 'Phone number updated successfully!', isSuccess: true);
+                AlertUtils.showToast(context, 'Nomor telepon berhasil diperbarui!', isSuccess: true);
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
+              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -217,11 +185,11 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Change Password', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: const Text('Ubah Kata Sandi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: passwordController,
             decoration: InputDecoration(
-              hintText: 'New Password',
+              hintText: 'Kata Sandi Baru',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             obscureText: true,
@@ -229,12 +197,12 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               onPressed: () async {
                 if (passwordController.text.length < 6) {
-                  AlertUtils.showToast(context, 'Password must be at least 6 characters', isSuccess: false);
+                  AlertUtils.showToast(context, 'Kata sandi harus minimal 6 karakter', isSuccess: false);
                   return;
                 }
                 await GlobalAuthData.updateAccount(widget.username, newPassword: passwordController.text);
@@ -242,12 +210,12 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
                 AlertUtils.showResultDialog(
                   context,
                   isSuccess: true,
-                  title: 'Password Updated!',
-                  message: 'Your account password has been successfully changed securely.',
+                  title: 'Kata Sandi Diperbarui!',
+                  message: 'Kata sandi akun Anda telah berhasil diubah dengan aman.',
                 );
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
+              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
             ),
           ],
         );

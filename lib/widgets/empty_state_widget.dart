@@ -11,7 +11,7 @@ class EmptyStateWidget extends StatelessWidget {
   const EmptyStateWidget({
     super.key,
     required this.message,
-    this.subMessage = 'Data will appear here once available.',
+    this.subMessage = 'Data akan muncul di sini jika sudah tersedia.',
     this.onActionPressed,
     this.actionLabel,
     this.actionIcon,

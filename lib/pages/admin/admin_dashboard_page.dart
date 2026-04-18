@@ -48,7 +48,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         backgroundColor: AppColors.primary,
         elevation: 0,
         title: const Text(
-          'Admin Management Hub',
+          'Pusat Manajemen Admin',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -84,11 +84,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       color: AppColors.primary,
       child: Row(
         children: [
-          _buildHeaderStat('Total Accounts', '${GlobalAuthData.accounts.where((a) => a.role == 'Owner').length}', Icons.people_alt),
+          _buildHeaderStat('Total Akun', '${GlobalAuthData.accounts.where((a) => a.role == 'Owner').length}', Icons.people_alt),
           const SizedBox(width: 16),
-          _buildHeaderStat('Pending', '${GlobalVerificationData.requests.where((r) => r.status == 'Pending').length}', Icons.pending_actions),
+          _buildHeaderStat('Menunggu', '${GlobalVerificationData.requests.where((r) => r.status == 'Pending').length}', Icons.pending_actions),
           const SizedBox(width: 16),
-          _buildHeaderStat('Verified', '${GlobalVerificationData.requests.where((r) => r.status == 'Approved').length}', Icons.verified_user),
+          _buildHeaderStat('Terverifikasi', '${GlobalVerificationData.requests.where((r) => r.status == 'Approved').length}', Icons.verified_user),
         ],
       ),
     );
@@ -123,13 +123,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            _buildTabItem(0, 'Overview', Icons.dashboard_outlined),
+            _buildTabItem(0, 'Ringkasan', Icons.dashboard_outlined),
             const SizedBox(width: 12),
-            _buildTabItem(1, 'User Management', Icons.people_outline_rounded),
+            _buildTabItem(1, 'Manajemen User', Icons.people_outline_rounded),
             const SizedBox(width: 12),
-            _buildTabItem(2, 'Owner Management', Icons.business_center_outlined),
+            _buildTabItem(2, 'Manajemen Owner', Icons.business_center_outlined),
             const SizedBox(width: 12),
-            _buildTabItem(3, 'Venue Verification', Icons.stadium_outlined),
+            _buildTabItem(3, 'Verifikasi Venue', Icons.stadium_outlined),
           ],
         ),
       ),
@@ -190,8 +190,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   Widget _buildOverview() {
     return const EmptyStateWidget(
-      message: 'No new activity.',
-      subMessage: 'Statistics will appear as the application is used.',
+      message: 'Tidak ada aktivitas baru.',
+      subMessage: 'Statistik akan muncul saat aplikasi digunakan.',
     );
   }
 
@@ -200,7 +200,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     if (filtered.isEmpty) {
       return EmptyStateWidget(
-        message: 'No $type verification requests found',
+        message: 'Permintaan verifikasi $type tidak ditemukan',
       );
     }
 
@@ -258,11 +258,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               children: [
                 const Icon(Icons.calendar_month_outlined, size: 14, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text('Date: ${req.submittedAt.day}/${req.submittedAt.month}/${req.submittedAt.year}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text('Tanggal: ${req.submittedAt.day}/${req.submittedAt.month}/${req.submittedAt.year}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 const Spacer(),
                 TextButton(
                   onPressed: () => _showDetailDialog(req),
-                  child: const Text('View Details', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Lihat Detail', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -301,7 +301,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(req.type == 'Owner' ? 'Owner Details' : 'Venue Details'),
+        title: Text(req.type == 'Owner' ? 'Detail Owner' : 'Detail Venue'),
         content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
@@ -309,15 +309,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildDetailRow('Applicant Name', req.applicantName),
-                if (req.username != null) _buildDetailRow('Account Username', req.username!),
-                if (req.phoneNumber != null) _buildDetailRow('WhatsApp Number', req.phoneNumber!),
-                if (req.type == 'Venue') _buildDetailRow('Venue Name', req.venueName ?? '-'),
+                _buildDetailRow('Nama Pemohon', req.applicantName),
+                if (req.username != null) _buildDetailRow('Username Akun', req.username!),
+                if (req.phoneNumber != null) _buildDetailRow('Nomor WhatsApp', req.phoneNumber!),
+                if (req.type == 'Venue') _buildDetailRow('Nama Venue', req.venueName ?? '-'),
                 _buildDetailRow('NIK', req.nik),
                 _buildDetailRow('NPWP', req.npwp),
-                if (req.type == 'Venue') _buildDetailRow('Address', req.venueAddress ?? '-'),
+                if (req.type == 'Venue') _buildDetailRow('Alamat', req.venueAddress ?? '-'),
                 const SizedBox(height: 16),
-                const Text('Attachments:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const Text('Lampiran:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 const SizedBox(height: 8),
                 Container(
                   height: 180,
@@ -354,7 +354,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.image, size: 48, color: Colors.grey),
-                            Text('No document available', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            Text('Dokumen tidak tersedia', style: TextStyle(color: Colors.grey, fontSize: 12)),
                           ],
                         ),
                     ],
@@ -379,7 +379,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       side: const BorderSide(color: Colors.red),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Reject'),
+                    child: const Text('Tolak'),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -393,7 +393,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       backgroundColor: Colors.green,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Approve'),
+                    child: const Text('Setujui'),
                   ),
                 ),
               ],
@@ -404,7 +404,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               child: ElevatedButton.icon(
                 onPressed: null,
                 icon: const Icon(Icons.lock_outline),
-                label: Text('Request already ${req.status}'),
+                label: Text('Permintaan sudah ${req.status}'),
                 style: ElevatedButton.styleFrom(
                   disabledBackgroundColor: Colors.grey.shade100,
                   disabledForegroundColor: Colors.grey.shade500,
@@ -422,21 +422,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reason for Rejection'),
+        title: const Text('Alasan Penolakan'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(hintText: 'e.g., ID photo is unclear'),
+          decoration: const InputDecoration(hintText: 'misal: foto identitas tidak jelas'),
           maxLines: 3,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context); // Close Reject Dialog first
               await _handleStatusChange(req, 'Rejected', reason: controller.text);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Send Rejection'),
+            child: const Text('Kirim Penolakan'),
           ),
         ],
       ),
@@ -472,8 +472,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       AlertUtils.showResultDialog(
         context,
         isSuccess: true,
-        title: newStatus == 'Approved' ? 'Approved' : 'Rejected',
-        message: '${req.applicantName}\'s request has been $newStatus.',
+        title: newStatus == 'Approved' ? 'Disetujui' : 'Ditolak',
+        message: 'Permintaan ${req.applicantName} telah $newStatus.',
       );
     }
   }
@@ -498,7 +498,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     if (allForRole.isEmpty) {
       return EmptyStateWidget(
-        message: 'No accounts found with role: $role',
+        message: 'Tidak ada akun ditemukan dengan role: $role',
       );
     }
 
@@ -595,7 +595,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-            child: Text('Page ${currentPage + 1} of $totalPages', style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text('Halaman ${currentPage + 1} dari $totalPages', style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
@@ -624,10 +624,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 child: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 40),
               ),
               const SizedBox(height: 20),
-              const Text('Delete Account?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text('Hapus Akun?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               Text(
-                'Are you sure you want to delete account ${acc.applicantName} (@${acc.username})? This action cannot be undone.',
+                'Apakah Anda yakin ingin menghapus akun ${acc.applicantName} (@${acc.username})? Tindakan ini tidak dapat dibatalkan.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
               ),
@@ -653,7 +653,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         await GlobalAuthData.deleteAccount(acc.username);
                         setState(() {}); // Refresh list
                         if (mounted) {
-                          AlertUtils.showToast(context, 'Account deleted successfully');
+                          AlertUtils.showToast(context, 'Akun berhasil dihapus');
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -663,7 +663,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Delete'),
+                      child: const Text('Hapus'),
                     ),
                   ),
                 ],
@@ -703,7 +703,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     child: const Icon(Icons.edit_note_rounded, color: Colors.white, size: 32),
                   ),
                   const SizedBox(height: 12),
-                  const Text('Edit Account', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text('Edit Akun', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   Text('@${acc.username}', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
                 ],
               ),
@@ -716,13 +716,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 children: [
                   _buildStyledTextField(
                     controller: nameController,
-                    label: 'Full Name',
+                    label: 'Nama Lengkap',
                     icon: Icons.person_outline_rounded,
                   ),
                   const SizedBox(height: 20),
                   _buildStyledTextField(
                     controller: passwordController,
-                    label: 'New Password',
+                    label: 'Password Baru',
                     icon: Icons.lock_outline_rounded,
                   ),
                   const SizedBox(height: 32),
@@ -735,7 +735,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             foregroundColor: Colors.grey.shade600,
                           ),
-                          child: const Text('Cancel', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                          child: const Text('Batal', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -746,7 +746,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             await GlobalAuthData.updateAccount(acc.username, newName: nameController.text, newPassword: passwordController.text);
                             setState(() {}); // Refresh list
                             if (mounted) {
-                              AlertUtils.showToast(context, 'Account updated successfully');
+                              AlertUtils.showToast(context, 'Akun berhasil diupdate');
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -756,7 +756,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             shadowColor: AppColors.primary.withOpacity(0.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('Save Changes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],

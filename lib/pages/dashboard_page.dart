@@ -14,6 +14,7 @@ import '../models/review_model.dart';
 import '../data/chat_data.dart';
 import '../data/notification_data.dart';
 import '../data/venue_data.dart';
+import '../widgets/empty_state_widget.dart';
 
 class DashboardPage extends StatefulWidget {
   final String username;
@@ -35,18 +36,28 @@ class _DashboardPageState extends State<DashboardPage> {
   late int _selectedIndex;
   DateTime _selectedDate = DateTime.now();
   String _selectedCategory = 'Semua';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+    _searchController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   static const List<CategoryItem> _categories = [
     CategoryItem('Semua'),
-    CategoryItem('Favorite', Icons.bookmark_outline),
+    CategoryItem('Favorit', Icons.bookmark_outline),
     CategoryItem('Mini Soccer', Icons.sports_soccer),
     CategoryItem('Sepak Bola', Icons.sports_soccer),
+    CategoryItem('Badminton', Icons.sports_tennis),
+    CategoryItem('Tennis', Icons.sports_tennis),
   ];
 
   static String _monthName(int month) {
@@ -63,14 +74,42 @@ class _DashboardPageState extends State<DashboardPage> {
       _selectedIndex = index;
       if (index == 0) {
         _selectedCategory = 'Semua';
+        _searchController.clear();
       }
     });
   }
 
   void _navigateToVenueWithCategory(String category) {
     setState(() {
+      _selectedCategory = category;
       _selectedIndex = 1;
     });
+  }
+
+  Future<void> _selectDateViaCalendar() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
   }
 
   @override
@@ -80,7 +119,8 @@ class _DashboardPageState extends State<DashboardPage> {
       VenuePage(
         username: widget.username, 
         role: widget.role, 
-        initialShowFavorites: _selectedCategory == 'Favorite'
+        initialCategory: _selectedCategory == 'Favorit' ? 'Favorite' : _selectedCategory,
+        initialDate: _selectedDate,
       ),
       BookingHistoryPage(username: widget.username),
       AkunPage(username: widget.username, role: widget.role),
@@ -127,8 +167,26 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildHomeContent() {
-    // Show 5 recommended venues
-    final List<Map<String, dynamic>> recommendedVenues = GlobalVenueData.venues.take(5).toList();
+    // Determine filtered venues
+    final List<Map<String, dynamic>> allVenues = GlobalVenueData.venues;
+    final String query = _searchController.text.toLowerCase();
+    
+    final List<Map<String, dynamic>> filteredVenues = allVenues.where((v) {
+      final bool matchesCategory = _selectedCategory == 'Semua' || 
+                                  _selectedCategory == 'Favorit' || // Filter logic handled by VenuePage usually, but here for Search
+                                  v['type'] == _selectedCategory;
+      final bool matchesSearch = (v['name'] ?? '').toLowerCase().contains(query) || 
+                                (v['location'] ?? '').toLowerCase().contains(query) ||
+                                (v['type'] ?? '').toLowerCase().contains(query);
+      return matchesCategory && matchesSearch;
+    }).toList();
+
+    // Show top 5 or all if filtered
+    final List<Map<String, dynamic>> displayVenues = query.isEmpty && _selectedCategory == 'Semua' 
+        ? filteredVenues.take(5).toList() 
+        : filteredVenues;
+
+    final bool hasNoResults = filteredVenues.isEmpty;
 
     return SingleChildScrollView(
       child: Column(
@@ -272,15 +330,30 @@ class _DashboardPageState extends State<DashboardPage> {
                 const SizedBox(height: 4),
                 Text('Temukan venue terbaik untuk bermain!', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                 const SizedBox(height: 20),
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: recommendedVenues.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 20),
-                  itemBuilder: (context, index) {
-                    return _buildVenueCard(recommendedVenues[index]);
-                  },
-                ),
+                if (hasNoResults)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: EmptyStateWidget(
+                      message: 'Tidak ada venue yang sesuai dengan filter atau pencarian Anda.',
+                      actionLabel: query.isNotEmpty || _selectedCategory != 'Semua' ? 'Reset Filter' : null,
+                      onActionPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _selectedCategory = 'Semua';
+                        });
+                      },
+                    ),
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: displayVenues.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 20),
+                    itemBuilder: (context, index) {
+                      return _buildVenueCard(displayVenues[index]);
+                    },
+                  ),
                 const SizedBox(height: 20),
               ],
             ),
@@ -299,9 +372,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildSearchBar() {
     return TextField(
+      controller: _searchController,
       decoration: InputDecoration(
         hintText: 'Cari Venue',
         prefixIcon: const Icon(Icons.search),
+        suffixIcon: _searchController.text.isNotEmpty 
+            ? IconButton(icon: const Icon(Icons.clear, size: 20), onPressed: () => _searchController.clear()) 
+            : null,
         filled: true,
         fillColor: Colors.grey[100],
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
@@ -313,16 +390,23 @@ class _DashboardPageState extends State<DashboardPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Icon(Icons.calendar_month, color: Colors.grey[600]),
-            const SizedBox(width: 8),
-            Text(_monthName(_selectedDate.month), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
-          ],
+        GestureDetector(
+          onTap: _selectDateViaCalendar,
+          child: Row(
+            children: [
+              Icon(Icons.calendar_month, color: Colors.grey[600]),
+              const SizedBox(width: 8),
+              Text(_monthName(_selectedDate.month), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
+            ],
+          ),
         ),
         GestureDetector(
-          onTap: () => setState(() => _selectedDate = DateTime.now()),
+          onTap: () => setState(() {
+            _selectedDate = DateTime.now();
+            _selectedCategory = 'Semua';
+            _searchController.clear();
+          }),
           child: const Text('Reset & Ulang', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
         ),
       ],
@@ -516,11 +600,11 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildTimeSlot(String venueName, String courtName, String time, {required bool isAvailable}) {
-    final todayStr = BookingUtils.formatDate(DateTime.now());
+    final dateStr = BookingUtils.formatDate(_selectedDate);
     final isBooked = BookingUtils.isSlotBooked(
       venueName: venueName,
       courtName: courtName,
-      dateStr: todayStr,
+      dateStr: dateStr,
       timeSlot: time,
     );
     final bool effectiveAvailable = isAvailable && !isBooked;
@@ -543,13 +627,15 @@ class _DashboardPageState extends State<DashboardPage> {
                       courtName: courtName,
                       venueName: venueName,
                       initialSelectedSlot: timeRange,
+                      initialSelectedDate: _selectedDate,
                     ),
                   ),
                 );
               }
             : null,
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
+          foregroundColor: effectiveAvailable ? AppColors.primary : Colors.grey.shade400,
+          backgroundColor: effectiveAvailable ? Colors.white : Colors.grey.shade100,
           side: BorderSide(color: effectiveAvailable ? AppColors.primary : Colors.grey.shade300),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -557,7 +643,7 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Text(
           time,
           style: TextStyle(
-            color: effectiveAvailable ? AppColors.primary : Colors.grey.shade400,
+            color: effectiveAvailable ? AppColors.primary : Colors.grey.shade500,
             fontSize: 12,
             fontWeight: effectiveAvailable ? FontWeight.w600 : FontWeight.normal,
             decoration: null,

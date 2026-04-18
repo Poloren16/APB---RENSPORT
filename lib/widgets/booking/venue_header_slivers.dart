@@ -312,22 +312,22 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                 const SizedBox(height: 12),
                 // Info rows
                 _infoRow(Icons.access_time, widget.venueHours,
-                    actionText: 'See Other Days',
+                    actionText: 'Lihat Hari Lain',
                     onActionTap: widget.onShowOperationalHours),
                 const SizedBox(height: 6),
                 _infoRow(Icons.location_on_outlined, widget.venueAddress,
-                    actionText: 'View Maps', onActionTap: widget.onOpenMaps),
+                    actionText: 'Lihat Peta', onActionTap: widget.onOpenMaps),
                 const SizedBox(height: 12),
                 // Facilities chips
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _facilityChip(Icons.wc, 'Restroom'),
+                      _facilityChip(Icons.wc, 'Toilet'),
                       const SizedBox(width: 8),
-                      _facilityChip(Icons.local_parking, 'Parking'),
+                      _facilityChip(Icons.local_parking, 'Parkir'),
                       const SizedBox(width: 8),
-                      _facilityChip(Icons.restaurant, 'Food and Drinks'),
+                      _facilityChip(Icons.restaurant, 'Makanan & Minuman'),
                       const SizedBox(width: 8),
                       _facilityChip(Icons.mosque, 'Prayer Room'),
                       const SizedBox(width: 8),

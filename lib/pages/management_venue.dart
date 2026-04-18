@@ -59,7 +59,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
         onPressed: () => _showVenueDialog(),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Venue', style: TextStyle(color: Colors.white)),
+        label: const Text('Tambah Venue', style: TextStyle(color: Colors.white)),
       ),
     );
   }
@@ -70,7 +70,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
       children: [
         Expanded(
           child: _buildStatCard(
-            title: 'Total Venues',
+            title: 'Total Venue',
             value: _venues.length.toString(),
             icon: Icons.sports_soccer,
             color: AppColors.primary,
@@ -79,7 +79,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            title: 'Active Listings',
+            title: 'Daftar Aktif',
             value: activeVenues.toString(),
             icon: Icons.check_circle_outline,
             color: AppColors.accent,
@@ -354,7 +354,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    isEditing ? 'Edit Venue' : 'Add New Venue',
+                    isEditing ? 'Edit Venue' : 'Tambah Venue Baru',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -368,13 +368,13 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                       const SizedBox(height: 8),
                       _buildDialogTextField(
                         controller: nameController,
-                        label: 'Venue Name',
+                        label: 'Nama Venue',
                         icon: Icons.stadium,
                       ),
                       const SizedBox(height: 16),
                       _buildDialogTextField(
                         controller: locationController,
-                        label: 'Location',
+                        label: 'Lokasi',
                         icon: Icons.location_on,
                         suffixIcon: Padding(
                           padding: const EdgeInsets.only(right: 4.0),
@@ -383,7 +383,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                               Icons.my_location,
                               color: AppColors.primary,
                             ),
-                            tooltip: 'Choose from Map',
+                            tooltip: 'Pilih dari Peta',
                             onPressed: () async {
                               // Navigate to Map page (Simulation) and wait for result
                               final result = await Navigator.push(
@@ -404,13 +404,13 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                       const SizedBox(height: 16),
                       _buildDialogTextField(
                         controller: typeController,
-                        label: 'Sport Type (e.g. Futsal)',
+                        label: 'Tipe Olahraga (misal: Futsal)',
                         icon: Icons.sports_soccer,
                       ),
                       const SizedBox(height: 16),
                       _buildDialogTextField(
                         controller: priceController,
-                        label: 'Price (e.g. IDR 100,000 / Hour)',
+                        label: 'Harga (misal: IDR 100,000 / Jam)',
                         icon: Icons.payments,
                       ),
                       const SizedBox(height: 16),
@@ -450,7 +450,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                       const Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Available Hours',
+                          'Jam Tersedia',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: AppColors.textPrimary),
@@ -500,7 +500,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text(
-                    'Cancel',
+                    'Batal',
                     style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 ),
@@ -512,8 +512,8 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                       AlertUtils.showResultDialog(
                         context,
                         isSuccess: false,
-                        title: 'Form Incomplete!',
-                        message: 'Venue Name and Location are required to proceed.',
+                        title: 'Form Belum Lengkap!',
+                        message: 'Nama Venue dan Lokasi wajib diisi.',
                       );
                       return;
                     }
@@ -573,10 +573,10 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                     AlertUtils.showResultDialog(
                       context,
                       isSuccess: true,
-                      title: isEditing ? 'Update Successful!' : 'Venue Added!',
+                      title: isEditing ? 'Update Berhasil!' : 'Venue Ditambahkan!',
                       message: isEditing
-                          ? '"${nameController.text.trim()}" has been successfully updated.'
-                          : '"${nameController.text.trim()}" is now available in your venue list.',
+                          ? '"${nameController.text.trim()}" berhasil diupdate.'
+                          : '"${nameController.text.trim()}" sekarang tersedia di daftar venue Anda.',
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -590,7 +590,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                     ),
                   ),
                   child: const Text(
-                    'Save',
+                    'Simpan',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -634,14 +634,14 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Delete Venue'),
+          title: const Text('Hapus Venue'),
           content: Text(
-            'Are you sure you want to delete "$venueName"? \nThis action cannot be undone.',
+            'Apakah Anda yakin ingin menghapus "$venueName"? \nTindakan ini tidak dapat dibatalkan.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -652,15 +652,15 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                 AlertUtils.showResultDialog(
                   context,
                   isSuccess: true,
-                  title: 'Deleted!',
-                  message: '"$venueName" has been successfully deleted from the system.',
+                  title: 'Terhapus!',
+                  message: '"$venueName" berhasil dihapus dari sistem.',
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
               ),
               child: const Text(
-                'Delete',
+                'Hapus',
                 style: TextStyle(color: Colors.white),
               ),
             ),
@@ -725,7 +725,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Select Venue Location',
+          'Pilih Lokasi Venue',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         backgroundColor: AppColors.primary,
@@ -783,19 +783,19 @@ class _MapPickerPageState extends State<MapPickerPage> {
                   showDialog(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text('Confirm Location'),
-                      content: Text('Do you want to use this coordinate for your venue?\n\n$simulatedAddress'),
+                      title: const Text('Konfirmasi Lokasi'),
+                      content: Text('Apakah Anda ingin menggunakan koordinat ini untuk venue Anda?\n\n$simulatedAddress'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Cancel'),
+                          child: const Text('Batal'),
                         ),
                         ElevatedButton(
                           onPressed: () {
                             Navigator.pop(ctx);
                             Navigator.pop(context, simulatedAddress);
                           },
-                          child: const Text('Select'),
+                          child: const Text('Pilih'),
                         ),
                       ],
                     ),
@@ -806,7 +806,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('Use This Location', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text('Gunakan Lokasi Ini', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
           ),

@@ -9,6 +9,7 @@ import 'court_detail_page.dart';
 import 'payment_page.dart';
 import '../models/review_model.dart';
 import '../utils/booking_utils.dart';
+import '../utils/alert_utils.dart';
 import '../data/venue_data.dart';
 import 'venue_map_page.dart';
 
@@ -566,6 +567,10 @@ class _BookingPageState extends State<BookingPage>
 
                 SliverToBoxAdapter(
                   child: VenueContactSection(
+                    username: widget.username,
+                    role: 'End User',
+                    venueType: widget.venueType,
+                    currentVenueName: widget.venueName,
                     formatCurrency: _formatCurrency,
                   ),
                 ),
@@ -634,8 +639,9 @@ class _BookingPageState extends State<BookingPage>
                           'services': Map<String, int>.from(_selectedServices),
                         });
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Berhasil ditambahkan ke keranjang!'), behavior: SnackBarBehavior.floating),
+                        AlertUtils.showToast(
+                          context,
+                          'Berhasil ditambahkan ke keranjang!',
                         );
                       },
                       child: Container(
