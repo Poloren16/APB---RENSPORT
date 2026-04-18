@@ -382,7 +382,7 @@ class _BookingPageState extends State<BookingPage>
                         venueName: widget.venueName,
                         courtName: selectedCourts.join(', '),
                         date: dateStr,
-                        timeRange: '${selectedTimes.length} Slot Waktu (${selectedTimes.join(', ')})',
+                        timeRange: selectedTimes.join(', '),
                         price: _totalPrice,
                         individualSlots: individualSlots,
                         selectedServices: Map<String, int>.from(_selectedServices),
@@ -614,16 +614,24 @@ class _BookingPageState extends State<BookingPage>
                         final selectedTimes = _selectedSlots.map((key) {
                           final parts = key.split('_');
                           final slotIndex = int.tryParse(parts[0]) ?? 0;
-                          return _timeSlots[slotIndex]['time'].split(' - ')[0];
+                          return _timeSlots[slotIndex]['time'];
                         }).toList();
                         selectedTimes.sort();
 
+                        // Get actual selected courts
+                        final selectedCourts = _selectedSlots.map((key) {
+                          final parts = key.split('_');
+                          final courtIndex = int.tryParse(parts[1]) ?? 0;
+                          return _courts[courtIndex]['name'] as String;
+                        }).toSet().join(', ');
+
                         GlobalVenueData.addToCart({
                           'venueName': widget.venueName,
-                          'courtName': 'Beberapa Lapangan',
+                          'courtName': selectedCourts.isEmpty ? 'Beberapa Lapangan' : selectedCourts,
                           'date': dateStr,
-                          'timeSlot': '${selectedTimes.length} Slot: ${selectedTimes.join(', ')}',
+                          'timeSlot': selectedTimes.join(', '),
                           'price': _totalPrice,
+                          'services': Map<String, int>.from(_selectedServices),
                         });
 
                         ScaffoldMessenger.of(context).showSnackBar(
