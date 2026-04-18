@@ -58,6 +58,7 @@ class _KeranjangPageState extends State<KeranjangPage> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false, // Menghilangkan tombol kembali otomatis
         actions: [
           if (items.isNotEmpty)
             TextButton(
@@ -75,6 +76,11 @@ class _KeranjangPageState extends State<KeranjangPage> {
                 style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
             ),
+          // Tombol tutup manual tetap ada untuk kembali ke halaman sebelumnya
+          IconButton(
+            icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
         ],
       ),
       body: items.isEmpty
