@@ -4,7 +4,7 @@ import 'management_venue.dart';
 import '../notifikasi.dart';
 import '../akun_page.dart';
 import '../chat_page.dart';
-import '../chat_detail_page.dart';
+import 'owner_activity_page.dart';
 
 class OwnerDashboardPage extends StatefulWidget {
   final String username;
@@ -34,6 +34,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     final List<Widget> pages = [
       _buildHomeContent(),
       const ManagementVenuePage(),
+      OwnerActivityPage(username: widget.username),
       ChatPage(username: widget.username, role: widget.role),
       AkunPage(username: widget.username, role: widget.role),
     ];
@@ -59,6 +60,11 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             icon: Icon(Icons.stadium_outlined),
             activeIcon: Icon(Icons.stadium),
             label: 'Venue',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_outlined),
+            activeIcon: Icon(Icons.bar_chart),
+            label: 'Laporan',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
@@ -239,19 +245,11 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                   ],
                 ),
               ),
+              // Tombol Chat & Rincian di sisi kanan atas pesanan
               Row(
                 children: [
                   _buildActionIcon(Icons.chat_bubble_outline, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatDetailPage(
-                          username: booking['name'],
-                          venueName: booking['court'].split(' Court')[0],
-                          role: widget.role,
-                        ),
-                      ),
-                    );
+                    // Logika ke halaman chat
                   }),
                   const SizedBox(width: 8),
                   _buildActionIcon(Icons.receipt_long_outlined, () {}),

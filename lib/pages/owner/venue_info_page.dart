@@ -38,18 +38,13 @@ class VenueInfoPage extends StatelessWidget {
             ]),
             const SizedBox(height: 24),
 
-            // 2. Rincian Per Lapangan
+            // 2. Rincian Per Lapangan (Termasuk Rating & Ulasan)
             _buildSectionTitle('Daftar Lapangan (${courts.length})'),
             if (courts.isEmpty)
               const Text('Belum ada lapangan terdaftar.', style: TextStyle(color: Colors.grey))
             else
-              ...courts.asMap().entries.map((entry) => _buildDetailedCourtCard(entry.value)),
+              ...courts.asMap().entries.map((entry) => _buildDetailedCourtCard(entry.value, venueName)),
 
-            const SizedBox(height: 24),
-
-            // 3. Ringkasan Ulasan
-            _buildSectionTitle('Rating & Ulasan'),
-            _buildReviewSummary(venueName),
             const SizedBox(height: 32),
           ],
         ),
@@ -57,13 +52,17 @@ class VenueInfoPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailedCourtCard(Map<String, dynamic> court) {
+  Widget _buildDetailedCourtCard(Map<String, dynamic> court, String venueName) {
     final Map<String, dynamic> priceDay = court['priceDay'] ?? {};
     final List<dynamic> services = court['services'] ?? [];
-    final Map<String, dynamic> availability = court['availability'] ?? {};
+    final String courtName = court['name'] ?? 'Lapangan';
+
+    // Fetch reviews specifically for this court (simulated by venueName)
+    final rating = Review.getAverageRating(venueName);
+    final reviews = Review.mockReviews.where((r) => r.venueName == venueName).toList();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -80,11 +79,27 @@ class VenueInfoPage extends StatelessWidget {
               borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.grid_on, color: AppColors.primary, size: 18),
-                const SizedBox(width: 8),
-                Text(court['name'] ?? 'Lapangan',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                Row(
+                  children: [
+                    const Icon(Icons.grid_on, color: AppColors.primary, size: 18),
+                    const SizedBox(width: 8),
+                    Text(courtName,
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  ],
+                ),
+                // --- RATING DI HEADER LAPANGAN ---
+                Row(
+                  children: [
+                    const Icon(Icons.star_rounded, color: Colors.orange, size: 18),
+                    const SizedBox(width: 4),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -122,6 +137,38 @@ class VenueInfoPage extends StatelessWidget {
                     ),
                   )),
                 ],
+
+                const Divider(height: 24),
+                // --- ULASAN PER LAPANGAN (SECTION) ---
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Ulasan & Rating',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    Text('${reviews.length} Ulasan', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (reviews.isEmpty)
+                  const Text('Belum ada ulasan untuk lapangan ini.', style: TextStyle(fontSize: 11, color: Colors.grey))
+                else
+                  ...reviews.take(2).map((r) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(r.username, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const Spacer(),
+                            Row(children: List.generate(5, (i) => Icon(i < r.rating ? Icons.star : Icons.star_border, size: 10, color: Colors.orange))),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(r.comment, style: const TextStyle(fontSize: 11, color: Colors.black87), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  )),
               ],
             ),
           ),
@@ -188,44 +235,6 @@ class VenueInfoPage extends StatelessWidget {
           Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
           const Spacer(),
           Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: valueColor ?? AppColors.textPrimary)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviewSummary(String venueName) {
-    final rating = Review.getAverageRating(venueName);
-    final count = Review.mockReviews.where((r) => r.venueName == venueName).length;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
-      ),
-      child: Row(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(rating.toStringAsFixed(1), style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary)),
-              const Text('dari 5.0', style: TextStyle(color: Colors.grey, fontSize: 12)),
-            ],
-          ),
-          const SizedBox(width: 24),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: List.generate(5, (i) => Icon(
-                  i < rating.floor() ? Icons.star_rounded : Icons.star_outline_rounded,
-                  color: Colors.orange, size: 20,
-                )),
-              ),
-              const SizedBox(height: 4),
-              Text('$count Total Ulasan', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
-            ],
-          ),
         ],
       ),
     );

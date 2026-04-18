@@ -47,7 +47,6 @@ class _AddVenuePageState extends State<AddVenuePage> {
           map['isExpanded'] = false;
           map['activeDayIndex'] = 0;
 
-          // Inisialisasi ketersediaan waktu per hari
           if (map['availability'] == null) {
             map['availability'] = {
               for (var day in _daysOfWeek) day: <String>{'08:00', '09:00', '10:00'}
@@ -57,14 +56,12 @@ class _AddVenuePageState extends State<AddVenuePage> {
             map['availability'] = rawAvailability.map((k, v) => MapEntry(k.toString(), Set<String>.from(v)));
           }
 
-          // Inisialisasi harga per hari
           if (map['priceDay'] == null) {
             map['priceDay'] = { for (var day in _daysOfWeek) day: '' };
           } else {
             map['priceDay'] = Map<String, String>.from(map['priceDay']);
           }
 
-          // Inisialisasi layanan tambahan
           if (map['services'] == null) {
             map['services'] = <Map<String, dynamic>>[];
           } else {
@@ -194,7 +191,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                     onPressed: () async {
                       final result = await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const MapPickerPage()),
+                        MaterialPageRoute(builder: (context) => MapPickerPage()),
                       );
                       if (result != null && result is String) {
                         setState(() {
