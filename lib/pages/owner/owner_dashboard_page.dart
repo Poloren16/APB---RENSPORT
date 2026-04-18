@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import 'management_venue.dart';
-import '../login_page.dart';
-import '../../data/venue_data.dart';
-import '../../models/review_model.dart';
 import '../notifikasi.dart';
 import '../akun_page.dart';
+import '../chat_page.dart';
+import '../chat_detail_page.dart';
 
 class OwnerDashboardPage extends StatefulWidget {
   final String username;
@@ -35,7 +34,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     final List<Widget> pages = [
       _buildHomeContent(),
       const ManagementVenuePage(),
-      const Center(child: Text('Laporan Pendapatan', style: TextStyle(fontSize: 18))),
+      ChatPage(username: widget.username, role: widget.role),
       AkunPage(username: widget.username, role: widget.role),
     ];
 
@@ -62,9 +61,9 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             label: 'Venue',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_outlined),
-            activeIcon: Icon(Icons.bar_chart),
-            label: 'Laporan',
+            icon: Icon(Icons.chat_bubble_outline),
+            activeIcon: Icon(Icons.chat_bubble),
+            label: 'Chat',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
@@ -92,13 +91,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
           ),
           const SizedBox(height: 12),
           _buildRecentBookings(),
-          const SizedBox(height: 24),
-          const Text(
-            'Review Venue',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          _buildVenueReviews(),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -152,7 +145,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
       children: [
         _buildStatCard('Booking Hari Ini', '12', Icons.calendar_today, Colors.blue),
         const SizedBox(width: 16),
-        _buildStatCard('Pendapatan', 'Rp 2.4jt', Icons.payments_outlined, Colors.green),
+        _buildStatCard('Pendapatan', 'Rp 2.400.000', Icons.payments_outlined, Colors.green),
       ],
     );
   }
@@ -171,8 +164,8 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
           children: [
             Icon(icon, color: color, size: 24),
             const SizedBox(height: 12),
-            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
           ],
         ),
       ),
@@ -180,31 +173,38 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   }
 
   Widget _buildRecentBookings() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
-      ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 3,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          return ListTile(
-            leading: const CircleAvatar(backgroundColor: AppColors.secondary, child: Icon(Icons.person, color: AppColors.primary)),
-            title: const Text('Budi Santoso', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            subtitle: const Text('BEC Tennis Court Lap.A • 18:00', style: TextStyle(fontSize: 12)),
-            trailing: const Text('Rp 125rb', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-          );
-        },
-      ),
+    final List<Map<String, dynamic>> mockBookings = [
+      {
+        'name': 'Budi Santoso',
+        'court': 'BEC Tennis Court Lap.A',
+        'time': '18:00 - 19:00',
+        'price': 125000,
+        'services': ['Raket Tenis (x2)', 'Sepatu Tenis (x1)'],
+      },
+      {
+        'name': 'Sari Wijaya',
+        'court': 'BEC Tennis Court Lap.B',
+        'time': '08:00 - 10:00',
+        'price': 250000,
+        'services': [],
+      },
+      {
+        'name': 'Andi Pratama',
+        'court': 'BEC Tennis Court Lap.A',
+        'time': '20:00 - 21:00',
+        'price': 125000,
+        'services': ['Bola Tennis (x1)'],
+      },
+    ];
+
+    return Column(
+      children: mockBookings.map((booking) => _buildBookingItem(booking)).toList(),
     );
   }
 
-  Widget _buildVenueReviews() {
+  Widget _buildBookingItem(Map<String, dynamic> booking) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -212,31 +212,109 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildReviewItem('Andi', 'Tempatnya bersih dan lampunya terang.', 5),
-          const Divider(),
-          _buildReviewItem('Sari', 'Sangat puas dengan pelayanannya.', 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CircleAvatar(
+                backgroundColor: AppColors.secondary,
+                child: Icon(Icons.person, color: AppColors.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(booking['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(booking['court'], style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time, size: 12, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(booking['time'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  _buildActionIcon(Icons.chat_bubble_outline, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChatDetailPage(
+                          username: booking['name'],
+                          venueName: booking['court'].split(' Court')[0],
+                          role: widget.role,
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(width: 8),
+                  _buildActionIcon(Icons.receipt_long_outlined, () {}),
+                ],
+              ),
+            ],
+          ),
+          if ((booking['services'] as List).isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            const Text('Layanan Tambahan:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: (booking['services'] as List).map((s) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.grey.shade100),
+                ),
+                child: Text(s, style: TextStyle(fontSize: 10, color: Colors.grey.shade700)),
+              )).toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Total Pembayaran:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+              Text(
+                _formatCurrency(booking['price'] as int),
+                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 15),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildReviewItem(String name, String comment, int rating) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              const Spacer(),
-              Row(children: List.generate(5, (i) => Icon(i < rating ? Icons.star : Icons.star_border, size: 14, color: Colors.orange))),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(comment, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        ],
+  String _formatCurrency(int amount) {
+    final formatted = amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+    return 'Rp$formatted';
+  }
+
+  Widget _buildActionIcon(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: AppColors.primary, size: 18),
       ),
     );
   }
