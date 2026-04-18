@@ -31,6 +31,20 @@
 
   <title>rensius</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Script untuk memuat API Key dari variabel lingkungan saat build time (Simulasi Web) -->
+  <script>
+    (function() {
+      // Pada lingkungan web nyata, API KEY biasanya disuntikkan saat proses deployment
+      // Untuk kebutuhan lokal, silakan masukkan API Key Anda di bawah ini:
+      const GOOGLE_MAPS_API_KEY = "MASUKKAN_API_KEY_ANDA_DI_SINI";
+
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
+      script.async = true;
+      document.head.appendChild(script);
+    })();
+  </script>
 </head>
 <body>
   <!--

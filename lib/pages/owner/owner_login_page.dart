@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:rensius/theme/app_colors.dart';
-import 'package:rensius/pages/dashboard_page.dart';
 import 'package:rensius/pages/admin/admin_dashboard_page.dart';
 import 'package:rensius/pages/owner/owner_register_page.dart';
+import 'package:rensius/pages/owner/owner_dashboard_page.dart';
 import 'package:rensius/data/auth_data.dart';
 
 class OwnerLoginPage extends StatefulWidget {
@@ -11,7 +11,6 @@ class OwnerLoginPage extends StatefulWidget {
   @override
   State<OwnerLoginPage> createState() => _OwnerLoginPageState();
 }
-
 
 class _OwnerLoginPageState extends State<OwnerLoginPage> {
   final TextEditingController _usernameController = TextEditingController();
@@ -41,7 +40,10 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => DashboardPage(username: account.applicantName, role: 'Owner'),
+            builder: (context) => OwnerDashboardPage(
+              username: account.applicantName,
+              role: 'Owner',
+            ),
           ),
         );
       } else {
