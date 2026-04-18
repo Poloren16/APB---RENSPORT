@@ -8,6 +8,7 @@ import '../models/review_model.dart';
 import '../utils/booking_utils.dart';
 import '../widgets/empty_state_widget.dart';
 import '../data/venue_data.dart';
+import 'keranjang_page.dart';
 
 class VenuePage extends StatefulWidget {
   final String username;
@@ -30,23 +31,23 @@ class _VenuePageState extends State<VenuePage> {
   late String _selectedCategory;
 
   static const List<CategoryItem> _categories = [
-    CategoryItem('All'),
+    CategoryItem('Semua'),
     CategoryItem('Favorite', Icons.bookmark_outline),
     CategoryItem('Mini Soccer', Icons.sports_soccer),
-    CategoryItem('Soccer', Icons.sports_soccer),
+    CategoryItem('Sepak Bola', Icons.sports_soccer),
   ];
 
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.initialShowFavorites ? 'Favorite' : 'All';
+    _selectedCategory = widget.initialShowFavorites ? 'Favorite' : 'Semua';
   }
 
   static String _monthName(int month) {
     const names = [
       '',
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
     ];
     return names[month];
   }
@@ -59,7 +60,7 @@ class _VenuePageState extends State<VenuePage> {
     List<Map<String, dynamic>> displayedVenues;
     if (isShowingFavorites) {
       displayedVenues = GlobalVenueData.favorites;
-    } else if (_selectedCategory == 'All') {
+    } else if (_selectedCategory == 'Semua') {
       displayedVenues = GlobalVenueData.venues;
     } else {
       displayedVenues = GlobalVenueData.venues
@@ -91,7 +92,7 @@ class _VenuePageState extends State<VenuePage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        isShowingFavorites ? 'Your Favorite Venues' : 'Find Various Venues!',
+                        isShowingFavorites ? 'Venue Favorit Kamu' : 'Temukan Beragam Venue!',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -99,32 +100,45 @@ class _VenuePageState extends State<VenuePage> {
                         ),
                       ),
                     ),
-                    Stack(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => KeranjangPage(
+                              username: widget.username,
+                              role: widget.role,
+                            ),
                           ),
-                          child: const Icon(Icons.shopping_basket_outlined, color: Colors.white),
-                        ),
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
+                        );
+                      },
+                      child: Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
                               shape: BoxShape.circle,
                             ),
-                            constraints: const BoxConstraints(
-                              minWidth: 8,
-                              minHeight: 8,
-                            ),
+                            child: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
                           ),
-                        )
-                      ],
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 8,
+                                minHeight: 8,
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
                     )
                   ],
                 ),
@@ -145,7 +159,7 @@ class _VenuePageState extends State<VenuePage> {
                   ),
                   child: TextField(
                     decoration: InputDecoration(
-                      hintText: 'Search Venue',
+                      hintText: 'Cari Venue',
                       prefixIcon: const Icon(Icons.search),
                       filled: true,
                       fillColor: Colors.white,
@@ -201,7 +215,7 @@ class _VenuePageState extends State<VenuePage> {
                     GestureDetector(
                       onTap: () => setState(() => _selectedDate = DateTime.now()),
                       child: const Text(
-                        'Reset & Restart',
+                        'Reset & Mulai Ulang',
                         style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -228,7 +242,7 @@ class _VenuePageState extends State<VenuePage> {
                   text: TextSpan(
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
                     children: [
-                      TextSpan(text: isShowingFavorites ? 'Favorite ' : 'Recommended '),
+                      TextSpan(text: isShowingFavorites ? 'Favorit ' : 'Rekomendasi '),
                       TextSpan(text: 'Venue', style: const TextStyle(color: AppColors.primary)),
                     ],
                   ),
@@ -236,29 +250,25 @@ class _VenuePageState extends State<VenuePage> {
                 const SizedBox(height: 4),
                 Text(
                   isShowingFavorites 
-                      ? 'List of venues you have bookmarked!' 
-                      : 'Find the best venues to play!',
+                      ? 'Daftar venue yang telah kamu tandai!' 
+                      : 'Temukan venue terbaik untuk bermain!',
                   style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
                 const SizedBox(height: 20),
                 if (displayedVenues.isEmpty)
                   isShowingFavorites 
                     ? EmptyStateWidget(
-                        message: 'No favorite venues yet',
-                        subMessage: 'Bookmark your favorite venues to find them here easily!',
-                        onActionPressed: () => setState(() => _selectedCategory = 'All'),
-                        actionLabel: 'Find Venue',
+                        message: 'Belum ada venue favorit',
+                        subMessage: 'Tandai venue favoritmu untuk menemukannya di sini dengan mudah!',
+                        onActionPressed: () => setState(() => _selectedCategory = 'Semua'),
+                        actionLabel: 'Cari Venue',
                         actionIcon: Icons.search_rounded,
                       )
-                    : EmptyStateWidget(
-                        message: 'No venues found',
-                        subMessage: 'Try searching for something else or check another category.',
-                        onActionPressed: () => setState(() {
-                           _selectedCategory = 'All';
-                           // Maybe trigger search reset here if applicable
-                        }),
-                        actionLabel: 'Reset Search',
-                        actionIcon: Icons.refresh_rounded,
+                    : Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40),
+                          child: Text('Tidak ada venue ditemukan untuk kategori ini.', style: TextStyle(color: Colors.grey.shade400)),
+                        ),
                       )
                 else
                   ListView.separated(
@@ -313,7 +323,7 @@ class _VenuePageState extends State<VenuePage> {
                       builder: (context) => BookingPage(
                         username: widget.username,
                         venueName: venueName,
-                        venueType: venue['type'] ?? 'Sports',
+                        venueType: venue['type'] ?? 'Olahraga',
                         venueAddress: venue['address'] ?? venue['location'] ?? '',
                         venueHours: venue['hours'] ?? '06:00 - 22:00',
                       ),
@@ -405,7 +415,7 @@ class _VenuePageState extends State<VenuePage> {
                                 Icon(Icons.apartment, size: 14, color: Colors.grey[400]),
                                 const SizedBox(width: 4),
                                 Text(
-                                  venue['location']?.split(',').last.trim() ?? 'City',
+                                  venue['location']?.split(',').last.trim() ?? 'Kota',
                                   style: const TextStyle(color: Colors.grey, fontSize: 11),
                                 ),
                               ],
@@ -416,14 +426,14 @@ class _VenuePageState extends State<VenuePage> {
                                 Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
                                 const SizedBox(width: 4),
                                 Text(
-                                  venue['type'] ?? 'Sports',
+                                  venue['type'] ?? 'Olahraga',
                                   style: const TextStyle(color: Colors.grey, fontSize: 11),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              venue['price'] ?? 'Contact Manager',
+                              venue['price'] ?? 'Hubungi Pengelola',
                               style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
@@ -477,7 +487,7 @@ class _VenuePageState extends State<VenuePage> {
 
   Widget _buildCourtItem(String venueName, Map<String, dynamic> court) {
     final String courtName = court['name'] ?? 'Unknown Court';
-    final String sportType = court['type'] ?? 'Tennis';
+    final String sportType = court['type'] ?? 'Tenis';
 
     return InkWell(
       onTap: () => _goToCourtDetail(venueName, courtName, sportType),
@@ -515,12 +525,12 @@ class _VenuePageState extends State<VenuePage> {
                         const SizedBox(width: 10),
                         Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
                         const SizedBox(width: 4),
-                        Text(court['size'] ?? 'Standard', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                        Text(court['size'] ?? 'Standar', style: const TextStyle(color: Colors.grey, fontSize: 11)),
                       ],
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Learn More >',
+                      'Selengkapnya >',
                       style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -530,7 +540,7 @@ class _VenuePageState extends State<VenuePage> {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Choose booking schedule:',
+            'Pilih jadwal booking:',
             style: TextStyle(fontSize: 11, color: Colors.grey),
           ),
           const SizedBox(height: 8),

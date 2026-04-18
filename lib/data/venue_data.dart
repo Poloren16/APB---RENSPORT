@@ -1,5 +1,10 @@
 class GlobalVenueData {
   static List<Map<String, dynamic>> favorites = [];
+  static List<Map<String, dynamic>> cart = [];
+
+  static void addToCart(Map<String, dynamic> item) {
+    cart.add(item);
+  }
 
   static void toggleFavorite(Map<String, dynamic> venue) {
     final exists = favorites.any((v) => v['name'] == venue['name']);

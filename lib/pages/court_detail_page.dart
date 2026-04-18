@@ -38,7 +38,6 @@ class CourtDetailPage extends StatefulWidget {
 
 class _CourtDetailPageState extends State<CourtDetailPage>
     with SingleTickerProviderStateMixin {
-  // ── Warna accent mengikuti tema utama aplikasi ──────────────────────────────
   static const Color _accent = AppColors.primary;
 
   late TabController _tabController;
@@ -47,10 +46,9 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   final Set<int> _expandedGroups = {};
   final Map<String, int> _selectedServices = {};
 
-  // ── Data slot waktu ──────────────────────────────────────────────────────────
   static const List<_TimeGroup> _timeGroups = [
     _TimeGroup(
-      period: 'Morning to Noon',
+      period: 'Pagi ke Siang',
       range: '06:00 - 10:00',
       icon: Icons.wb_twilight_rounded,
       slots: [
@@ -61,7 +59,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       ],
     ),
     _TimeGroup(
-      period: 'Noon to Afternoon',
+      period: 'Siang ke Sore',
       range: '10:00 - 16:00',
       icon: Icons.wb_sunny_rounded,
       slots: [
@@ -74,7 +72,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       ],
     ),
     _TimeGroup(
-      period: 'Afternoon to Evening',
+      period: 'Sore ke Malam',
       range: '16:00 - 22:00',
       icon: Icons.nightlight_round,
       slots: [
@@ -98,22 +96,18 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       }
     });
     
-    // Find key for initial selected slot if provided
     if (widget.initialSelectedSlot != null) {
       String? foundKey;
       for (int g = 0; g < _timeGroups.length; g++) {
         for (int s = 0; s < _timeGroups[g].slots.length; s++) {
           if (_timeGroups[g].slots[s].time == widget.initialSelectedSlot) {
             foundKey = '${g}_$s';
-            
-            // Also ensure the group is expanded so the user sees their selection
             _expandedGroups.add(g);
             break;
           }
         }
         if (foundKey != null) break;
       }
-      
       if (foundKey != null) {
         _selectedSlots.add(foundKey);
       }
@@ -125,8 +119,6 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     _tabController.dispose();
     super.dispose();
   }
-
-  // ── Helpers ──────────────────────────────────────────────────────────────────
 
   String _formatPrice(int price) {
     return 'IDR ${price.toString().replaceAllMapped(
@@ -161,8 +153,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     final now = DateTime.now();
     final end = DateTime(now.year, now.month + 1, 0);
     const m = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
     ];
     return '${now.day} ${m[now.month]} ${now.year} - ${end.day} ${m[end.month]} ${end.year}';
   }
@@ -172,7 +164,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       final parts = key.split('_');
       final g = int.tryParse(parts[0]) ?? 0;
       final s = int.tryParse(parts[1]) ?? 0;
-      return _timeGroups[g].slots[s].time.split(' - ')[0]; // e.g. "06:00"
+      return _timeGroups[g].slots[s].time.split(' - ')[0];
     }).toList();
     times.sort();
     return times;
@@ -180,13 +172,11 @@ class _CourtDetailPageState extends State<CourtDetailPage>
 
   static String _monthName(int month) {
     const names = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
     ];
     return names[month];
   }
-
-  // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -218,8 +208,6 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     );
   }
 
-  // ── AppBar ───────────────────────────────────────────────────────────────────
-
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.white,
@@ -231,7 +219,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
         onPressed: () => Navigator.pop(context),
       ),
       title: const Text(
-        'Court Details',
+        'Detail Lapangan',
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
@@ -245,8 +233,6 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       ),
     );
   }
-
-  // ── Court info card ──────────────────────────────────────────────────────────
 
   Widget _buildCourtInfoCard() {
     return Container(
@@ -306,16 +292,14 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     );
   }
 
-  // ── Court specs card (Tipe Lapangan | Tipe Lantai) ───────────────────────────
-
   Widget _buildCourtSpecsCard() {
     return Container(
       color: Colors.white,
       child: Row(
         children: [
-          _buildSpecItem('Court Type', widget.courtCategory),
+          _buildSpecItem('Tipe Lapangan', widget.courtCategory),
           Container(width: 1, height: 50, color: Colors.grey.shade200),
-          _buildSpecItem('Floor Type', widget.floorType),
+          _buildSpecItem('Tipe Lantai', widget.floorType),
         ],
       ),
     );
@@ -341,12 +325,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     );
   }
 
-  // ── Player reviews ───────────────────────────────────────────────────────────
-
   Widget _buildPlayerReviewsSection() {
-    final hasReviewed = Review.hasUserReviewed(widget.username, widget.venueName);
     final venueReviews = Review.mockReviews.where((r) => r.venueName == widget.venueName).toList();
-    
     return Container(
       width: double.infinity,
       color: Colors.white,
@@ -354,19 +334,14 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'What Players say about this court',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-            ],
+          const Text(
+            'Apa kata pemain tentang lapangan ini',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 10),
           if (venueReviews.isNotEmpty) ...[
             Text(
-              '⭐ ${Review.getAverageRating(widget.venueName).toStringAsFixed(1)} from total ${venueReviews.length} Player reviews',
+              '⭐ ${Review.getAverageRating(widget.venueName).toStringAsFixed(1)} dari total ${venueReviews.length} ulasan pemain',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 12),
@@ -375,94 +350,13 @@ class _CourtDetailPageState extends State<CourtDetailPage>
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildReviewChip('🏟️', 'Great Facilities', 3),
-              _buildReviewChip('👍', 'Clean Venue', 3),
-              _buildReviewChip('⚡', 'Complete Facilities', 2),
+              _buildReviewChip('🏟️', 'Fasilitas Bagus', 3),
+              _buildReviewChip('👍', 'Tempat Bersih', 3),
+              _buildReviewChip('⚡', 'Fasilitas Lengkap', 2),
             ],
           ),
           const SizedBox(height: 16),
-          const SizedBox(height: 8),
         ],
-      ),
-    );
-  }
-
-  void _showReviewDialog(BuildContext context, {Review? existingReview}) {
-    double selectedRating = existingReview?.rating ?? 5;
-    final commentController = TextEditingController(text: existingReview?.comment ?? '');
-    
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Write Court Review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) => GestureDetector(
-                  onTap: () => setDialogState(() => selectedRating = index + 1.0),
-                  child: Icon(
-                    index < selectedRating ? Icons.star_rounded : Icons.star_outline_rounded,
-                    color: Colors.orange,
-                    size: 36,
-                  ),
-                )),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: commentController,
-                decoration: InputDecoration(
-                  hintText: 'How was your experience playing here?',
-                  hintStyle: const TextStyle(fontSize: 13),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                ),
-                maxLines: 3,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (commentController.text.isEmpty) return;
-                
-                setState(() {
-                  if (existingReview != null) {
-                    Review.mockReviews.remove(existingReview);
-                  }
-                  
-                  Review.mockReviews.insert(0, Review(
-                    username: widget.username,
-                    venueName: widget.venueName,
-                    rating: selectedRating,
-                    comment: commentController.text,
-                    date: DateTime.now(),
-                  ));
-                });
-                
-                Navigator.pop(context);
-                AlertUtils.showResultDialog(
-                  context,
-                  isSuccess: true,
-                  title: existingReview == null ? 'Review Sent!' : 'Review Updated!',
-                  message: existingReview == null 
-                    ? 'Thank you for your review. Your review helps other players!'
-                    : 'Your review has been successfully updated.',
-                );
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: _accent, foregroundColor: Colors.white),
-              child: Text(existingReview == null ? 'Submit Review' : 'Save Changes'),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -488,14 +382,11 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     );
   }
 
-  // ── Booking section ──────────────────────────────────────────────────────────
-
   Widget _buildBookingSection() {
     return Container(
       color: Colors.white,
       child: Column(
         children: [
-          // Tab Harian / Membership
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Container(
@@ -514,27 +405,21 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
                 tabs: const [
-                  Tab(text: 'Daily'),
-                  Tab(text: 'Service'),
+                  Tab(text: 'Harian'),
+                  Tab(text: 'Layanan'),
                 ],
               ),
             ),
           ),
-
           const SizedBox(height: 16),
           const Divider(height: 1),
           const SizedBox(height: 12),
-
           if (_tabController.index == 0) ...[
-            // "Choose Booking Schedule" header
             const Text(
-              'Choose Booking Schedule',
+              'Pilih Jadwal Booking',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
-
             const SizedBox(height: 12),
-
-            // Month row + reset
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -561,7 +446,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                       _expandedGroups.clear();
                     }),
                     child: const Text(
-                      'Reset & Restart',
+                      'Reset & Ulang',
                       style: TextStyle(
                           color: _accent,
                           fontSize: 13,
@@ -571,10 +456,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 ],
               ),
             ),
-
             const SizedBox(height: 12),
-
-            // Date picker (reusable)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: VenueDatePicker(
@@ -586,10 +468,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 }),
               ),
             ),
-
             const SizedBox(height: 10),
-
-            // Period info
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -599,7 +478,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                       const TextStyle(fontSize: 12, color: Colors.black54),
                   children: [
                     const TextSpan(
-                      text: '*Booking Date Period: ',
+                      text: '*Periode Tanggal Booking: ',
                       style: TextStyle(
                           color: _accent, fontWeight: FontWeight.w500),
                     ),
@@ -608,18 +487,13 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 ),
               ),
             ),
-
             const SizedBox(height: 8),
-
-            // Time groups
             ..._timeGroups.asMap().entries.map(
                   (e) => _buildTimeGroup(e.key, e.value),
                 ),
           ] else ...[
-            // Service Tab Content
             _buildServicesList(),
           ],
-
           const SizedBox(height: 16),
         ],
       ),
@@ -630,13 +504,11 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     final available =
         group.slots.where((s) => s.isAvailable).length;
     final isExpanded = _expandedGroups.contains(groupIdx);
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Section header
           GestureDetector(
             onTap: () {
               setState(() {
@@ -668,7 +540,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                   ),
                   const Spacer(),
                   Text(
-                    '$available Available Slots',
+                    '$available Slot Tersedia',
                     style: TextStyle(
                         fontSize: 12, color: Colors.grey.shade400),
                   ),
@@ -682,10 +554,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
               ),
             ),
           ),
-
           if (isExpanded) ...[
             const SizedBox(height: 10),
-            // 2-column grid of slots
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -694,7 +564,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                mainAxisExtent: 90, // Meningkatkan ukuran card agar tidak kekecilan
+                mainAxisExtent: 90,
               ),
               itemCount: group.slots.length,
               itemBuilder: (context, idx) {
@@ -718,9 +588,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       dateStr: dateStr,
       timeSlot: slot.time,
     );
-
     final bool isBooked = !slot.isAvailable || isAlreadyBooked;
-
     return GestureDetector(
       onTap: isBooked ? null : () => setState(() {
         if (isSelected) {
@@ -777,12 +645,10 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     );
   }
 
-  // ── Bottom bar ───────────────────────────────────────────────────────────────
-
   Widget _buildBottomBar() {
     final hasSelection = _selectedSlots.isNotEmpty;
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -796,38 +662,86 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              hasSelection
-                  ? '${_selectedSlots.length} slots selected • ${_formatPrice(_totalPrice)}'
-                  : 'Please select a booking slot',
-              style: TextStyle(
-                fontSize: 13,
-                color: hasSelection
-                    ? Colors.black87
-                    : Colors.grey.shade500,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasSelection
+                      ? '${_selectedSlots.length} slot dipilih'
+                      : 'Belum ada slot',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                Text(
+                  _formatPrice(_totalPrice),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: hasSelection ? AppColors.primary : Colors.grey.shade400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Tombol Keranjang (DI SINI - Samping Kiri)
+          Container(
+            height: 48,
+            width: 48,
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              color: hasSelection ? Colors.orange.withValues(alpha: 0.1) : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: hasSelection ? Colors.orange : Colors.grey.shade200,
+              ),
+            ),
+            child: IconButton(
+              onPressed: hasSelection 
+                ? () {
+                    final dateStr = BookingUtils.formatDate(_selectedDate);
+                    final selectedTimes = _selectedTimeStrings;
+                    GlobalVenueData.addToCart({
+                      'venueName': widget.venueName,
+                      'courtName': widget.courtName,
+                      'date': dateStr,
+                      'timeSlot': '${selectedTimes.length} Slot: ${selectedTimes.join(', ')}',
+                      'price': _totalPrice,
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Berhasil ditambahkan ke keranjang!'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                : null,
+              icon: Icon(
+                Icons.add_shopping_cart_rounded, 
+                color: hasSelection ? Colors.orange : Colors.grey.shade400,
+                size: 20,
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          // Tombol Pesan Sekarang
           SizedBox(
-            height: 44,
-            child: ElevatedButton.icon(
+            height: 48,
+            child: ElevatedButton(
               onPressed: hasSelection
                   ? () {
                       final selectedTimes = _selectedTimeStrings;
                       final dateStr = BookingUtils.formatDate(_selectedDate);
-                      
-                      // Prepare individual slots for atomic locking
                       final individualSlots = _selectedSlots.map((key) {
                         final parts = key.split('_');
                         final g = int.tryParse(parts[0]) ?? 0;
                         final s = int.tryParse(parts[1]) ?? 0;
                         return {
                           'court': widget.courtName,
-                          'time': _CourtDetailPageState._timeGroups[g].slots[s].time,
+                          'time': _timeGroups[g].slots[s].time,
                         };
                       }).toList();
-
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -837,7 +751,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                             venueName: widget.venueName,
                             courtName: widget.courtName,
                             date: dateStr,
-                            timeRange: '${selectedTimes.length} Time Slots (${selectedTimes.join(', ')})',
+                            timeRange: '${selectedTimes.length} Slot Waktu (${selectedTimes.join(', ')})',
                             price: _totalPrice,
                             individualSlots: individualSlots,
                             selectedServices: _selectedServices,
@@ -847,21 +761,20 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                     }
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _accent,
+                backgroundColor: AppColors.primary,
                 disabledBackgroundColor: Colors.grey.shade200,
                 foregroundColor: Colors.white,
                 disabledForegroundColor: Colors.grey.shade400,
                 elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
               ),
-              icon: const Icon(Icons.shopping_cart_rounded, size: 16),
-              label: Text(
-                hasSelection ? 'Book Now' : 'None Selected',
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600),
+              child: const Text(
+                'Pesan Sekarang',
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -874,7 +787,6 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
     final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
     final services = venue['services'] as List<dynamic>? ?? [];
-
     if (services.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
@@ -884,7 +796,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
               Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey.shade300),
               const SizedBox(height: 12),
               const Text(
-                'No additional services available at this venue.',
+                'Tidak ada layanan tambahan tersedia di venue ini.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey),
               ),
@@ -893,7 +805,6 @@ class _CourtDetailPageState extends State<CourtDetailPage>
         ),
       );
     }
-
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -909,7 +820,6 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     final stock = service['stock'] as int;
     final unit = service['unit'] as String;
     final currentQty = _selectedServices[id] ?? 0;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -943,7 +853,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                   style: const TextStyle(color: _accent, fontWeight: FontWeight.w600, fontSize: 12),
                 ),
                 Text(
-                  'Stock: $stock',
+                  'Stok: $stock',
                   style: TextStyle(color: stock == 0 ? Colors.red : Colors.grey, fontSize: 11),
                 ),
               ],
@@ -991,16 +901,11 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Data Models
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _TimeGroup {
   final String period;
   final String range;
   final IconData icon;
   final List<_TimeSlot> slots;
-
   const _TimeGroup({
     required this.period,
     required this.range,
@@ -1014,7 +919,5 @@ class _TimeSlot {
   final int originalPrice;
   final int price;
   final bool isAvailable;
-
-  const _TimeSlot(
-      this.time, this.originalPrice, this.price, this.isAvailable);
+  const _TimeSlot(this.time, this.originalPrice, this.price, this.isAvailable);
 }
