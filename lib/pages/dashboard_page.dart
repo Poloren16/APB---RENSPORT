@@ -34,7 +34,7 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   late int _selectedIndex;
   DateTime _selectedDate = DateTime.now();
-  String _selectedCategory = 'All';
+  String _selectedCategory = 'Semua';
 
   @override
   void initState() {
@@ -43,17 +43,17 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   static const List<CategoryItem> _categories = [
-    CategoryItem('All'),
+    CategoryItem('Semua'),
     CategoryItem('Favorite', Icons.bookmark_outline),
     CategoryItem('Mini Soccer', Icons.sports_soccer),
-    CategoryItem('Soccer', Icons.sports_soccer),
+    CategoryItem('Sepak Bola', Icons.sports_soccer),
   ];
 
   static String _monthName(int month) {
     const names = [
       '',
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
     ];
     return names[month];
   }
@@ -62,7 +62,7 @@ class _DashboardPageState extends State<DashboardPage> {
     setState(() {
       _selectedIndex = index;
       if (index == 0) {
-        _selectedCategory = 'All';
+        _selectedCategory = 'Semua';
       }
     });
   }
@@ -97,7 +97,7 @@ class _DashboardPageState extends State<DashboardPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home),
-            label: 'Home',
+            label: 'Beranda',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.stadium_outlined),
@@ -107,12 +107,12 @@ class _DashboardPageState extends State<DashboardPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.sports_basketball_outlined),
             activeIcon: Icon(Icons.sports_basketball),
-            label: 'Activities',
+            label: 'Aktivitas',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
-            label: 'Account',
+            label: 'Akun',
           ),
         ],
         currentIndex: _selectedIndex,
@@ -149,12 +149,12 @@ class _DashboardPageState extends State<DashboardPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Hello, ${widget.username}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text('Halo, ${widget.username}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       Row(
                         children: [
                           Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
-                          Text('Your Location', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                          Text('Lokasi Kamu', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                         ],
                       ),
                     ],
@@ -264,15 +264,14 @@ class _DashboardPageState extends State<DashboardPage> {
                   text: const TextSpan(
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
                     children: [
-                      TextSpan(text: 'Recommended '),
+                      TextSpan(text: 'Rekomendasi '),
                       TextSpan(text: 'Venue', style: TextStyle(color: AppColors.primary)),
                     ],
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text('Find the best venues to play!', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                Text('Temukan venue terbaik untuk bermain!', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                 const SizedBox(height: 20),
-                // Render list of venues
                 ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -301,7 +300,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildSearchBar() {
     return TextField(
       decoration: InputDecoration(
-        hintText: 'Search Venue',
+        hintText: 'Cari Venue',
         prefixIcon: const Icon(Icons.search),
         filled: true,
         fillColor: Colors.grey[100],
@@ -324,7 +323,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         GestureDetector(
           onTap: () => setState(() => _selectedDate = DateTime.now()),
-          child: const Text('Reset & Restart', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
+          child: const Text('Reset & Ulang', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
         ),
       ],
     );
@@ -366,8 +365,8 @@ class _DashboardPageState extends State<DashboardPage> {
             builder: (context) => BookingPage(
               username: widget.username,
               venueName: venue['name'] ?? 'Venue',
-              venueType: venue['type'] ?? 'General',
-              venueAddress: venue['address'] ?? venue['location'] ?? 'Location',
+              venueType: venue['type'] ?? 'Umum',
+              venueAddress: venue['address'] ?? venue['location'] ?? 'Lokasi',
               venueHours: venue['hours'] ?? '06:00 - 22:00',
             ),
           ),
@@ -392,11 +391,11 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 4),
                   _buildVenueStats(venue['name']),
                   const SizedBox(height: 4),
-                  _buildIconText(Icons.location_on, venue['location'] ?? 'Unknown'),
+                  _buildIconText(Icons.location_on, venue['location'] ?? 'Tidak Diketahui'),
                   const SizedBox(height: 4),
-                  _buildIconText(Icons.sports_tennis, venue['type'] ?? 'General'),
+                  _buildIconText(Icons.sports_tennis, venue['type'] ?? 'Umum'),
                   const SizedBox(height: 8),
-                  Text(venue['price'] ?? 'Contact for price', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(venue['price'] ?? 'Hubungi Pengelola', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
                 ],
               ),
             ),
@@ -413,7 +412,7 @@ class _DashboardPageState extends State<DashboardPage> {
         const SizedBox(width: 4),
         Text(Review.getAverageRating(venueName ?? '').toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
         const SizedBox(width: 4),
-        Text('(${Review.mockReviews.where((r) => r.venueName == venueName).length} reviews)', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+        Text('(${Review.mockReviews.where((r) => r.venueName == venueName).length} ulasan)', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
       ],
     );
   }
@@ -429,7 +428,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildCourtItem(Map<String, dynamic> venue, Map<String, dynamic> court) {
-    final String courtName = court['name'] ?? 'Court';
+    final String courtName = court['name'] ?? 'Lapangan';
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -440,7 +439,7 @@ class _DashboardPageState extends State<DashboardPage> {
               role: widget.role,
               courtName: courtName,
               venueName: venue['name'] ?? 'Venue',
-              sportType: venue['type'] ?? 'General',
+              sportType: venue['type'] ?? 'Umum',
             ),
           ),
         );
@@ -454,11 +453,11 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 _buildSmallImage(),
                 const SizedBox(width: 12),
-                Expanded(child: _buildCourtInfo(courtName, venue['type'] ?? 'General', court['size'] ?? 'Standard')),
+                Expanded(child: _buildCourtInfo(courtName, venue['type'] ?? 'Umum', court['size'] ?? 'Standar')),
               ],
             ),
             const SizedBox(height: 12),
-            const Text('Choose booking schedule:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const Text('Pilih jadwal booking:', style: TextStyle(fontSize: 11, color: Colors.grey)),
             const SizedBox(height: 8),
             _buildTimeSlotsRow(venue['name'] ?? '', courtName),
           ],
@@ -492,7 +491,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ],
         ),
         const SizedBox(height: 4),
-        const Text('Learn More >', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
+        const Text('Selengkapnya >', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
       ],
     );
   }

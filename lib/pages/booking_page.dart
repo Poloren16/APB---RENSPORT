@@ -24,7 +24,7 @@ class BookingPage extends StatefulWidget {
     this.username = 'User',
     this.venueName = 'Bandung Elektrik Cigereleng Tennis Court',
     this.venueType = 'Tennis',
-    this.venueAddress = 'Jl. PLN Cigereleng No.19, Ciseureuh, K...',
+    this.venueAddress = 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
     this.venueHours = '06:00 - 22:00',
   });
 
@@ -39,7 +39,7 @@ class _BookingPageState extends State<BookingPage>
   final Set<String> _selectedSlots = {};
   final Map<String, int> _selectedServices = {};
 
-  final List<String> _tabs = ['Select Schedule', 'Service'];
+  final List<String> _tabs = ['Pilih Jadwal', 'Layanan'];
 
   // Slot waktu
   final List<Map<String, dynamic>> _timeSlots = [
@@ -88,7 +88,7 @@ class _BookingPageState extends State<BookingPage>
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (m) => '${m[1]}.',
     );
-    return 'IDR $formatted';
+    return 'Rp$formatted';
   }
 
   int get _totalSelected => _selectedSlots.length;
@@ -100,7 +100,6 @@ class _BookingPageState extends State<BookingPage>
       return sum + (_timeSlots[slotIndex]['price'] as int);
     });
 
-    // Add services price
     final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
     final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
     final services = venue['services'] as List<dynamic>? ?? [];
@@ -118,8 +117,8 @@ class _BookingPageState extends State<BookingPage>
 
   String _getMonthName(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
     return months[date.month - 1];
   }
@@ -129,9 +128,9 @@ class _BookingPageState extends State<BookingPage>
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
-        color: isHighlighted ? AppColors.primary.withOpacity(0.08) : Colors.transparent,
+        color: isHighlighted ? AppColors.primary.withValues(alpha: 0.08) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        border: isHighlighted ? Border.all(color: AppColors.primary.withOpacity(0.2)) : null,
+        border: isHighlighted ? Border.all(color: AppColors.primary.withValues(alpha: 0.2)) : null,
       ),
       child: Row(
         children: [
@@ -173,7 +172,7 @@ class _BookingPageState extends State<BookingPage>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         final currentDayName = days[_selectedDate.weekday % 7];
         return SafeArea(
           child: Padding(
@@ -183,7 +182,7 @@ class _BookingPageState extends State<BookingPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Operational Hours',
+                  'Jam Operasional',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -193,16 +192,16 @@ class _BookingPageState extends State<BookingPage>
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 16),
-                _buildOperationalRow('Sunday', '06:00 - 22:00', currentDayName == 'Sunday'),
-                _buildOperationalRow('Monday', '06:00 - 22:00', currentDayName == 'Monday'),
-                _buildOperationalRow('Tuesday', '06:00 - 22:00', currentDayName == 'Tuesday'),
-                _buildOperationalRow('Wednesday', '06:00 - 21:00', currentDayName == 'Wednesday'),
-                _buildOperationalRow('Thursday', '06:00 - 22:00', currentDayName == 'Thursday'),
-                _buildOperationalRow('Friday', '06:00 - 22:00', currentDayName == 'Friday'),
-                _buildOperationalRow('Saturday', '06:00 - 22:00', currentDayName == 'Saturday'),
+                _buildOperationalRow('Minggu', '06:00 - 22:00', currentDayName == 'Minggu'),
+                _buildOperationalRow('Senin', '06:00 - 22:00', currentDayName == 'Senin'),
+                _buildOperationalRow('Selasa', '06:00 - 22:00', currentDayName == 'Selasa'),
+                _buildOperationalRow('Rabu', '06:00 - 21:00', currentDayName == 'Rabu'),
+                _buildOperationalRow('Kamis', '06:00 - 22:00', currentDayName == 'Kamis'),
+                _buildOperationalRow('Jumat', '06:00 - 22:00', currentDayName == 'Jumat'),
+                _buildOperationalRow('Sabtu', '06:00 - 22:00', currentDayName == 'Sabtu'),
                 const SizedBox(height: 16),
                 Text(
-                  '*Opening hours may change at any time',
+                  '*Jam buka dapat berubah sewaktu-waktu',
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.grey.shade500,
@@ -223,7 +222,7 @@ class _BookingPageState extends State<BookingPage>
                       ),
                     ),
                     child: const Text(
-                      'OK, Go Back',
+                      'Oke, Kembali',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -262,7 +261,6 @@ class _BookingPageState extends State<BookingPage>
       }
     }
 
-    // Fallback to URL launcher if coordinates are missing
     final query = Uri.encodeComponent(widget.venueName + ' ' + widget.venueAddress);
     final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
     if (await canLaunchUrl(url)) {
@@ -272,8 +270,8 @@ class _BookingPageState extends State<BookingPage>
 
   void _showBookingConfirmation(BuildContext context) {
     final monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
     showModalBottomSheet(
       context: context,
@@ -287,7 +285,7 @@ class _BookingPageState extends State<BookingPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Booking Confirmation',
+              'Konfirmasi Pemesanan',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -313,7 +311,7 @@ class _BookingPageState extends State<BookingPage>
                     size: 16, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
                 Text(
-                  '${_selectedSlots.length} time slots + ${_selectedServices.values.fold(0, (a, b) => a + b)} items selected',
+                  '${_selectedSlots.length} slot waktu dipilih',
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ],
@@ -325,7 +323,7 @@ class _BookingPageState extends State<BookingPage>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Total Payment',
+                  'Total Pembayaran',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
@@ -357,7 +355,6 @@ class _BookingPageState extends State<BookingPage>
                     selectedTimes.add(_timeSlots[slotIndex]['time'].split(' - ')[0]);
                   }
                   
-                  // Sorting the times so they appear chronologically
                   selectedTimes.sort((a, b) {
                     final hA = int.tryParse(a.split(':')[0]) ?? 0;
                     final hB = int.tryParse(b.split(':')[0]) ?? 0;
@@ -366,7 +363,6 @@ class _BookingPageState extends State<BookingPage>
 
                   final dateStr = BookingUtils.formatDate(_selectedDate);
                   
-                  // Prepare individual slots for atomic locking
                   final individualSlots = _selectedSlots.map((key) {
                     final parts = key.split('_');
                     final slotIdx = int.tryParse(parts[0]) ?? 0;
@@ -386,7 +382,7 @@ class _BookingPageState extends State<BookingPage>
                         venueName: widget.venueName,
                         courtName: selectedCourts.join(', '),
                         date: dateStr,
-                        timeRange: '${selectedTimes.length} Time Slots (${selectedTimes.join(', ')})',
+                        timeRange: selectedTimes.join(', '),
                         price: _totalPrice,
                         individualSlots: individualSlots,
                         selectedServices: Map<String, int>.from(_selectedServices),
@@ -398,7 +394,7 @@ class _BookingPageState extends State<BookingPage>
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Confirm & Pay',
+                child: const Text('Konfirmasi & Bayar',
                     style: TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16)),
               ),
@@ -411,11 +407,12 @@ class _BookingPageState extends State<BookingPage>
 
   @override
   Widget build(BuildContext context) {
+    final bool hasSelection = _selectedSlots.isNotEmpty || _selectedServices.isNotEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
         children: [
-          // Scrollable Body
           Expanded(
             child: CustomScrollView(
               slivers: [
@@ -429,7 +426,6 @@ class _BookingPageState extends State<BookingPage>
                   onOpenMaps: _openMaps,
                 ),
 
-                // Tab Bar
                 SliverPersistentHeader(
                   pinned: true,
                   delegate: _StickyTabBarDelegate(
@@ -446,9 +442,7 @@ class _BookingPageState extends State<BookingPage>
                   ),
                 ),
 
-                // Tab Content
                 if (_tabController.index == 0) ...[
-                  // Schedule Tab Content
                   SliverToBoxAdapter(
                     child: Column(
                       children: [
@@ -505,7 +499,7 @@ class _BookingPageState extends State<BookingPage>
                                   _selectedSlots.clear();
                                 }),
                                 child: const Text(
-                                  'Reset & Restart',
+                                  'Reset & Ulang',
                                   style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600),
                                 ),
                               ),
@@ -563,16 +557,13 @@ class _BookingPageState extends State<BookingPage>
                     ),
                   ),
                 ] else ...[
-                  // Service Tab Content
                   _buildServiceSection(),
                 ],
 
-                // Player Reviews Section
                 SliverToBoxAdapter(
                   child: _buildPlayerReviewsSection(),
                 ),
 
-                // Venue Contact and Recommendation Section
                 SliverToBoxAdapter(
                   child: VenueContactSection(
                     formatCurrency: _formatCurrency,
@@ -582,68 +573,99 @@ class _BookingPageState extends State<BookingPage>
             ),
           ),
 
-          // Bottom Booking Bar
-          if (_selectedSlots.isNotEmpty || _selectedServices.isNotEmpty)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
+          if (hasSelection)
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
-                    blurRadius: 16,
-                    offset: const Offset(0, -4),
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -5),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _selectedSlots.isNotEmpty 
-                            ? '${_selectedSlots.length} slots + ${_selectedServices.values.fold(0, (a, b) => a + b)} services'
-                            : '${_selectedServices.values.fold(0, (a, b) => a + b)} services selected',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
+              child: SafeArea(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _selectedSlots.isNotEmpty 
+                              ? '${_selectedSlots.length} slot + ${_selectedServices.values.fold(0, (a, b) => a + b)} layanan'
+                              : '${_selectedServices.values.fold(0, (a, b) => a + b)} layanan dipilih',
+                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                           ),
-                        ),
-                        Text(
-                          _formatCurrency(_totalPrice),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
+                          Text(
+                            _formatCurrency(_totalPrice),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      _showBookingConfirmation(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        ],
                       ),
                     ),
-                    child: const Text(
-                      'Book Now',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15),
+                    // Tombol Keranjang (Samping Kiri)
+                    InkWell(
+                      onTap: () {
+                        final dateStr = BookingUtils.formatDate(_selectedDate);
+                        final selectedTimes = _selectedSlots.map((key) {
+                          final parts = key.split('_');
+                          final slotIndex = int.tryParse(parts[0]) ?? 0;
+                          return _timeSlots[slotIndex]['time'];
+                        }).toList();
+                        selectedTimes.sort();
+
+                        // Get actual selected courts
+                        final selectedCourts = _selectedSlots.map((key) {
+                          final parts = key.split('_');
+                          final courtIndex = int.tryParse(parts[1]) ?? 0;
+                          return _courts[courtIndex]['name'] as String;
+                        }).toSet().join(', ');
+
+                        GlobalVenueData.addToCart({
+                          'venueName': widget.venueName,
+                          'courtName': selectedCourts.isEmpty ? 'Beberapa Lapangan' : selectedCourts,
+                          'date': dateStr,
+                          'timeSlot': selectedTimes.join(', '),
+                          'price': _totalPrice,
+                          'services': Map<String, int>.from(_selectedServices),
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Berhasil ditambahkan ke keranjang!'), behavior: SnackBarBehavior.floating),
+                        );
+                      },
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.orange),
+                        ),
+                        child: const Icon(Icons.add_shopping_cart_rounded, color: Colors.orange),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    // Tombol Pesan Sekarang (Samping Kanan)
+                    ElevatedButton(
+                      onPressed: () => _showBookingConfirmation(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        minimumSize: const Size(140, 50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Pesan Sekarang',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
         ],
@@ -665,26 +687,13 @@ class _BookingPageState extends State<BookingPage>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Player Reviews',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
+              const Text('Ulasan Player', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               Row(
                 children: [
                   const Icon(Icons.star_rounded, color: Colors.orange, size: 18),
                   const SizedBox(width: 4),
-                  Text(
-                    Review.getAverageRating(widget.venueName).toStringAsFixed(1),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    ' (${venueReviews.length})',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                  ),
+                  Text(Review.getAverageRating(widget.venueName).toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(' (${venueReviews.length})', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 ],
               ),
             ],
@@ -705,37 +714,19 @@ class _BookingPageState extends State<BookingPage>
                     children: [
                       CircleAvatar(
                         radius: 12,
-                        backgroundColor: AppColors.primary.withOpacity(0.1),
-                        child: Text(
-                          review.username[0],
-                          style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold),
-                        ),
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        child: Text(review.username[0], style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold)),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        review.username,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
+                      Text(review.username, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                       const Spacer(),
-                      Text(
-                        '${review.date.day} ${_getMonthName(review.date)}',
-                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                      ),
+                      Text('${review.date.day} ${_getMonthName(review.date)}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: List.generate(5, (i) => Icon(
-                      i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                      size: 14,
-                      color: Colors.orange,
-                    )),
-                  ),
+                  Row(children: List.generate(5, (i) => Icon(i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 14, color: Colors.orange))),
                   const SizedBox(height: 6),
-                  Text(
-                    review.comment,
-                    style: const TextStyle(fontSize: 13, color: Colors.black87),
-                  ),
+                  Text(review.comment, style: const TextStyle(fontSize: 13, color: Colors.black87)),
                   const SizedBox(height: 4),
                 ],
               );
@@ -747,10 +738,7 @@ class _BookingPageState extends State<BookingPage>
               child: Center(
                 child: GestureDetector(
                   onTap: () => _showAllReviews(context, venueReviews),
-                  child: Text(
-                    'Show All ${venueReviews.length} Reviews',
-                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
-                  ),
+                  child: Text('Lihat Semua ${venueReviews.length} Ulasan', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13)),
                 ),
               ),
             ),
@@ -765,9 +753,7 @@ class _BookingPageState extends State<BookingPage>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return DraggableScrollableSheet(
           initialChildSize: 0.7,
@@ -778,23 +764,9 @@ class _BookingPageState extends State<BookingPage>
             return Column(
               children: [
                 const SizedBox(height: 12),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
                 const SizedBox(height: 16),
-                const Text(
-                  'All Reviews',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
+                const Text('Semua Ulasan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 16),
                 const Divider(height: 1),
                 Expanded(
@@ -802,10 +774,7 @@ class _BookingPageState extends State<BookingPage>
                     controller: scrollController,
                     padding: const EdgeInsets.all(20),
                     itemCount: reviews.length,
-                    separatorBuilder: (_, __) => const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Divider(height: 1),
-                    ),
+                    separatorBuilder: (_, __) => const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1)),
                     itemBuilder: (context, index) {
                       final review = reviews[index];
                       return Column(
@@ -813,50 +782,21 @@ class _BookingPageState extends State<BookingPage>
                         children: [
                           Row(
                             children: [
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: AppColors.primary.withOpacity(0.1),
-                                child: Text(
-                                  review.username[0],
-                                  style: const TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.bold),
-                                ),
-                              ),
+                              CircleAvatar(radius: 16, backgroundColor: AppColors.primary.withValues(alpha: 0.1), child: Text(review.username[0], style: const TextStyle(fontSize: 14, color: AppColors.primary, fontWeight: FontWeight.bold))),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      review.username,
-                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                                    ),
-                                    Row(
-                                      children: [
-                                        Row(
-                                          children: List.generate(5, (i) => Icon(
-                                            i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                                            size: 14,
-                                            color: Colors.orange,
-                                          )),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          '${review.date.day} ${_getMonthName(review.date)} ${review.date.year}',
-                                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                                        ),
-                                      ],
-                                    ),
+                                    Text(review.username, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                    Row(children: [Row(children: List.generate(5, (i) => Icon(i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded, size: 14, color: Colors.orange))), const SizedBox(width: 6), Text('${review.date.day} ${_getMonthName(review.date)} ${review.date.year}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary))]),
                                   ],
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            review.comment,
-                            style: const TextStyle(fontSize: 14, color: Colors.black87),
-                          ),
-                          const SizedBox(height: 6),
+                          Text(review.comment, style: const TextStyle(fontSize: 14, color: Colors.black87)),
                         ],
                       );
                     },
@@ -869,6 +809,7 @@ class _BookingPageState extends State<BookingPage>
       },
     );
   }
+
   Widget _buildServiceSection() {
     final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
     final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
@@ -878,13 +819,7 @@ class _BookingPageState extends State<BookingPage>
       return const SliverToBoxAdapter(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-          child: Center(
-            child: Text(
-              'No additional services available at this venue.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-          ),
+          child: Center(child: Text('Tidak ada layanan tambahan tersedia di venue ini.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))),
         ),
       );
     }
@@ -893,10 +828,7 @@ class _BookingPageState extends State<BookingPage>
       padding: const EdgeInsets.all(16),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final service = services[index];
-            return _buildServiceItem(service);
-          },
+          (context, index) => _buildServiceItem(services[index]),
           childCount: services.length,
         ),
       ),
@@ -905,83 +837,30 @@ class _BookingPageState extends State<BookingPage>
 
   Widget _buildServiceItem(Map<String, dynamic> service) {
     final id = service['id'] as String;
-    final name = service['name'] as String;
-    final price = service['price'] as int;
-    final stock = service['stock'] as int;
-    final unit = service['unit'] as String;
     final currentQty = _selectedServices[id] ?? 0;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
       child: Row(
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: AppColors.secondary,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.sports_tennis_rounded, color: AppColors.primary),
-          ),
+          Container(width: 50, height: 50, decoration: BoxDecoration(color: AppColors.secondary, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.sports_tennis_rounded, color: AppColors.primary)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-                Text(
-                  '${_formatCurrency(price)} / $unit',
-                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12),
-                ),
-                Text(
-                  'Stock: $stock',
-                  style: TextStyle(color: stock == 0 ? Colors.red : Colors.grey, fontSize: 11),
-                ),
+                Text(service['name'] ?? 'Layanan', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text('${_formatCurrency(service['price'] as int)} / ${service['unit']}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12)),
+                Text('Stok: ${service['stock']}', style: TextStyle(color: (service['stock'] as int) == 0 ? Colors.red : Colors.grey, fontSize: 11)),
               ],
             ),
           ),
           Row(
             children: [
-              IconButton(
-                onPressed: currentQty > 0
-                    ? () {
-                        setState(() {
-                          if (currentQty > 1) {
-                            _selectedServices[id] = currentQty - 1;
-                          } else {
-                            _selectedServices.remove(id);
-                          }
-                        });
-                      }
-                    : null,
-                icon: Icon(Icons.remove_circle_outline, color: currentQty > 0 ? AppColors.primary : Colors.grey),
-                iconSize: 22,
-              ),
-              Text(
-                '$currentQty',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              IconButton(
-                onPressed: currentQty < stock
-                    ? () {
-                        setState(() {
-                          _selectedServices[id] = currentQty + 1;
-                        });
-                      }
-                    : null,
-                icon: Icon(Icons.add_circle_outline, color: currentQty < stock ? AppColors.primary : Colors.grey),
-                iconSize: 22,
-              ),
+              IconButton(onPressed: currentQty > 0 ? () => setState(() => currentQty > 1 ? _selectedServices[id] = currentQty - 1 : _selectedServices.remove(id)) : null, icon: Icon(Icons.remove_circle_outline, color: currentQty > 0 ? AppColors.primary : Colors.grey), iconSize: 22),
+              Text('$currentQty', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              IconButton(onPressed: currentQty < (service['stock'] as int) ? () => setState(() => _selectedServices[id] = currentQty + 1) : null, icon: Icon(Icons.add_circle_outline, color: currentQty < (service['stock'] as int) ? AppColors.primary : Colors.grey), iconSize: 22),
             ],
           ),
         ],
@@ -990,30 +869,15 @@ class _BookingPageState extends State<BookingPage>
   }
 }
 
-// Sticky tab bar delegate
 class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar tabBar;
   _StickyTabBarDelegate(this.tabBar);
-
   @override
   double get minExtent => tabBar.preferredSize.height + 1;
   @override
   double get maxExtent => tabBar.preferredSize.height + 1;
-
   @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: Colors.white,
-      child: Column(
-        children: [
-          tabBar,
-          const Divider(height: 1, thickness: 1),
-        ],
-      ),
-    );
-  }
-
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => Container(color: Colors.white, child: Column(children: [tabBar, const Divider(height: 1, thickness: 1)]));
   @override
   bool shouldRebuild(_StickyTabBarDelegate oldDelegate) => false;
 }
