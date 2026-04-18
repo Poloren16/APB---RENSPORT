@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
-import '../../data/venue_data.dart';
 import '../../models/review_model.dart';
 
 class VenueInfoPage extends StatelessWidget {
@@ -12,12 +11,12 @@ class VenueInfoPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final String venueName = venue['name'] ?? 'Detail Venue';
     final List<dynamic> courts = venue['courts'] ?? [];
-    final List<dynamic> services = venue['services'] ?? [];
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Informasi Venue', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Informasi Venue',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -26,49 +25,29 @@ class VenueInfoPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Venue Basic Info
-            _buildSectionTitle('Informasi Dasar'),
+            // 1. Informasi Lokasi Detail
+            _buildSectionTitle('Lokasi & Alamat'),
             _buildInfoCard([
               _buildInfoRow(Icons.stadium, 'Nama Venue', venueName),
-              _buildInfoRow(Icons.location_on, 'Lokasi', venue['location'] ?? '-'),
-              _buildInfoRow(Icons.sports_soccer, 'Tipe', venue['type'] ?? '-'),
-              _buildInfoRow(Icons.payments, 'Harga Dasar', venue['price'] ?? '-'),
-              _buildInfoRow(Icons.info, 'Status', venue['status'] ?? '-', 
-                valueColor: (venue['status'] == 'Active') ? Colors.green : Colors.orange),
+              _buildInfoRow(Icons.map, 'Provinsi', venue['provinsi'] ?? '-'),
+              _buildInfoRow(Icons.location_city, 'Kota', venue['location'] ?? '-'),
+              _buildInfoRow(Icons.add_location_alt_outlined, 'Jalan', venue['address'] ?? '-'),
+              _buildInfoRow(Icons.more_horiz, 'Detail', venue['dll'] ?? '-'),
+              _buildInfoRow(Icons.info_outline, 'Status', venue['status'] ?? '-',
+                  valueColor: (venue['status'] == 'Active') ? Colors.green : Colors.orange),
             ]),
             const SizedBox(height: 24),
 
-            // Courts Info
+            // 2. Rincian Per Lapangan
             _buildSectionTitle('Daftar Lapangan (${courts.length})'),
             if (courts.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(left: 4),
-                child: Text('Belum ada lapangan yang terdaftar.', style: TextStyle(color: Colors.grey)),
-              )
+              const Text('Belum ada lapangan terdaftar.', style: TextStyle(color: Colors.grey))
             else
-              ...courts.map((court) => _buildSubCard(
-                title: court['name'] ?? 'Lapangan',
-                subtitle: 'Ukuran: ${court['size'] ?? '-'}',
-                icon: Icons.grid_on,
-              )),
+              ...courts.asMap().entries.map((entry) => _buildDetailedCourtCard(entry.value)),
+
             const SizedBox(height: 24),
 
-            // Services Info
-            _buildSectionTitle('Layanan Tambahan (${services.length})'),
-            if (services.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(left: 4),
-                child: Text('Belum ada layanan tambahan.', style: TextStyle(color: Colors.grey)),
-              )
-            else
-              ...services.map((service) => _buildSubCard(
-                title: service['name'] ?? 'Layanan',
-                subtitle: 'Harga: Rp ${service['price']} / ${service['unit']}',
-                icon: Icons.shopping_bag,
-              )),
-            const SizedBox(height: 24),
-
-            // Reviews Summary
+            // 3. Ringkasan Ulasan
             _buildSectionTitle('Rating & Ulasan'),
             _buildReviewSummary(venueName),
             const SizedBox(height: 32),
@@ -78,13 +57,112 @@ class VenueInfoPage extends StatelessWidget {
     );
   }
 
+  Widget _buildDetailedCourtCard(Map<String, dynamic> court) {
+    final Map<String, dynamic> priceDay = court['priceDay'] ?? {};
+    final List<dynamic> services = court['services'] ?? [];
+    final Map<String, dynamic> availability = court['availability'] ?? {};
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Lapangan
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: AppColors.secondary,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.grid_on, color: AppColors.primary, size: 18),
+                const SizedBox(width: 8),
+                Text(court['name'] ?? 'Lapangan',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Spesifikasi
+                _buildSmallInfo('Tipe: ${court['type']} | ${court['courtCategory']}'),
+                _buildSmallInfo('Lantai: ${court['floorType']}'),
+                _buildSmallInfo('Ukuran: ${court['size']}'),
+                _buildSmallInfo('Fasilitas: ${court['facility']}'),
+                const Divider(height: 24),
+
+                // Harga Harian
+                const Text('Harga Sewa (Per Jam):',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                _buildDayPriceGrid(priceDay),
+
+                if (services.isNotEmpty) ...[
+                  const Divider(height: 24),
+                  const Text('Layanan Tambahan:',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ...services.map((s) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('• ${s['name']}', style: const TextStyle(fontSize: 12)),
+                        Text('Rp ${s['price']}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  )),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDayPriceGrid(Map<String, dynamic> priceDay) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: priceDay.entries.map((e) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Text(e.key, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            Text(e.value.toString().isEmpty ? 'N/A' : 'Rp ${e.value}',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      )).toList(),
+    );
+  }
+
+  Widget _buildSmallInfo(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(text, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 12),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-      ),
+      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
     );
   }
 
@@ -115,39 +193,9 @@ class VenueInfoPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSubCard({required String title, required String subtitle, required IconData icon}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: AppColors.secondary, borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: AppColors.primary, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildReviewSummary(String venueName) {
     final rating = Review.getAverageRating(venueName);
     final count = Review.mockReviews.where((r) => r.venueName == venueName).length;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
