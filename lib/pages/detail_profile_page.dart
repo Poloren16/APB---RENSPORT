@@ -331,8 +331,10 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
 
   Widget _buildDetailPersonalTab() {
     final account = GlobalAuthData.getAccount(widget.username);
-    final userEmail = account?.email ?? widget.email;
-    final userPhone = account?.phoneNumber ?? '+62 812 3456 7890';
+    final emailVal = account?.email ?? '';
+    final phoneVal = account?.phoneNumber ?? '';
+    final userEmail = emailVal.isNotEmpty ? emailVal : widget.email;
+    final userPhone = phoneVal.isNotEmpty ? phoneVal : '+62 812 3456 7890';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),

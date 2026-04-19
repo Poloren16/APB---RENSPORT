@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../utils/alert_utils.dart';
 import '../data/auth_data.dart';
+import '../data/verification_data.dart';
+import 'login_page.dart';
 
 class PengaturanKeamananPage extends StatefulWidget {
   final String username;
@@ -29,8 +31,9 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   void _refreshData() {
     final account = GlobalAuthData.getAccount(widget.username);
     setState(() {
-      currentEmail = account?.email ?? 'Belum Diatur';
-      currentPhone = account?.phoneNumber ?? 'Belum Diatur';
+      final acc = GlobalAuthData.getAccount(widget.username);
+      currentEmail = (acc?.email != null && acc!.email.isNotEmpty) ? acc.email : 'Belum Diatur';
+      currentPhone = (acc?.phoneNumber != null && acc!.phoneNumber.isNotEmpty) ? acc.phoneNumber : 'Belum Diatur';
     });
   }
 
@@ -90,9 +93,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
               style: TextStyle(color: Colors.red, fontSize: 16),
             ),
             trailing: const Icon(Icons.chevron_right, color: Colors.red, size: 20),
-            onTap: () async {
-              // Add confirmation dialog if needed
-            },
+            onTap: () => _showDeleteAccountConfirmation(),
           ),
         ],
       ),
@@ -216,6 +217,55 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeleteAccountConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Hapus Akun', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          content: const Text(
+            'Apakah Anda yakin ingin menghapus akun ini? Tindakan ini tidak dapat dibatalkan dan semua data Anda akan dihapus secara permanen.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // 1. Sync with verification records
+                final reqIndex = GlobalVerificationData.requests.indexWhere((r) => r.username == widget.username);
+                if (reqIndex != -1) {
+                  await GlobalVerificationData.updateRequestStatus(
+                    GlobalVerificationData.requests[reqIndex].id, 
+                    'Rejected', 
+                    reason: 'Akun dihapus oleh pengguna'
+                  );
+                }
+                
+                // 2. Delete the account
+                await GlobalAuthData.deleteAccount(widget.username);
+                
+                if (mounted) {
+                  // Pop dialog
+                  Navigator.pop(context);
+                  // Return to login
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                    (route) => false,
+                  );
+                  AlertUtils.showToast(context, 'Akun berhasil dihapus.', isSuccess: true);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Hapus Permanen', style: TextStyle(color: Colors.white)),
             ),
           ],
         );

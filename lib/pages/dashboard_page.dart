@@ -119,10 +119,13 @@ class _DashboardPageState extends State<DashboardPage> {
       VenuePage(
         username: widget.username, 
         role: widget.role, 
-        initialCategory: _selectedCategory == 'Favorit' ? 'Favorite' : _selectedCategory,
+        initialCategory: _selectedCategory,
         initialDate: _selectedDate,
       ),
-      BookingHistoryPage(username: widget.username),
+      BookingHistoryPage(
+        username: widget.username,
+        onCreateBooking: () => setState(() => _selectedIndex = 1),
+      ),
       AkunPage(username: widget.username, role: widget.role),
     ];
 
@@ -167,6 +170,10 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildHomeContent() {
+    final account = GlobalAuthData.getAccount(widget.username);
+    final displayName = account?.applicantName ?? widget.username;
+    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+
     // Determine filtered venues
     final List<Map<String, dynamic>> allVenues = GlobalVenueData.venues;
     final String query = _searchController.text.toLowerCase();
@@ -197,17 +204,17 @@ class _DashboardPageState extends State<DashboardPage> {
             padding: const EdgeInsets.all(20.0),
             child: Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 24,
                   backgroundColor: AppColors.primary,
-                  child: Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Text(initial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Halo, ${widget.username}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text('Halo, $displayName', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       Row(
                         children: [
                           Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
@@ -294,8 +301,8 @@ class _DashboardPageState extends State<DashboardPage> {
                   selectedCategory: _selectedCategory,
                   onCategorySelected: (cat) {
                     setState(() => _selectedCategory = cat);
-                    if (cat == 'Favorite') {
-                      _navigateToVenueWithCategory('Favorite');
+                    if (cat == 'Favorit') {
+                      _navigateToVenueWithCategory('Favorit');
                     }
                   },
                 ),
@@ -653,3 +660,4 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 }
+

@@ -13,11 +13,13 @@ import '../data/auth_data.dart';
 class AkunPage extends StatefulWidget {
   final String username;
   final String role;
+  final VoidCallback? onNavigateToVenue;
 
   const AkunPage({
     super.key,
     required this.username,
     required this.role,
+    this.onNavigateToVenue,
   });
 
   @override
@@ -249,12 +251,16 @@ class _AkunPageState extends State<AkunPage> {
                           ),
                         );
                       } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ManagementVenuePage(),
-                          ),
-                        );
+                        if (widget.onNavigateToVenue != null) {
+                          widget.onNavigateToVenue!();
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ManagementVenuePage(),
+                            ),
+                          );
+                        }
                       }
                     },
                   ),

@@ -23,7 +23,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        automaticallyImplyLeading: false, 
+        automaticallyImplyLeading: true, 
         title: const Text(
           'Manajemen Venue',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),

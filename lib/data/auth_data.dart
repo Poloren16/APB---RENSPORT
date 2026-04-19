@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/verification_model.dart';
 
 class UserAccount {
   final String username;
@@ -84,6 +85,7 @@ class UserAccount {
 class GlobalAuthData {
   static const String _storageKey = 'rensius_accounts_v4'; // Bumped version for new default accounts
   static List<UserAccount> accounts = [];
+  static UserAccount? currentUser;
 
   // Initial accounts to be used only if storage is empty
   static final List<UserAccount> _defaultAccounts = [
@@ -91,26 +93,9 @@ class GlobalAuthData {
       username: 'admin',
       password: 'admin123',
       role: 'Admin',
-      applicantName: 'System Admin',
+      applicantName: 'Rensius Admin',
       email: 'admin@rensius.com',
-      phoneNumber: '+6281234567890',
-    ),
-    UserAccount(
-      username: 'user',
-      password: 'user123',
-      role: 'End User',
-      applicantName: 'Muhammad End User',
-      email: 'muhammad@rensius.com',
-      phoneNumber: '+6287711223344',
-      points: 500,
-    ),
-    UserAccount(
-      username: 'owner',
-      password: 'owner123',
-      role: 'Owner',
-      applicantName: 'Budi Venue Owner',
-      email: 'budi@rensius.com',
-      phoneNumber: '+6281122334455',
+      phoneNumber: '+6200000000000',
     ),
   ];
 
@@ -223,6 +208,46 @@ class GlobalAuthData {
         dateOfBirth: newDOB ?? old.dateOfBirth,
         points: newPoints ?? old.points,
       );
+      await save();
+    }
+  }
+
+  static Future<void> syncWithVerificationData(List<VerificationRequest> requests) async {
+    bool hasChanges = false;
+    for (int i = 0; i < accounts.length; i++) {
+      var acc = accounts[i];
+      // Only sync if email or phone is missing
+      if (acc.role.toLowerCase() == 'owner' && (acc.email.isEmpty || acc.phoneNumber.isEmpty)) {
+        try {
+          // Find matching approved request for this username
+          final req = requests.firstWhere(
+            (r) => r.username == acc.username && r.status == 'Approved'
+          );
+          
+          accounts[i] = UserAccount(
+            username: acc.username,
+            password: acc.password,
+            role: acc.role,
+            applicantName: acc.applicantName,
+            email: acc.email.isEmpty ? (req.email ?? '') : acc.email,
+            phoneNumber: acc.phoneNumber.isEmpty ? (req.phoneNumber ?? '') : acc.phoneNumber,
+            bio: acc.bio,
+            sportsInterests: acc.sportsInterests,
+            instagram: acc.instagram,
+            twitter: acc.twitter,
+            facebook: acc.facebook,
+            profileImagePath: acc.profileImagePath,
+            gender: acc.gender,
+            dateOfBirth: acc.dateOfBirth,
+            points: acc.points,
+          );
+          hasChanges = true;
+        } catch (e) {
+          // No matching approved request found, skip
+        }
+      }
+    }
+    if (hasChanges) {
       await save();
     }
   }
