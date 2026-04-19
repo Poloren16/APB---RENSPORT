@@ -455,6 +455,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         password: req.password ?? '123456',
         role: req.type,
         applicantName: req.applicantName,
+        email: req.email,
+        phoneNumber: req.phoneNumber ?? '',
       ));
     } 
     // If Rejected, make sure no account exists (cleanup)

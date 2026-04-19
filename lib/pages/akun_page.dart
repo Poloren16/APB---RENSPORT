@@ -126,6 +126,7 @@ class _AkunPageState extends State<AkunPage> {
                                 builder: (context) => DetailProfilePage(
                                   username: widget.username,
                                   email: userEmail,
+                                  role: widget.role,
                                 ),
                               ),
                             ).then((_) {
