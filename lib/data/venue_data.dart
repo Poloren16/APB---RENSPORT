@@ -25,7 +25,7 @@ class GlobalVenueData {
       'location': 'Jakarta Selatan',
       'type': 'Futsal',
       'price': 'IDR 150,000 / Jam',
-      'status': 'Active',
+      'status': 'Aktif',
       'lat': -6.2297,
       'lng': 106.8295,
       'courts': [
@@ -49,7 +49,7 @@ class GlobalVenueData {
       'location': 'Kelapa Gading',
       'type': 'Badminton',
       'price': 'IDR 80,000 / Jam',
-      'status': 'Active',
+      'status': 'Aktif',
       'lat': -6.1601,
       'lng': 106.9038,
       'courts': [
@@ -72,7 +72,7 @@ class GlobalVenueData {
       'location': 'Senayan',
       'type': 'Tennis',
       'price': 'IDR 200,000 / Jam',
-      'status': 'Maintenance',
+      'status': 'Dalam Perbaikan',
       'lat': -6.2183,
       'lng': 106.8020,
       'courts': [
@@ -95,7 +95,7 @@ class GlobalVenueData {
       'location': 'Bintaro',
       'type': 'Mini Soccer',
       'price': 'IDR 300,000 / Jam',
-      'status': 'Active',
+      'status': 'Aktif',
       'lat': -6.2446,
       'lng': 106.6961,
       'courts': [
@@ -121,7 +121,7 @@ class GlobalVenueData {
       'address': 'Jl. PLN Cigereleng No.19, Ciseureuh, Kota Bandung',
       'hours': '06:00 - 22:00',
       'price': 'IDR 125,000 ~ IDR 175,000',
-      'status': 'Active',
+      'status': 'Aktif',
       'lat': -6.9389,
       'lng': 107.6167,
       'courts': [
@@ -146,7 +146,7 @@ class GlobalVenueData {
       'location': 'Jakarta Pusat',
       'type': 'Mini Soccer',
       'price': 'IDR 2,200,000 ~ IDR 2,200,000',
-      'status': 'Active',
+      'status': 'Aktif',
       'lat': -6.1887,
       'lng': 106.8378,
       'courts': [

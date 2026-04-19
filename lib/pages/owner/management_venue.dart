@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rensius/theme/app_colors.dart';
 import 'package:rensius/data/venue_data.dart';
 import 'package:rensius/utils/alert_utils.dart';
+import 'package:rensius/widgets/empty_state_widget.dart';
 import 'venue_info_page.dart';
 import 'add_venue_page.dart';
 
@@ -71,7 +72,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
   }
 
   Widget _buildStatsRow() {
-    int activeVenues = _venues.where((v) => v['status'] == 'Active').length;
+    int activeVenues = _venues.where((v) => v['status'] == 'Aktif').length;
     return Row(
       children: [
         Expanded(
@@ -146,6 +147,15 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
   }
 
   Widget _buildVenueList() {
+    if (_venues.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 40),
+        child: EmptyStateWidget(
+          message: 'Belum ada venue terdaftar',
+          subMessage: 'Mulai kelola bisnis Anda dengan menambahkan venue pertama Anda sekarang!',
+        ),
+      );
+    }
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -227,7 +237,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      venue['status'],
+                      isActive ? 'Aktif' : venue['status'],
                       style: TextStyle(fontSize: 11, color: isActive ? AppColors.accent : Colors.orange, fontWeight: FontWeight.bold),
                     ),
                   ),

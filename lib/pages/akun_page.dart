@@ -151,57 +151,49 @@ class _AkunPageState extends State<AkunPage> {
           ),
           const SizedBox(height: 16),
           // Points Card
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
+          if (widget.role.toLowerCase() != 'owner')
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                    child: const Icon(
-                      Icons.monetization_on,
-                      color: Colors.white,
-                      size: 20,
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.monetization_on,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '${account?.points ?? 0} Rensius Points',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                    const SizedBox(width: 12),
+                    Text(
+                      '${account?.points ?? 0} Rensius Points',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  const Text(
-                    'Detail Poin',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           const SizedBox(height: 8),
           // Menu Section
           Container(
@@ -209,23 +201,24 @@ class _AkunPageState extends State<AkunPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildMenuSection('Pribadi'),
-                _buildListTile(
-                  icon: Icons.bookmark_outline,
-                  title: 'Venue Favorit Saya',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => FavoriteVenuesPage(
-                          username: widget.username,
-                          role: widget.role,
+                if (widget.role.toLowerCase() != 'owner') ...[
+                  _buildListTile(
+                    icon: Icons.bookmark_outline,
+                    title: 'Venue Favorit Saya',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FavoriteVenuesPage(
+                            username: widget.username,
+                            role: widget.role,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-                const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                ],
                 _buildMenuSection('Pengaturan'),
                 _buildListTile(
                   icon: Icons.settings,

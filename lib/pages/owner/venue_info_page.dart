@@ -34,7 +34,7 @@ class VenueInfoPage extends StatelessWidget {
               _buildInfoRow(Icons.add_location_alt_outlined, 'Jalan', venue['address'] ?? '-'),
               _buildInfoRow(Icons.more_horiz, 'Detail', venue['dll'] ?? '-'),
               _buildInfoRow(Icons.info_outline, 'Status', venue['status'] ?? '-',
-                  valueColor: (venue['status'] == 'Active') ? Colors.green : Colors.orange),
+                  valueColor: (venue['status'] == 'Aktif') ? Colors.green : Colors.orange),
             ]),
             const SizedBox(height: 24),
 

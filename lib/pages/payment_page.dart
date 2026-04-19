@@ -678,10 +678,17 @@ class _PaymentPageState extends State<PaymentPage> {
           usedPoints: _usePoints ? (_availablePoints > (widget.items.fold(0, (s, i) => s + (i['price'] as int)) + (widget.items.isEmpty ? widget.price : 0)) ? (widget.items.fold(0, (s, i) => s + (i['price'] as int)) + (widget.items.isEmpty ? widget.price : 0)) : _availablePoints) : 0,
           orderId: orderId,
           venueName: widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName,
-          courtName: widget.items.isNotEmpty ? '${widget.items.length} Lapangan' : widget.courtName,
+          courtName: widget.items.isNotEmpty 
+              ? (widget.items.length == 1 ? widget.items.first['courtName'] : '${widget.items.length} Lapangan') 
+              : widget.courtName,
           date: widget.items.isNotEmpty ? widget.items.first['date'] : widget.date,
           timeRange: widget.items.isNotEmpty ? widget.items.first['timeSlot'] : widget.timeRange,
-          individualSlots: widget.individualSlots,
+          individualSlots: widget.individualSlots.isNotEmpty 
+              ? widget.individualSlots 
+              : widget.items.map((item) => {
+                  'court': item['courtName']?.toString() ?? '',
+                  'time': item['timeSlot']?.toString() ?? '',
+                }).toList(),
           selectedServices: _localSelectedServices,
           username: widget.username,
           role: widget.role,

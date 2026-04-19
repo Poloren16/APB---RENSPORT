@@ -77,7 +77,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
       'time': widget.timeRange,
       'price': widget.amount,
       'paymentMethod': widget.paymentMethodName,
-      'status': 'Awaiting Schedule',
+      'status': 'Menunggu Jadwal',
       'services': widget.selectedServices.isEmpty ? null : widget.selectedServices.entries.map((e) {
         final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
         final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};

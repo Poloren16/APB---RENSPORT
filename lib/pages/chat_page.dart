@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../data/chat_data.dart';
 import 'chat_detail_page.dart';
+import '../widgets/empty_state_widget.dart';
 
 class ChatPage extends StatefulWidget {
   final String username;
@@ -46,11 +47,9 @@ class _ChatPageState extends State<ChatPage> {
         ),
       ),
       body: displayThreads.isEmpty
-          ? const Center(
-              child: Text(
-                'Belum ada pesan',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
-              ),
+          ? const EmptyStateWidget(
+              message: 'Belum ada pesan',
+              subMessage: 'Hubungi pengelola venue untuk menanyakan jadwal atau fasilitas lainnya!',
             )
           : ListView.separated(
               itemCount: displayThreads.length,

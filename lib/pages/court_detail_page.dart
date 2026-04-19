@@ -83,7 +83,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
         _TimeSlot('18:00 - 19:00', 175000, 150000, true),
         _TimeSlot('19:00 - 20:00', 175000, 150000, true),
         _TimeSlot('20:00 - 21:00', 175000, 150000, true),
-        _TimeSlot('21:00 - 22:00', 175000, 150000, false),
+        _TimeSlot('21:00 - 22:00', 175000, 150000, true),
+        _TimeSlot('22:00 - 23:00', 175000, 150000, true),
       ],
     ),
   ];

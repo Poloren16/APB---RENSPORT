@@ -62,14 +62,34 @@ class _BookingPageState extends State<BookingPage>
     {'time': '21:00 - 22:00', 'price': 125000, 'originalPrice': 150000, 'available': false, 'booked': true},
   ];
 
-  final List<Map<String, dynamic>> _courts = [
-    {'name': 'BEC Tennis Court Lap.A', 'type': 'Tennis'},
-    {'name': 'BEC Tennis Court Lap.B', 'type': 'Tennis'},
-  ];
+  final List<Map<String, dynamic>> _courts = [];
 
   @override
   void initState() {
     super.initState();
+    
+    // Load dynamic courts for the venue
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    if (venueResults.isNotEmpty) {
+      final venue = venueResults.first;
+      final courts = venue['courts'] as List<dynamic>?;
+      if (courts != null && courts.isNotEmpty) {
+        for (var c in courts) {
+          _courts.add({
+            'name': c['name'] ?? 'Lapangan',
+            'type': c['type'] ?? widget.venueType,
+          });
+        }
+      }
+    }
+
+    // Fallback if no courts found
+    if (_courts.isEmpty) {
+      _courts.addAll([
+        {'name': '${widget.venueName} Court 1', 'type': widget.venueType},
+      ]);
+    }
+
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {

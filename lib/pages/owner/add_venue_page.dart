@@ -26,7 +26,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
   static const List<String> _facilitiesOptions = ['Kamar Mandi', 'Parkiran', 'Kantin', 'Mushola', 'Locker Room'];
   static const List<String> _courtTypeOptions = ['Indoor', 'Outdoor'];
   static const List<String> _floorTypeOptions = ['Vinyl', 'Rumput Sintetis', 'Semen', 'Parquet', 'Karpet'];
-  static const List<String> _timeOptions = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
+  static const List<String> _timeOptions = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
   static const List<String> _daysOfWeek = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
   
   List<Map<String, dynamic>> _courts = [];
@@ -49,7 +49,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
 
           if (map['availability'] == null) {
             map['availability'] = {
-              for (var day in _daysOfWeek) day: <String>{'08:00', '09:00', '10:00'}
+              for (var day in _daysOfWeek) day: <String>{'06:00', '07:00', '08:00'}
             };
           } else {
             final rawAvailability = map['availability'] as Map;
@@ -89,7 +89,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
         'services': <Map<String, dynamic>>[],
         'activeDayIndex': 0,
         'availability': {
-          for (var day in _daysOfWeek) day: <String>{'08:00', '09:00', '10:00'}
+          for (var day in _daysOfWeek) day: <String>{'06:00', '07:00', '08:00'}
         },
         'isExpanded': true,
       });
@@ -116,7 +116,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
         'dll': _dllController.text.trim(),
         'type': _courts.isNotEmpty ? _courts[0]['type'] : 'Umum',
         'price': widget.venueToEdit?['price'] ?? 'Hubungi Pengelola',
-        'status': widget.venueToEdit?['status'] ?? 'Active',
+        'status': widget.venueToEdit?['status'] ?? 'Aktif',
         'hours': '06:00 - 22:00',
         'courts': _courts.map((c) {
           final dynamic availability = c['availability'];
@@ -294,26 +294,49 @@ class _AddVenuePageState extends State<AddVenuePage> {
                     onChanged: (val) => setState(() => _courts[index]['type'] = val),
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: court['courtCategory'],
-                          decoration: const InputDecoration(labelText: 'Tipe Lapangan', border: OutlineInputBorder(), floatingLabelBehavior: FloatingLabelBehavior.always),
-                          items: _courtTypeOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                          onChanged: (val) => setState(() => _courts[index]['courtCategory'] = val),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: court['floorType'],
-                          decoration: const InputDecoration(labelText: 'Tipe Lantai', border: OutlineInputBorder(), floatingLabelBehavior: FloatingLabelBehavior.always),
-                          items: _floorTypeOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                          onChanged: (val) => setState(() => _courts[index]['floorType'] = val),
-                        ),
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      bool isNarrow = constraints.maxWidth < 400;
+                      return isNarrow 
+                        ? Column(
+                            children: [
+                              DropdownButtonFormField<String>(
+                                value: court['courtCategory'],
+                                decoration: const InputDecoration(labelText: 'Tipe Lapangan', border: OutlineInputBorder(), floatingLabelBehavior: FloatingLabelBehavior.always),
+                                items: _courtTypeOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                onChanged: (val) => setState(() => _courts[index]['courtCategory'] = val),
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<String>(
+                                value: court['floorType'],
+                                decoration: const InputDecoration(labelText: 'Tipe Lantai', border: OutlineInputBorder(), floatingLabelBehavior: FloatingLabelBehavior.always),
+                                items: _floorTypeOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                onChanged: (val) => setState(() => _courts[index]['floorType'] = val),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: court['courtCategory'],
+                                  decoration: const InputDecoration(labelText: 'Tipe Lapangan', border: OutlineInputBorder(), floatingLabelBehavior: FloatingLabelBehavior.always),
+                                  items: _courtTypeOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                  onChanged: (val) => setState(() => _courts[index]['courtCategory'] = val),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: court['floorType'],
+                                  decoration: const InputDecoration(labelText: 'Tipe Lantai', border: OutlineInputBorder(), floatingLabelBehavior: FloatingLabelBehavior.always),
+                                  items: _floorTypeOptions.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                  onChanged: (val) => setState(() => _courts[index]['floorType'] = val),
+                                ),
+                              ),
+                            ],
+                          );
+                    }
                   ),
                   const SizedBox(height: 16),
                   _buildLabelOnlyTextField('Ukuran Lapangan (Contoh: P 25 X L 15)', (val) => _courts[index]['size'] = val, initial: court['size']),
@@ -401,19 +424,29 @@ class _AddVenuePageState extends State<AddVenuePage> {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
-                            flex: 2,
+                            flex: 3,
                             child: _buildLabelOnlyTextField('Nama Layanan', (val) => sVal['name'] = val, initial: sVal['name'], isDense: true),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            flex: 1,
+                            flex: 2,
                             child: _buildLabelOnlyTextField('Harga', (val) => sVal['price'] = val, initial: sVal['price'].toString(), isDense: true, isNumber: true, prefix: 'Rp'),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                            onPressed: () => setState(() => services.removeAt(sIdx)),
+                          const SizedBox(width: 4),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                              onPressed: () => setState(() => services.removeAt(sIdx)),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            ),
                           ),
                         ],
                       ),

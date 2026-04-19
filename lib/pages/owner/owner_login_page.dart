@@ -23,7 +23,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
     String password = _passwordController.text.trim();
 
     if (username.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Please enter username and password.');
+      setState(() => _errorMessage = 'Harap masukkan nama pengguna dan kata sandi.');
       return;
     }
 
@@ -47,10 +47,10 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
           ),
         );
       } else {
-        setState(() => _errorMessage = 'This account is not an Owner/Admin category.');
+        setState(() => _errorMessage = 'Akun ini bukan kategori Pemilik/Admin.');
       }
     } else {
-      setState(() => _errorMessage = 'Incorrect username or password.');
+      setState(() => _errorMessage = 'Nama pengguna atau kata sandi salah.');
     }
   }
 
@@ -81,7 +81,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Owner & Admin Portal',
+                  'Portal Pemilik & Admin',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
@@ -91,7 +91,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Manage your venues, verification, and system settings.',
+                  'Kelola venue Anda, verifikasi, dan pengaturan sistem.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
@@ -116,7 +116,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                 TextFormField(
                   controller: _usernameController,
                   decoration: const InputDecoration(
-                    hintText: 'Username',
+                    hintText: 'Nama Pengguna',
                     prefixIcon: Icon(Icons.person_outline, color: AppColors.textSecondary),
                   ),
                 ),
@@ -125,7 +125,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Password',
+                    hintText: 'Kata Sandi',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -146,7 +146,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                   child: ElevatedButton(
                     onPressed: _handleLogin,
                     child: const Text(
-                      'Login',
+                      'Masuk',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -156,7 +156,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      "Don't have an owner account?",
+                      "Belum punya akun pemilik?",
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     TextButton(
@@ -169,7 +169,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                         );
                       },
                       child: const Text(
-                        'Register as Owner',
+                        'Daftar sebagai Pemilik',
                         style: TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,

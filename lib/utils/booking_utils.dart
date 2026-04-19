@@ -58,10 +58,15 @@ class BookingUtils {
     // 1. Check atomic reservations first (Interactive system)
     if (_reservedSlots.contains(key)) return true;
 
-    // 2. Check initial mock data (Date-aware static system)
-    if (_isInitialMockBooked(dateStr, startTime)) return true;
+    // 3. Real-time check: Disable slots in the past for today
+    final now = DateTime.now();
+    final todayStr = formatDate(now);
+    if (dateStr == todayStr) {
+      final hour = int.tryParse(startTime.split(':')[0]) ?? 0;
+      if (hour <= now.hour) return true; // Mark as "booked" (disabled) if time has passed
+    }
 
-    // 3. Fallback to matching against history items
+    // 4. Fallback to matching against history items
     return BookingHistoryPage.mockHistory.any((booking) {
       if (booking == null) return false;
       
@@ -77,5 +82,44 @@ class BookingUtils {
 
       return venueMatch && courtMatch && dateMatch && timeMatch;
     });
+  }
+
+  /// Calculates total revenue from history
+  static int calculateRevenue({String? venueName, String period = 'Total'}) {
+    final all = [...BookingHistoryPage.mockHistory, ...BookingHistoryPage.mockPastHistory];
+    final filtered = (venueName == null || venueName == 'Semua') 
+        ? all 
+        : all.where((b) => b['venueName'] == venueName).toList();
+    
+    if (filtered.isEmpty) return 0;
+    
+    // Period logic (Simplified for mock)
+    // In a real app, we would parse b['date'] and check against DateTime.now()
+    int total = filtered.fold(0, (sum, b) => sum + (int.tryParse(b['price'].toString()) ?? 0));
+    
+    if (period == 'Bulan Ini') return (total * 0.8).toInt();
+    if (period == 'Minggu Ini') return (total * 0.3).toInt();
+    if (period == 'Hari Ini') return (total * 0.1).toInt();
+    
+    return total;
+  }
+
+  /// Returns recent transactions for owner
+  static List<Map<String, dynamic>> getTransactionsForOwner(String? venueName) {
+    final all = [...BookingHistoryPage.mockHistory, ...BookingHistoryPage.mockPastHistory];
+    return (venueName == null || venueName == 'Semua')
+        ? all
+        : all.where((b) => b['venueName'] == venueName).toList();
+  }
+
+  /// Returns revenue data for the last 7 days for the line chart
+  static List<double> getWeeklyDistribution({String? venueName}) {
+    // In a real app we'd filter by actual dates. 
+    // Here we'll simulate based on venue and total volume.
+    final total = calculateRevenue(venueName: venueName, period: 'Total');
+    if (total == 0) return [0, 0, 0, 0, 0, 0, 0];
+    
+    // Weighted random-looking distribution [Sen -> Min]
+    return [0.4, 0.6, 0.3, 0.8, 0.5, 1.0, 0.7];
   }
 }

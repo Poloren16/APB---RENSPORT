@@ -70,32 +70,32 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       final pass = _passwordController.text.trim();
 
       if (name.isEmpty || email.isEmpty || phone.isEmpty || user.isEmpty || pass.isEmpty) {
-        _showValidationError('Please fill in all profile and account information.');
+        _showValidationError('Harap isi semua informasi profil dan akun.');
         return false;
       }
 
       // Email Validation
       final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
       if (!emailRegex.hasMatch(email)) {
-        _showValidationError('Please enter a valid business email address (e.g., name@company.com).');
+        _showValidationError('Harap masukkan alamat email bisnis yang valid (contoh: nama@perusahaan.com).');
         return false;
       }
 
       // Phone Validation (Numbers only)
       final phoneRegex = RegExp(r'^[0-9]{7,15}$');
       if (!phoneRegex.hasMatch(phone)) {
-        _showValidationError('Phone number must contain only digits (7-15 digits).');
+        _showValidationError('Nomor telepon hanya boleh berisi angka (7-15 digit).');
         return false;
       }
       
       // Check if username exists
       if (GlobalAuthData.usernameExists(user)) {
-        _showValidationError('This username is already taken. Please choose another one.');
+        _showValidationError('Nama pengguna ini sudah digunakan. Silakan pilih yang lain.');
         return false;
       }
       
       if (pass.length < 6) {
-        _showValidationError('Password must be at least 6 characters long.');
+        _showValidationError('Kata sandi harus minimal 6 karakter.');
         return false;
       }
 
@@ -104,19 +104,19 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       final npwp = _npwpController.text.trim();
 
       if (nik.isEmpty || npwp.isEmpty) {
-        _showValidationError('Please fill in both NIK and NPWP fields.');
+        _showValidationError('Harap isi kolom NIK dan NPWP.');
         return false;
       }
 
       // NIK Validation (16 digits)
       if (!RegExp(r'^[0-9]{16}$').hasMatch(nik)) {
-        _showValidationError('NIK must be exactly 16 numeric digits.');
+        _showValidationError('NIK harus tepat 16 digit angka.');
         return false;
       }
 
       // NPWP Validation (15 digits)
       if (!RegExp(r'^[0-9]{15}$').hasMatch(npwp)) {
-        _showValidationError('NPWP must be exactly 15 numeric digits.');
+        _showValidationError('NPWP harus tepat 15 digit angka.');
         return false;
       }
     }
@@ -127,7 +127,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
     AlertUtils.showResultDialog(
       context,
       isSuccess: false,
-      title: 'Incomplete Data',
+      title: 'Data Tidak Lengkap',
       message: message,
     );
   }
@@ -173,16 +173,16 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Select ID Photo Source', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Pilih Sumber Foto ID', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildSourceOption(Icons.camera_alt, 'Camera', () {
+                  _buildSourceOption(Icons.camera_alt, 'Kamera', () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.camera);
                   }),
-                  _buildSourceOption(Icons.photo_library, 'Gallery', () {
+                  _buildSourceOption(Icons.photo_library, 'Galeri', () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.gallery);
                   }),
@@ -217,8 +217,8 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       AlertUtils.showResultDialog(
         context,
         isSuccess: false,
-        title: 'Document Missing',
-        message: 'Please simulate ID card upload first.',
+        title: 'Dokumen Kurang',
+        message: 'Harap unggah foto KTP Anda terlebih dahulu.',
       );
       return;
     }
@@ -264,7 +264,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
-        title: const Text('Owner Registration', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Pendaftaran Pemilik', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
@@ -289,11 +289,11 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildStepCircle(0, 'Profile'),
+          _buildStepCircle(0, 'Profil'),
           _buildStepDivider(),
           _buildStepCircle(1, 'Legal'),
           _buildStepDivider(),
-          _buildStepCircle(2, 'Identity'),
+          _buildStepCircle(2, 'Identitas'),
         ],
       ),
     );
@@ -348,18 +348,18 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Profile & Account Information', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const Text('Informasi Profil & Akun', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('Complete your basic information and create your login account.', style: TextStyle(color: Colors.grey)),
+        const Text('Lengkapi informasi dasar Anda dan buat akun login.', style: TextStyle(color: Colors.grey)),
         const SizedBox(height: 24),
-        _buildTextField(_nameController, 'Full Name (as per ID)', Icons.person_outline),
+        _buildTextField(_nameController, 'Nama Lengkap (Sesuai KTP)', Icons.person_outline),
         const SizedBox(height: 16),
-        _buildTextField(_emailController, 'Business Email', Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+        _buildTextField(_emailController, 'Email Bisnis', Icons.email_outlined, keyboardType: TextInputType.emailAddress),
         const SizedBox(height: 16),
         _buildPhoneField(),
         const SizedBox(height: 16),
         const Divider(height: 32),
-        _buildTextField(_usernameController, 'Username', Icons.alternate_email_rounded),
+        _buildTextField(_usernameController, 'Nama Pengguna', Icons.alternate_email_rounded),
         const SizedBox(height: 16),
         _buildPasswordField(),
       ],
@@ -412,13 +412,13 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textPrimary)),
+        const Text('Kata Sandi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textPrimary)),
         const SizedBox(height: 8),
         TextField(
           controller: _passwordController,
           obscureText: !_isPasswordVisible,
           decoration: InputDecoration(
-            hintText: 'Enter Password',
+            hintText: 'Masukkan Kata Sandi',
             prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
             suffixIcon: IconButton(
               icon: Icon(_isPasswordVisible ? Icons.visibility_off : Icons.visibility, color: AppColors.textSecondary),
@@ -439,13 +439,13 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Legal Documents', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const Text('Dokumen Legal', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('NIK and NPWP are required for business verification.', style: TextStyle(color: Colors.grey)),
+        const Text('NIK dan NPWP diperlukan untuk verifikasi bisnis.', style: TextStyle(color: Colors.grey)),
         const SizedBox(height: 32),
-        _buildTextField(_nikController, 'Identity Number (NIK)', Icons.badge_outlined, keyboardType: TextInputType.number),
+        _buildTextField(_nikController, 'Nomor Identitas (NIK)', Icons.badge_outlined, keyboardType: TextInputType.number),
         const SizedBox(height: 16),
-        _buildTextField(_npwpController, 'Tax ID Number (NPWP)', Icons.description_outlined, keyboardType: TextInputType.number),
+        _buildTextField(_npwpController, 'Nomor Pokok Wajib Pajak (NPWP)', Icons.description_outlined, keyboardType: TextInputType.number),
       ],
     );
   }
@@ -454,9 +454,9 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Identity Verification', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const Text('Verifikasi Identitas', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text('Upload a clear photo of your original ID card.', style: TextStyle(color: Colors.grey)),
+        const Text('Unggah foto KTP asli Anda yang terbaca jelas.', style: TextStyle(color: Colors.grey)),
         const SizedBox(height: 32),
         GestureDetector(
           onTap: _showImageSourceDialog,
@@ -483,7 +483,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Click to Select ID Photo',
+                        'Klik untuk Pilih Foto KTP',
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                     ],
@@ -503,7 +503,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Your data is guaranteed safe with our encryption system and is only used for owner verification.',
+                  'Data Anda dijamin aman dengan sistem enkripsi kami dan hanya digunakan untuk verifikasi pemilik.',
                   style: TextStyle(color: Colors.blue.shade800, fontSize: 12),
                 ),
               ),
@@ -524,7 +524,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
           controller: controller,
           keyboardType: keyboardType,
           decoration: InputDecoration(
-            hintText: 'Enter $hint',
+            hintText: 'Masukkan $hint',
             prefixIcon: Icon(icon, color: AppColors.textSecondary),
             filled: true,
             fillColor: Colors.white,
@@ -555,7 +555,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
                   side: const BorderSide(color: AppColors.primary),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Back'),
+                child: const Text('Kembali'),
               ),
             ),
           if (_currentStep > 0) const SizedBox(width: 16),
@@ -569,7 +569,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(_currentStep == 2 ? 'Submit Verification' : 'Next'),
+              child: Text(_currentStep == 2 ? 'Kirim Verifikasi' : 'Lanjut'),
             ),
           ),
         ],
