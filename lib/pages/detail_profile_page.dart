@@ -10,8 +10,14 @@ import 'pengaturan_keamanan_page.dart';
 class DetailProfilePage extends StatefulWidget {
   final String username;
   final String email;
+  final String role;
 
-  const DetailProfilePage({super.key, required this.username, required this.email});
+  const DetailProfilePage({
+    super.key, 
+    required this.username, 
+    required this.email,
+    required this.role,
+  });
 
   @override
   State<DetailProfilePage> createState() => _DetailProfilePageState();
@@ -351,10 +357,13 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
           const SizedBox(height: 20),
           _buildClickableField('Tanggal Lahir', _dob.isEmpty ? 'Pilih Tanggal' : _dob, Icons.calendar_today, _selectDate),
           
-          const SizedBox(height: 24),
-          const Text('Minat Olahraga', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          _buildSportsGrid(),
+          if (widget.role.toLowerCase() != 'owner') ...[
+            const SizedBox(height: 24),
+            const Text('Minat Olahraga',
+                style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            _buildSportsGrid(),
+          ],
           
           const SizedBox(height: 24),
           const Text('Bio', style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
