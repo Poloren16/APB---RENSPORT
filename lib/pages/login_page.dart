@@ -31,11 +31,10 @@ class _LoginPageState extends State<LoginPage> {
     final account = GlobalAuthData.login(username, password);
 
     if (account != null && account.role == 'End User') {
-      GlobalAuthData.currentUser = account;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => DashboardPage(username: account.username, role: 'End User'),
+          builder: (context) => DashboardPage(username: account.applicantName, role: 'End User'),
         ),
       );
     } else if (account != null) {
@@ -109,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 // Login Form
                 const Text(
-                  'Selamat Datang',
+                  'Selamat Datang Kembali',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -118,7 +117,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Masuk untuk memesan venue favorit Anda.',
+                  'Masuk untuk memesan venue dan bertemu rekan tanding.',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -242,4 +241,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-

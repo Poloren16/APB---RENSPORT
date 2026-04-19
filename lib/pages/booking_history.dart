@@ -3,12 +3,12 @@ import '../theme/app_colors.dart';
 import '../models/review_model.dart';
 import '../utils/alert_utils.dart';
 import 'package:rensius/pages/receipt_page.dart';
+import 'package:rensius/pages/venue_page.dart';
 import 'package:rensius/widgets/empty_state_widget.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   final String username;
-  final VoidCallback? onCreateBooking;
-  const BookingHistoryPage({super.key, this.username = 'User', this.onCreateBooking});
+  const BookingHistoryPage({super.key, this.username = 'User'});
 
   static List<Map<String, dynamic>> mockHistory = [];
 
@@ -257,7 +257,12 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                _statusFilter = 'Semua';
              });
            } else {
-             widget.onCreateBooking?.call();
+             Navigator.push(
+               context,
+               MaterialPageRoute(
+                 builder: (context) => VenuePage(username: widget.username),
+               ),
+             );
            }
         },
         actionLabel: _searchController.text.isNotEmpty || _statusFilter != 'Semua' ? 'Reset Filter' : 'Buat Pesanan',

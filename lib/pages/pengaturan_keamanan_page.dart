@@ -29,7 +29,6 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   }
 
   void _refreshData() {
-    final account = GlobalAuthData.getAccount(widget.username);
     setState(() {
       final acc = GlobalAuthData.getAccount(widget.username);
       currentEmail = (acc?.email != null && acc!.email.isNotEmpty) ? acc.email : 'Belum Diatur';

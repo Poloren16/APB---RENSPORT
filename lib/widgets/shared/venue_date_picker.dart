@@ -18,9 +18,8 @@ class VenueDatePicker extends StatefulWidget {
 
   static List<DateTime> getWeekDates() {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    // Start from 7 days ago to put "today" in the middle of a 15-day range
-    return List.generate(15, (i) => today.subtract(const Duration(days: 7)).add(Duration(days: i)));
+    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
+    return List.generate(14, (i) => startOfWeek.add(Duration(days: i)));
   }
 
   static String getDayName(DateTime date) {
@@ -39,8 +38,7 @@ class _VenueDatePickerState extends State<VenueDatePicker> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
-    // Use a slightly longer delay to ensure layout is complete
-    Future.delayed(const Duration(milliseconds: 100), () => _scrollToSelected(isAnimated: false));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected(isAnimated: false));
   }
 
   @override
@@ -66,18 +64,14 @@ class _VenueDatePickerState extends State<VenueDatePicker> {
     if (index != -1) {
       final viewportWidth = _scrollController.position.viewportDimension;
       // Item width (55) + margin (12) = 67
-      // We subtract half viewport to center, then add half item width (55/2 = 27.5)
-      final double itemWidth = 55.0;
-      final double margin = 12.0;
-      final double totalItemWidth = itemWidth + margin;
-      
-      final offset = (index * totalItemWidth + (itemWidth / 2)) - (viewportWidth / 2);
+      // Center of item: (index * 67) + (55 / 2) = index * 67 + 27.5
+      final offset = (index * 67.0 + 27.5) - (viewportWidth / 2);
 
       if (isAnimated) {
         _scrollController.animateTo(
           offset.clamp(0.0, _scrollController.position.maxScrollExtent),
           duration: const Duration(milliseconds: 500),
-          curve: Curves.easeOutCubic,
+          curve: Curves.easeInOut,
         );
       } else {
         _scrollController.jumpTo(

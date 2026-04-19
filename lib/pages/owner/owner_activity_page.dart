@@ -3,8 +3,8 @@ import '../../theme/app_colors.dart';
 
 import '../../data/venue_data.dart';
 import '../../utils/booking_utils.dart';
-import '../booking_history.dart';
 import '../../widgets/empty_state_widget.dart';
+import '../venue_page.dart';
 
 class OwnerActivityPage extends StatefulWidget {
   final String username;
@@ -348,59 +348,83 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
       itemBuilder: (context, index) {
         final tx = transactions[index];
         final bool isSuccess = tx['status'] == 'Confirmed' || tx['status'] == 'Pembayaran Berhasil';
+        final String venueName = tx['venueName'] ?? '';
         
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
-            border: Border.all(color: Colors.grey.shade100),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isSuccess ? Colors.green.shade50 : Colors.blue.shade50,
-                  shape: BoxShape.circle
-                ),
-                child: Icon(
-                  isSuccess ? Icons.check_circle_rounded : Icons.access_time_filled_rounded,
-                  color: isSuccess ? Colors.green.shade600 : Colors.blue.shade600,
-                  size: 20
+        return GestureDetector(
+          onTap: () {
+            // Find the venue's category from venue data
+            final venue = GlobalVenueData.venues.firstWhere(
+              (v) => v['name'] == venueName,
+              orElse: () => <String, dynamic>{},
+            );
+            final String? category = venue.isNotEmpty ? venue['category'] as String? : null;
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VenuePage(
+                  username: widget.username,
+                  role: 'Owner',
+                  initialCategory: category,
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isSuccess ? Colors.green.shade50 : Colors.blue.shade50,
+                    shape: BoxShape.circle
+                  ),
+                  child: Icon(
+                    isSuccess ? Icons.check_circle_rounded : Icons.access_time_filled_rounded,
+                    color: isSuccess ? Colors.green.shade600 : Colors.blue.shade600,
+                    size: 20
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(tx['courtName'] ?? 'Lapangan', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const SizedBox(height: 2),
+                      Text('${tx['venueName']} • ${tx['date']}', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(tx['courtName'] ?? 'Lapangan', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(_formatCurrency(int.tryParse(tx['price'].toString()) ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                     const SizedBox(height: 2),
-                    Text('${tx['venueName']} • ${tx['date']}', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isSuccess ? Colors.green.shade50 : Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isSuccess ? 'Berhasil' : 'Diproses',
+                        style: TextStyle(fontSize: 10, color: isSuccess ? Colors.green.shade700 : Colors.blue.shade700, fontWeight: FontWeight.bold)
+                      ),
+                    ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(_formatCurrency(int.tryParse(tx['price'].toString()) ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                  const SizedBox(height: 2),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: isSuccess ? Colors.green.shade50 : Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      isSuccess ? 'Berhasil' : 'Diproses',
-                      style: TextStyle(fontSize: 10, color: isSuccess ? Colors.green.shade700 : Colors.blue.shade700, fontWeight: FontWeight.bold)
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 18),
+              ],
+            ),
           ),
         );
       },

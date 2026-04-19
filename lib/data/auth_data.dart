@@ -85,7 +85,6 @@ class UserAccount {
 class GlobalAuthData {
   static const String _storageKey = 'rensius_accounts_v4'; // Bumped version for new default accounts
   static List<UserAccount> accounts = [];
-  static UserAccount? currentUser;
 
   // Initial accounts to be used only if storage is empty
   static final List<UserAccount> _defaultAccounts = [
@@ -93,9 +92,26 @@ class GlobalAuthData {
       username: 'admin',
       password: 'admin123',
       role: 'Admin',
-      applicantName: 'Rensius Admin',
+      applicantName: 'System Admin',
       email: 'admin@rensius.com',
-      phoneNumber: '+6200000000000',
+      phoneNumber: '+6281234567890',
+    ),
+    UserAccount(
+      username: 'user',
+      password: 'user123',
+      role: 'End User',
+      applicantName: 'Muhammad End User',
+      email: 'muhammad@rensius.com',
+      phoneNumber: '+6287711223344',
+      points: 500,
+    ),
+    UserAccount(
+      username: 'owner',
+      password: 'owner123',
+      role: 'Owner',
+      applicantName: 'Budi Venue Owner',
+      email: 'budi@rensius.com',
+      phoneNumber: '+6281122334455',
     ),
   ];
 

@@ -14,7 +14,6 @@ class VerificationRequest {
   final String? venueName; // For venue verification
   final String? venueAddress; // For venue verification
   final String? password; // Hidden field to create account later
-  final Map<String, dynamic>? venueData; // Full venue details for approval
 
   VerificationRequest({
     required this.id,
@@ -32,7 +31,6 @@ class VerificationRequest {
     this.venueName,
     this.venueAddress,
     this.password,
-    this.venueData,
   });
 
   VerificationRequest copyWith({
@@ -43,8 +41,8 @@ class VerificationRequest {
       id: id,
       applicantName: applicantName,
       email: email,
-      username: username,
-      phoneNumber: phoneNumber,
+      username: username ?? this.username,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       nik: nik,
       npwp: npwp,
       documentUrl: documentUrl,
@@ -54,8 +52,7 @@ class VerificationRequest {
       submittedAt: submittedAt,
       venueName: venueName,
       venueAddress: venueAddress,
-      password: password,
-      venueData: venueData,
+      password: password ?? this.password,
     );
   }
 
@@ -76,7 +73,6 @@ class VerificationRequest {
       'venueName': venueName,
       'venueAddress': venueAddress,
       'password': password,
-      'venueData': venueData,
     };
   }
 
@@ -97,7 +93,6 @@ class VerificationRequest {
       venueName: map['venueName'],
       venueAddress: map['venueAddress'],
       password: map['password'],
-      venueData: map['venueData'] != null ? Map<String, dynamic>.from(map['venueData']) : null,
     );
   }
 }

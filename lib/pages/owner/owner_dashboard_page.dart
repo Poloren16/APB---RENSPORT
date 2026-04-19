@@ -5,8 +5,6 @@ import '../notifikasi.dart';
 import '../akun_page.dart';
 import '../chat_page.dart';
 import 'owner_activity_page.dart';
-import '../../widgets/empty_state_widget.dart';
-import '../../data/auth_data.dart';
 
 class OwnerDashboardPage extends StatefulWidget {
   final String username;
@@ -110,17 +108,13 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   }
 
   Widget _buildHeader() {
-    final account = GlobalAuthData.getAccount(widget.username);
-    final displayName = account?.applicantName ?? widget.username;
-    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'O';
-
     return Row(
       children: [
         CircleAvatar(
           radius: 24,
           backgroundColor: AppColors.primary,
           child: Text(
-            initial,
+            widget.username.isNotEmpty ? widget.username[0].toUpperCase() : 'O',
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
@@ -130,7 +124,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Halo, $displayName',
+                'Halo, ${widget.username}',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const Text(
@@ -143,7 +137,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
         IconButton(
           icon: const Icon(Icons.notifications_outlined, color: AppColors.primary),
           onPressed: () => Navigator.push(
-            context,
+            context, 
             MaterialPageRoute(
               builder: (context) => NotifikasiPage(
                 username: widget.username,
@@ -159,9 +153,9 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   Widget _buildQuickStats() {
     return Row(
       children: [
-        _buildStatCard('Booking Hari Ini', '0', Icons.calendar_today, Colors.blue),
+        _buildStatCard('Booking Hari Ini', '12', Icons.calendar_today, Colors.blue),
         const SizedBox(width: 16),
-        _buildStatCard('Pendapatan', 'Rp 0', Icons.payments_outlined, Colors.green),
+        _buildStatCard('Pendapatan', 'Rp 2.400.000', Icons.payments_outlined, Colors.green),
       ],
     );
   }
@@ -189,24 +183,32 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   }
 
   Widget _buildRecentBookings() {
-    final List<Map<String, dynamic>> realBookings = []; // Will be connected to Global Data later
-
-    if (realBookings.isEmpty) {
-            return Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const EmptyStateWidget(
-          message: 'Belum Ada Pesanan',
-          subMessage: 'Pantau terus bisnis Anda, pesanan terbaru akan muncul di sini!',
-        ),
-      );
-    }
+    final List<Map<String, dynamic>> mockBookings = [
+      {
+        'name': 'Budi Santoso',
+        'court': 'BEC Tennis Court Lap.A',
+        'time': '18:00 - 19:00',
+        'price': 125000,
+        'services': ['Raket Tenis (x2)', 'Sepatu Tenis (x1)'],
+      },
+      {
+        'name': 'Sari Wijaya',
+        'court': 'BEC Tennis Court Lap.B',
+        'time': '08:00 - 10:00',
+        'price': 250000,
+        'services': [],
+      },
+      {
+        'name': 'Andi Pratama',
+        'court': 'BEC Tennis Court Lap.A',
+        'time': '20:00 - 21:00',
+        'price': 125000,
+        'services': ['Bola Tennis (x1)'],
+      },
+    ];
 
     return Column(
-      children: realBookings.map((booking) => _buildBookingItem(booking)).toList(),
+      children: mockBookings.map((booking) => _buildBookingItem(booking)).toList(),
     );
   }
 

@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:io' as io;
 import '../../theme/app_colors.dart';
 import '../../data/venue_data.dart';
-import '../../data/verification_data.dart';
-import '../../data/auth_data.dart';
-import '../../models/verification_model.dart';
 import '../../utils/alert_utils.dart';
 import 'map_picker_page.dart';
-import 'package:image_picker/image_picker.dart';
 
 class AddVenuePage extends StatefulWidget {
   final Map<String, dynamic>? venueToEdit;
@@ -34,11 +29,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
   static const List<String> _timeOptions = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
   static const List<String> _daysOfWeek = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
   
-  List<Map<String, dynamic>> _courts = []; 
-
-  final ImagePicker _picker = ImagePicker();
-  List<XFile> _selectedImages = [];
-  int _thumbnailIndex = 0;
+  List<Map<String, dynamic>> _courts = [];
 
   @override
   void initState() {
@@ -85,53 +76,6 @@ class _AddVenuePageState extends State<AddVenuePage> {
     }
   }
 
-    Future<void> _pickImages() async {
-    if (_selectedImages.length >= 10) {
-      AlertUtils.showToast(context, 'Maksimal 10 foto diperbolehkan.');
-      return;
-    }
-    
-    final List<XFile> images = await _picker.pickMultiImage();
-    if (images.isNotEmpty) {
-      setState(() {
-        _selectedImages.addAll(images);
-        if (_selectedImages.length > 10) {
-          _selectedImages = _selectedImages.sublist(0, 10);
-          AlertUtils.showToast(context, 'Hanya 10 foto pertama yang ditambahkan.');
-        }
-      });
-    }
-  }
-
-  Future<void> _takePhoto() async {
-    if (_selectedImages.length >= 10) {
-      AlertUtils.showToast(context, 'Maksimal 10 foto diperbolehkan.');
-      return;
-    }
-
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-    if (photo != null) {
-      setState(() {
-        _selectedImages.add(photo);
-      });
-    }
-  }
-
-  void _removeImage(int index) {
-    setState(() {
-      _selectedImages.removeAt(index);
-      if (_thumbnailIndex >= _selectedImages.length) {
-        _thumbnailIndex = 0;
-      }
-    });
-  }
-
-  void _setThumbnail(int index) {
-    setState(() {
-      _thumbnailIndex = index;
-    });
-  }
-
   void _addNewCourt() {
     setState(() {
       _courts.add({
@@ -162,7 +106,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
     super.dispose();
   }
 
-  void _saveVenue() async {
+  void _saveVenue() {
     if (_formKey.currentState!.validate()) {
       final newVenue = {
         'name': _nameController.text.trim(),
@@ -190,53 +134,24 @@ class _AddVenuePageState extends State<AddVenuePage> {
               return MapEntry(day, times);
             }),
           };
-                }).toList(),
-        'images': _selectedImages.map((e) => e.path).toList(),
-        'image': _selectedImages.isNotEmpty ? _selectedImages[_thumbnailIndex].path : '',
+        }).toList(),
       };
 
       if (widget.venueToEdit != null && widget.index != null) {
-        // Edit existing (currently still direct, but could also be a request)
         GlobalVenueData.venues[widget.index!] = newVenue;
-        GlobalVenueData.save();
-        
-        AlertUtils.showResultDialog(
-          context,
-          isSuccess: true,
-          title: 'Berhasil!',
-          message: 'Data venue berhasil diperbarui.',
-          onConfirm: () => Navigator.pop(context),
-        );
       } else {
-        // NEW VENUE: Submit for verification
-        final user = GlobalAuthData.currentUser;
-        final req = VerificationRequest(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          applicantName: user?.applicantName ?? 'Owner',
-          email: user?.email ?? '',
-          username: user?.username,
-          phoneNumber: user?.phoneNumber,
-          nik: '-', // Placeholder as not needed for venue creation
-          npwp: '-', 
-          documentUrl: '', // Could be added if needed
-          type: 'Venue',
-          status: 'Pending',
-          submittedAt: DateTime.now(),
-          venueName: newVenue['name'],
-          venueAddress: newVenue['address'],
-          venueData: newVenue,
-        );
-
-        await GlobalVerificationData.addRequest(req);
-
-        AlertUtils.showResultDialog(
-          context,
-          isSuccess: true,
-          title: 'Berhasil Terkirim!',
-          message: 'Venue Anda telah dikirim ke Admin untuk verifikasi. Mohon tunggu persetujuan sebelum venue muncul di publik.',
-          onConfirm: () => Navigator.pop(context),
-        );
+        GlobalVenueData.venues.add(newVenue);
       }
+
+      AlertUtils.showResultDialog(
+        context,
+        isSuccess: true,
+        title: 'Berhasil!',
+        message: widget.venueToEdit != null ? 'Data venue berhasil diperbarui.' : 'Venue baru berhasil ditambahkan.',
+        onConfirm: () {
+          Navigator.pop(context);
+        },
+      );
     }
   }
 
@@ -257,8 +172,6 @@ class _AddVenuePageState extends State<AddVenuePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildImageGallerySection(),
-              const SizedBox(height: 24),
               _buildSectionTitle('Informasi Utama Venue'),
               _buildCard([
                 _buildTextField(_nameController, 'Nama Venue', Icons.stadium),
@@ -538,7 +451,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                         ],
                       ),
                     );
-                                    }).toList(),
+                  }).toList(),
                   const SizedBox(height: 24),
                   Align(
                     alignment: Alignment.centerRight,
@@ -575,157 +488,6 @@ class _AddVenuePageState extends State<AddVenuePage> {
     );
   }
 
-    Widget _buildImageGallerySection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Foto Venue (Maks. 10)'),
-        Container(
-          height: 125,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _selectedImages.length + (_selectedImages.length < 10 ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index == _selectedImages.length) {
-                return _buildAddImageButton();
-              }
-              
-              return _buildImageItem(index);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAddImageButton() {
-    return GestureDetector(
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          builder: (context) => SafeArea(
-            child: Wrap(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.photo_library, color: AppColors.primary),
-                  title: const Text('Ambil dari Galeri'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImages();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.camera_alt, color: AppColors.primary),
-                  title: const Text('Ambil dari Kamera'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _takePhoto();
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-      child: Container(
-        width: 100,
-        margin: const EdgeInsets.only(right: 12, bottom: 4),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
-        ),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_a_photo_outlined, color: AppColors.primary, size: 30),
-            SizedBox(height: 8),
-            Text('Tambah Foto', style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildImageItem(int index) {
-    bool isThumbnail = _thumbnailIndex == index;
-    return Container(
-      width: 100,
-      margin: const EdgeInsets.only(right: 12, bottom: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))],
-      ),
-      child: Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.file(
-              io.File(_selectedImages[index].path),
-              width: 100,
-              height: 125,
-              fit: BoxFit.cover,
-            ),
-          ),
-          if (isThumbnail)
-            Positioned(
-              top: 6,
-              left: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 2)],
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.star, color: Colors.white, size: 10),
-                    SizedBox(width: 2),
-                    Text('UTAMA', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ),
-          Positioned(
-            top: 4,
-            right: 4,
-            child: GestureDetector(
-              onTap: () => _removeImage(index),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                child: const Icon(Icons.close, color: Colors.white, size: 14),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 4,
-            right: 4,
-            left: 4,
-            child: GestureDetector(
-              onTap: () => _setThumbnail(index),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                decoration: BoxDecoration(
-                  color: isThumbnail ? AppColors.primary.withOpacity(0.9) : Colors.black54,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: Text(
-                    isThumbnail ? 'Thumbnail Saat Ini' : 'Jadikan Utama',
-                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -758,7 +520,3 @@ class _AddVenuePageState extends State<AddVenuePage> {
     );
   }
 }
-
-
-
-

@@ -15,7 +15,6 @@ import '../data/chat_data.dart';
 import '../data/notification_data.dart';
 import '../data/venue_data.dart';
 import '../widgets/empty_state_widget.dart';
-import '../data/auth_data.dart';
 
 class DashboardPage extends StatefulWidget {
   final String username;
@@ -64,18 +63,8 @@ class _DashboardPageState extends State<DashboardPage> {
   static String _monthName(int month) {
     const names = [
       '',
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
     ];
     return names[month];
   }
@@ -128,15 +117,12 @@ class _DashboardPageState extends State<DashboardPage> {
     final List<Widget> pages = [
       _buildHomeContent(),
       VenuePage(
-        username: widget.username,
-        role: widget.role,
-        initialCategory: _selectedCategory,
+        username: widget.username, 
+        role: widget.role, 
+        initialCategory: _selectedCategory == 'Favorit' ? 'Favorite' : _selectedCategory,
         initialDate: _selectedDate,
       ),
-      BookingHistoryPage(
-        username: widget.username,
-        onCreateBooking: () => setState(() => _selectedIndex = 1),
-      ),
+      BookingHistoryPage(username: widget.username),
       AkunPage(username: widget.username, role: widget.role),
     ];
 
@@ -173,8 +159,7 @@ class _DashboardPageState extends State<DashboardPage> {
         selectedItemColor: AppColors.primary,
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
-        selectedLabelStyle:
-            const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         onTap: _onItemTapped,
       ),
@@ -182,31 +167,24 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildHomeContent() {
-    final account = GlobalAuthData.getAccount(widget.username);
-    final displayName = account?.applicantName ?? widget.username;
-    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
-
     // Determine filtered venues
     final List<Map<String, dynamic>> allVenues = GlobalVenueData.venues;
     final String query = _searchController.text.toLowerCase();
-
+    
     final List<Map<String, dynamic>> filteredVenues = allVenues.where((v) {
-      final bool matchesCategory = _selectedCategory == 'Semua' ||
-          _selectedCategory ==
-              'Favorit' || // Filter logic handled by VenuePage usually, but here for Search
-          v['type'] == _selectedCategory;
-      final bool matchesSearch =
-          (v['name'] ?? '').toLowerCase().contains(query) ||
-              (v['location'] ?? '').toLowerCase().contains(query) ||
-              (v['type'] ?? '').toLowerCase().contains(query);
+      final bool matchesCategory = _selectedCategory == 'Semua' || 
+                                  _selectedCategory == 'Favorit' || // Filter logic handled by VenuePage usually, but here for Search
+                                  v['type'] == _selectedCategory;
+      final bool matchesSearch = (v['name'] ?? '').toLowerCase().contains(query) || 
+                                (v['location'] ?? '').toLowerCase().contains(query) ||
+                                (v['type'] ?? '').toLowerCase().contains(query);
       return matchesCategory && matchesSearch;
     }).toList();
 
     // Show top 5 or all if filtered
-    final List<Map<String, dynamic>> displayVenues =
-        query.isEmpty && _selectedCategory == 'Semua'
-            ? filteredVenues.take(5).toList()
-            : filteredVenues;
+    final List<Map<String, dynamic>> displayVenues = query.isEmpty && _selectedCategory == 'Semua' 
+        ? filteredVenues.take(5).toList() 
+        : filteredVenues;
 
     final bool hasNoResults = filteredVenues.isEmpty;
 
@@ -219,29 +197,22 @@ class _DashboardPageState extends State<DashboardPage> {
             padding: const EdgeInsets.all(20.0),
             child: Row(
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   radius: 24,
                   backgroundColor: AppColors.primary,
-                  child: Text(initial,
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Halo, $displayName',
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text('Halo, ${widget.username}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       Row(
                         children: [
-                          Icon(Icons.location_on,
-                              size: 14, color: Colors.grey[400]),
+                          Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
-                          Text('Lokasi Kamu',
-                              style: TextStyle(
-                                  color: Colors.grey[600], fontSize: 14)),
+                          Text('Lokasi Kamu', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                         ],
                       ),
                     ],
@@ -250,17 +221,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 Stack(
                   children: [
                     _buildCircleIcon(Icons.notifications_outlined, () async {
-                      await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => NotifikasiPage(
-                                  username: widget.username,
-                                  role: widget.role)));
+                      await Navigator.push(context, MaterialPageRoute(builder: (context) => NotifikasiPage(username: widget.username, role: widget.role)));
                       setState(() {});
                     }),
-                    if (GlobalNotificationData.getUnreadCount(
-                            widget.username, widget.role) >
-                        0)
+                    if (GlobalNotificationData.getUnreadCount(widget.username, widget.role) > 0)
                       Positioned(
                         right: 0,
                         top: 0,
@@ -271,9 +235,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             shape: BoxShape.circle,
                           ),
                           child: Text(
-                            GlobalNotificationData.getUnreadCount(
-                                    widget.username, widget.role)
-                                .toString(),
+                            GlobalNotificationData.getUnreadCount(widget.username, widget.role).toString(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -289,17 +251,10 @@ class _DashboardPageState extends State<DashboardPage> {
                 Stack(
                   children: [
                     _buildCircleIcon(Icons.chat_bubble_outline, () async {
-                      await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => ChatPage(
-                                  username: widget.username,
-                                  role: widget.role)));
+                      await Navigator.push(context, MaterialPageRoute(builder: (context) => ChatPage(username: widget.username, role: widget.role)));
                       setState(() {});
                     }),
-                    if (GlobalChatData.getTotalUnreadCount(
-                            widget.username, widget.role) >
-                        0)
+                    if (GlobalChatData.getTotalUnreadCount(widget.username, widget.role) > 0)
                       Positioned(
                         right: 0,
                         top: 0,
@@ -310,9 +265,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             shape: BoxShape.circle,
                           ),
                           child: Text(
-                            GlobalChatData.getTotalUnreadCount(
-                                    widget.username, widget.role)
-                                .toString(),
+                            GlobalChatData.getTotalUnreadCount(widget.username, widget.role).toString(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -341,8 +294,8 @@ class _DashboardPageState extends State<DashboardPage> {
                   selectedCategory: _selectedCategory,
                   onCategorySelected: (cat) {
                     setState(() => _selectedCategory = cat);
-                    if (cat == 'Favorit') {
-                      _navigateToVenueWithCategory('Favorit');
+                    if (cat == 'Favorite') {
+                      _navigateToVenueWithCategory('Favorite');
                     }
                   },
                 ),
@@ -351,8 +304,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 const SizedBox(height: 15),
                 VenueDatePicker(
                   selectedDate: _selectedDate,
-                  onDateSelected: (date) =>
-                      setState(() => _selectedDate = date),
+                  onDateSelected: (date) => setState(() => _selectedDate = date),
                 ),
               ],
             ),
@@ -368,32 +320,22 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 RichText(
                   text: const TextSpan(
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
                     children: [
                       TextSpan(text: 'Rekomendasi '),
-                      TextSpan(
-                          text: 'Venue',
-                          style: TextStyle(color: AppColors.primary)),
+                      TextSpan(text: 'Venue', style: TextStyle(color: AppColors.primary)),
                     ],
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text('Temukan venue terbaik untuk bermain!',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                Text('Temukan venue terbaik untuk bermain!', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                 const SizedBox(height: 20),
                 if (hasNoResults)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 40),
                     child: EmptyStateWidget(
-                      message:
-                          'Tidak ada venue yang sesuai dengan filter atau pencarian Anda.',
-                      actionLabel:
-                          query.isNotEmpty || _selectedCategory != 'Semua'
-                              ? 'Reset Filter'
-                              : null,
+                      message: 'Tidak ada venue yang sesuai dengan filter atau pencarian Anda.',
+                      actionLabel: query.isNotEmpty || _selectedCategory != 'Semua' ? 'Reset Filter' : null,
                       onActionPressed: () {
                         setState(() {
                           _searchController.clear();
@@ -407,8 +349,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: displayVenues.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 20),
+                    separatorBuilder: (context, index) => const SizedBox(height: 20),
                     itemBuilder: (context, index) {
                       return _buildVenueCard(displayVenues[index]);
                     },
@@ -424,11 +365,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildCircleIcon(IconData icon, VoidCallback onTap) {
     return Container(
-      decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.1),
-          shape: BoxShape.circle),
-      child: IconButton(
-          icon: Icon(icon, color: AppColors.primary), onPressed: onTap),
+      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+      child: IconButton(icon: Icon(icon, color: AppColors.primary), onPressed: onTap),
     );
   }
 
@@ -438,16 +376,12 @@ class _DashboardPageState extends State<DashboardPage> {
       decoration: InputDecoration(
         hintText: 'Cari Venue',
         prefixIcon: const Icon(Icons.search),
-        suffixIcon: _searchController.text.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.clear, size: 20),
-                onPressed: () => _searchController.clear())
+        suffixIcon: _searchController.text.isNotEmpty 
+            ? IconButton(icon: const Icon(Icons.clear, size: 20), onPressed: () => _searchController.clear()) 
             : null,
         filled: true,
         fillColor: Colors.grey[100],
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
       ),
     );
   }
@@ -462,9 +396,7 @@ class _DashboardPageState extends State<DashboardPage> {
             children: [
               Icon(Icons.calendar_month, color: Colors.grey[600]),
               const SizedBox(width: 8),
-              Text(_monthName(_selectedDate.month),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(_monthName(_selectedDate.month), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
             ],
           ),
@@ -475,9 +407,7 @@ class _DashboardPageState extends State<DashboardPage> {
             _selectedCategory = 'Semua';
             _searchController.clear();
           }),
-          child: const Text('Reset & Ulang',
-              style: TextStyle(
-                  color: AppColors.primary, fontWeight: FontWeight.w500)),
+          child: const Text('Reset & Ulang', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
         ),
       ],
     );
@@ -487,30 +417,20 @@ class _DashboardPageState extends State<DashboardPage> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 5))
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 5))],
       ),
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade200),
-              borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(20)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildVenueHeader(venue),
-              if (venue['courts'] != null &&
-                  (venue['courts'] as List).isNotEmpty) ...[
+              if (venue['courts'] != null && (venue['courts'] as List).isNotEmpty) ...[
                 const Divider(height: 1),
-                ...(venue['courts'] as List)
-                    .take(1)
-                    .map((court) => _buildCourtItem(venue, court)),
+                ... (venue['courts'] as List).take(1).map((court) => _buildCourtItem(venue, court)),
               ],
               const SizedBox(height: 10),
             ],
@@ -544,35 +464,22 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(15),
-              child: Container(
-                  width: 100,
-                  height: 100,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.image, size: 50, color: Colors.grey)),
+              child: Container(width: 100, height: 100, color: Colors.grey[300], child: const Icon(Icons.image, size: 50, color: Colors.grey)),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(venue['name'] ?? 'Venue',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
+                  Text(venue['name'] ?? 'Venue', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
                   _buildVenueStats(venue['name']),
                   const SizedBox(height: 4),
-                  _buildIconText(Icons.location_on,
-                      venue['location'] ?? 'Tidak Diketahui'),
+                  _buildIconText(Icons.location_on, venue['location'] ?? 'Tidak Diketahui'),
                   const SizedBox(height: 4),
                   _buildIconText(Icons.sports_tennis, venue['type'] ?? 'Umum'),
                   const SizedBox(height: 8),
-                  Text(venue['price'] ?? 'Hubungi Pengelola',
-                      style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14)),
+                  Text(venue['price'] ?? 'Hubungi Pengelola', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
                 ],
               ),
             ),
@@ -587,15 +494,9 @@ class _DashboardPageState extends State<DashboardPage> {
       children: [
         const Icon(Icons.star_rounded, size: 16, color: Colors.orange),
         const SizedBox(width: 4),
-        Text(Review.getAverageRating(venueName ?? '').toStringAsFixed(1),
-            style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: AppColors.textPrimary)),
+        Text(Review.getAverageRating(venueName ?? '').toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
         const SizedBox(width: 4),
-        Text(
-            '(${Review.mockReviews.where((r) => r.venueName == venueName).length} ulasan)',
-            style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+        Text('(${Review.mockReviews.where((r) => r.venueName == venueName).length} ulasan)', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
       ],
     );
   }
@@ -605,16 +506,12 @@ class _DashboardPageState extends State<DashboardPage> {
       children: [
         Icon(icon, size: 14, color: Colors.grey[400]),
         const SizedBox(width: 4),
-        Expanded(
-            child: Text(text,
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-                overflow: TextOverflow.ellipsis)),
+        Expanded(child: Text(text, style: const TextStyle(color: Colors.grey, fontSize: 12), overflow: TextOverflow.ellipsis)),
       ],
     );
   }
 
-  Widget _buildCourtItem(
-      Map<String, dynamic> venue, Map<String, dynamic> court) {
+  Widget _buildCourtItem(Map<String, dynamic> venue, Map<String, dynamic> court) {
     final String courtName = court['name'] ?? 'Lapangan';
     return InkWell(
       onTap: () {
@@ -640,14 +537,11 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 _buildSmallImage(),
                 const SizedBox(width: 12),
-                Expanded(
-                    child: _buildCourtInfo(courtName, venue['type'] ?? 'Umum',
-                        court['size'] ?? 'Standar')),
+                Expanded(child: _buildCourtInfo(courtName, venue['type'] ?? 'Umum', court['size'] ?? 'Standar')),
               ],
             ),
             const SizedBox(height: 12),
-            const Text('Pilih jadwal booking:',
-                style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const Text('Pilih jadwal booking:', style: TextStyle(fontSize: 11, color: Colors.grey)),
             const SizedBox(height: 8),
             _buildTimeSlotsRow(venue['name'] ?? '', courtName),
           ],
@@ -659,11 +553,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildSmallImage() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: Container(
-          width: 60,
-          height: 60,
-          color: Colors.grey[200],
-          child: const Icon(Icons.image, size: 30, color: Colors.grey)),
+      child: Container(width: 60, height: 60, color: Colors.grey[200], child: const Icon(Icons.image, size: 30, color: Colors.grey)),
     );
   }
 
@@ -671,28 +561,21 @@ class _DashboardPageState extends State<DashboardPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(name,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 4),
         Row(
           children: [
             Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
             const SizedBox(width: 4),
-            Text(type,
-                style: const TextStyle(color: Colors.grey, fontSize: 11)),
+            Text(type, style: const TextStyle(color: Colors.grey, fontSize: 11)),
             const SizedBox(width: 10),
             Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
             const SizedBox(width: 4),
-            Text(size,
-                style: const TextStyle(color: Colors.grey, fontSize: 11)),
+            Text(size, style: const TextStyle(color: Colors.grey, fontSize: 11)),
           ],
         ),
         const SizedBox(height: 4),
-        const Text('Selengkapnya >',
-            style: TextStyle(
-                color: AppColors.primary,
-                fontSize: 11,
-                fontWeight: FontWeight.bold)),
+        const Text('Selengkapnya >', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -716,8 +599,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildTimeSlot(String venueName, String courtName, String time,
-      {required bool isAvailable}) {
+  Widget _buildTimeSlot(String venueName, String courtName, String time, {required bool isAvailable}) {
     final dateStr = BookingUtils.formatDate(_selectedDate);
     final isBooked = BookingUtils.isSlotBooked(
       venueName: venueName,
@@ -734,8 +616,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ? () {
                 final hour = int.tryParse(time.split(':')[0]) ?? 0;
                 final nextHour = hour + 1;
-                final timeRange =
-                    '$time - ${nextHour.toString().padLeft(2, '0')}:00';
+                final timeRange = '$time - ${nextHour.toString().padLeft(2, '0')}:00';
 
                 Navigator.push(
                   context,
@@ -753,26 +634,18 @@ class _DashboardPageState extends State<DashboardPage> {
               }
             : null,
         style: OutlinedButton.styleFrom(
-          foregroundColor:
-              effectiveAvailable ? AppColors.primary : Colors.grey.shade400,
-          backgroundColor:
-              effectiveAvailable ? Colors.white : Colors.grey.shade100,
-          side: BorderSide(
-              color: effectiveAvailable
-                  ? AppColors.primary
-                  : Colors.grey.shade300),
+          foregroundColor: effectiveAvailable ? AppColors.primary : Colors.grey.shade400,
+          backgroundColor: effectiveAvailable ? Colors.white : Colors.grey.shade100,
+          side: BorderSide(color: effectiveAvailable ? AppColors.primary : Colors.grey.shade300),
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
         child: Text(
           time,
           style: TextStyle(
-            color:
-                effectiveAvailable ? AppColors.primary : Colors.grey.shade500,
+            color: effectiveAvailable ? AppColors.primary : Colors.grey.shade500,
             fontSize: 12,
-            fontWeight:
-                effectiveAvailable ? FontWeight.w600 : FontWeight.normal,
+            fontWeight: effectiveAvailable ? FontWeight.w600 : FontWeight.normal,
             decoration: null,
           ),
         ),

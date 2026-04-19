@@ -30,7 +30,6 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
     final account = GlobalAuthData.login(username, password);
 
     if (account != null) {
-      GlobalAuthData.currentUser = account;
       if (account.role == 'Admin') {
         Navigator.pushAndRemoveUntil(
           context,
@@ -42,7 +41,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
           context,
           MaterialPageRoute(
             builder: (context) => OwnerDashboardPage(
-              username: account.username,
+              username: account.applicantName,
               role: 'Owner',
             ),
           ),

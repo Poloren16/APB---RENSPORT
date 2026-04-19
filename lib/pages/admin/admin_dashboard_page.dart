@@ -6,7 +6,6 @@ import 'package:rensius/models/verification_model.dart';
 import 'package:rensius/utils/alert_utils.dart';
 import 'package:rensius/pages/login_page.dart';
 import 'package:rensius/data/auth_data.dart';
-import 'package:rensius/data/venue_data.dart';
 import 'package:rensius/widgets/empty_state_widget.dart';
 import 'dart:io';
 
@@ -81,42 +80,37 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Widget _buildTopStats() {
     return Container(
       width: double.infinity,
+      padding: const EdgeInsets.all(20),
       color: AppColors.primary,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        child: Row(
-          children: [
-            _buildHeaderStat('Total User', '${GlobalAuthData.accounts.where((a) => a.role == 'End User').length}', Icons.person_outline),
-            const SizedBox(width: 12),
-            _buildHeaderStat('Total Owner', '${GlobalAuthData.accounts.where((a) => a.role == 'Owner').length}', Icons.business_center_outlined),
-            const SizedBox(width: 12),
-            _buildHeaderStat('Menunggu', '${GlobalVerificationData.requests.where((r) => r.status == 'Pending').length}', Icons.pending_actions),
-            const SizedBox(width: 12),
-            _buildHeaderStat('Terverifikasi', '${GlobalVerificationData.requests.where((r) => r.status == 'Approved').length}', Icons.verified_user_outlined),
-          ],
-        ),
+      child: Row(
+        children: [
+          _buildHeaderStat('Total Akun', '${GlobalAuthData.accounts.where((a) => a.role == 'Owner').length}', Icons.people_alt),
+          const SizedBox(width: 16),
+          _buildHeaderStat('Menunggu', '${GlobalVerificationData.requests.where((r) => r.status == 'Pending').length}', Icons.pending_actions),
+          const SizedBox(width: 16),
+          _buildHeaderStat('Terverifikasi', '${GlobalVerificationData.requests.where((r) => r.status == 'Approved').length}', Icons.verified_user),
+        ],
       ),
     );
   }
 
   Widget _buildHeaderStat(String title, String value, IconData icon) {
-    return Container(
-      width: 140,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.white.withOpacity(0.8), size: 18),
-          const SizedBox(height: 8),
-          Text(value,
-              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-          Text(title, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11)),
-        ],
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: Colors.white.withOpacity(0.8), size: 18),
+            const SizedBox(height: 8),
+            Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(title, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11)),
+          ],
+        ),
       ),
     );
   }
@@ -454,24 +448,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     // But for this mock, await the save directly
     await GlobalVerificationData.updateRequestStatus(req.id, newStatus, reason: reason);
 
-    // If Approved, handle based on type
-    if (newStatus == 'Approved') {
-      if (req.type == 'Owner' && req.username != null) {
-        await GlobalAuthData.registerAccount(UserAccount(
-          username: req.username!,
-          password: req.password ?? '123456',
-          role: 'Owner',
-          applicantName: req.applicantName,
-          email: req.email,
-          phoneNumber: req.phoneNumber ?? '',
-        ));
-      } else if (req.type == 'Venue' && req.venueData != null) {
-        // Publish venue to public list
-        await GlobalVenueData.addVenue(req.venueData!);
-      }
+    // If Approved, create the actual login account
+    if (newStatus == 'Approved' && req.username != null) {
+      await GlobalAuthData.registerAccount(UserAccount(
+        username: req.username!,
+        password: req.password ?? '123456',
+        role: req.type,
+        applicantName: req.applicantName,
+        email: req.email ?? '',
+        phoneNumber: req.phoneNumber ?? '',
+      ));
     } 
-    // If Rejected, handle cleanup
-    else if (newStatus == 'Rejected' && req.type == 'Owner' && req.username != null) {
+    // If Rejected, make sure no account exists (cleanup)
+    else if (newStatus == 'Rejected' && req.username != null) {
       await GlobalAuthData.deleteAccount(req.username!);
     }
 
@@ -664,19 +653,17 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       onPressed: () async {
                         Navigator.pop(context);
                         
-                        // 1. Sync with verification records
+                        // Sync with verification records
                         final reqIndex = GlobalVerificationData.requests.indexWhere((r) => r.username == acc.username);
                         if (reqIndex != -1) {
                           await GlobalVerificationData.updateRequestStatus(
-                            GlobalVerificationData.requests[reqIndex].id, 
-                            'Rejected', 
-                            reason: 'Akun dihapus oleh Admin'
+                            GlobalVerificationData.requests[reqIndex].id,
+                            'Rejected',
+                            reason: 'Akun dihapus oleh Admin',
                           );
                         }
                         
-                        // 2. Delete the account
                         await GlobalAuthData.deleteAccount(acc.username);
-                        
                         setState(() {}); // Refresh list
                         if (mounted) {
                           AlertUtils.showToast(context, 'Akun berhasil dihapus');
