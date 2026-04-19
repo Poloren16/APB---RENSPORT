@@ -257,7 +257,7 @@ class _AkunPageState extends State<AkunPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const ManagementVenuePage(),
+                              builder: (context) => ManagementVenuePage(username: widget.username, role: widget.role),
                             ),
                           );
                         }

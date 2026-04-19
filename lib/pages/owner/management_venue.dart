@@ -7,7 +7,10 @@ import 'venue_info_page.dart';
 import 'add_venue_page.dart';
 
 class ManagementVenuePage extends StatefulWidget {
-  const ManagementVenuePage({super.key});
+  final String username;
+  final String role;
+
+  const ManagementVenuePage({super.key, required this.username, required this.role});
 
   @override
   State<ManagementVenuePage> createState() => _ManagementVenuePageState();
@@ -61,7 +64,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const AddVenuePage()),
+            MaterialPageRoute(builder: (context) => AddVenuePage(username: widget.username, role: widget.role)),
           ).then((_) => setState(() {})); // Refresh list after adding
         },
         backgroundColor: AppColors.primary,
@@ -265,7 +268,12 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AddVenuePage(venueToEdit: venue, index: index),
+                        builder: (context) => AddVenuePage(
+                          venueToEdit: venue, 
+                          index: index,
+                          username: widget.username,
+                          role: widget.role,
+                        ),
                       ),
                     ).then((_) => setState(() {})); // Refresh list after editing
                   },

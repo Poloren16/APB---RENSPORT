@@ -103,10 +103,10 @@ class _VenuePageState extends State<VenuePage> {
     if (isShowingFavorites) {
       displayedVenues = GlobalVenueData.favorites;
     } else if (_selectedCategory == 'Semua') {
-      displayedVenues = GlobalVenueData.venues;
+      displayedVenues = GlobalVenueData.venues.where((v) => v['status'] == 'Aktif').toList();
     } else {
       displayedVenues = GlobalVenueData.venues
-          .where((v) => v['type'] == _selectedCategory)
+          .where((v) => v['type'] == _selectedCategory && v['status'] == 'Aktif')
           .toList();
     }
 

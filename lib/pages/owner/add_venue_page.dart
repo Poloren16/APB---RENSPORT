@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../data/venue_data.dart';
+import '../../data/verification_data.dart';
+import '../../data/auth_data.dart';
+import '../../models/verification_model.dart';
 import '../../utils/alert_utils.dart';
 import 'map_picker_page.dart';
 
 class AddVenuePage extends StatefulWidget {
   final Map<String, dynamic>? venueToEdit;
   final int? index;
+  final String username;
+  final String role;
 
-  const AddVenuePage({super.key, this.venueToEdit, this.index});
+  const AddVenuePage({
+    super.key, 
+    this.venueToEdit, 
+    this.index,
+    required this.username,
+    required this.role,
+  });
 
   @override
   State<AddVenuePage> createState() => _AddVenuePageState();
@@ -106,9 +117,11 @@ class _AddVenuePageState extends State<AddVenuePage> {
     super.dispose();
   }
 
-  void _saveVenue() {
+  void _saveVenue() async {
     if (_formKey.currentState!.validate()) {
-      final newVenue = {
+      final userAccount = GlobalAuthData.getAccount(widget.username);
+      
+      final venueData = {
         'name': _nameController.text.trim(),
         'location': _kotaController.text.trim(),
         'address': _jalanController.text.trim(),
@@ -116,7 +129,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
         'dll': _dllController.text.trim(),
         'type': _courts.isNotEmpty ? _courts[0]['type'] : 'Umum',
         'price': widget.venueToEdit?['price'] ?? 'Hubungi Pengelola',
-        'status': widget.venueToEdit?['status'] ?? 'Aktif',
+        'status': widget.venueToEdit?['status'] ?? 'Menunggu Verifikasi',
         'hours': '06:00 - 22:00',
         'courts': _courts.map((c) {
           final dynamic availability = c['availability'];
@@ -138,20 +151,50 @@ class _AddVenuePageState extends State<AddVenuePage> {
       };
 
       if (widget.venueToEdit != null && widget.index != null) {
-        GlobalVenueData.venues[widget.index!] = newVenue;
+        // For edits, we update directly for now as per current logic
+        // but set status to pending if desired (User didn't specify for edit)
+        GlobalVenueData.venues[widget.index!] = venueData;
+        
+        AlertUtils.showResultDialog(
+          context,
+          isSuccess: true,
+          title: 'Berhasil!',
+          message: 'Data venue berhasil diperbarui.',
+          onConfirm: () => Navigator.pop(context),
+        );
       } else {
-        GlobalVenueData.venues.add(newVenue);
-      }
+        // FOR NEW VENUE: Create Verification Request
+        final newId = 'VRY-${DateTime.now().millisecondsSinceEpoch}';
+        final request = VerificationRequest(
+          id: newId,
+          applicantName: userAccount?.applicantName ?? widget.username,
+          username: widget.username,
+          email: userAccount?.email ?? '',
+          phoneNumber: userAccount?.phoneNumber ?? '',
+          nik: '-', // Dummy as it's not asked in this form
+          npwp: '-', // Dummy
+          documentUrl: 'assets/images/venue_placeholder.png', // Placeholder
+          type: 'Venue',
+          status: 'Pending',
+          submittedAt: DateTime.now(),
+          venueName: venueData['name'] as String,
+          venueAddress: venueData['address'] as String,
+          venueData: venueData,
+        );
 
-      AlertUtils.showResultDialog(
-        context,
-        isSuccess: true,
-        title: 'Berhasil!',
-        message: widget.venueToEdit != null ? 'Data venue berhasil diperbarui.' : 'Venue baru berhasil ditambahkan.',
-        onConfirm: () {
-          Navigator.pop(context);
-        },
-      );
+        await GlobalVerificationData.addRequest(request);
+        
+        // Also add to global list with Pending status so owner can see it
+        GlobalVenueData.venues.add(venueData);
+
+        AlertUtils.showResultDialog(
+          context,
+          isSuccess: true,
+          title: 'Berhasil!',
+          message: 'Venue baru telah diajukan dan sedang menunggu verifikasi Admin.',
+          onConfirm: () => Navigator.pop(context),
+        );
+      }
     }
   }
 

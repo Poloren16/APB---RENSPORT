@@ -170,15 +170,17 @@ class _DashboardPageState extends State<DashboardPage> {
     // Determine filtered venues
     final List<Map<String, dynamic>> allVenues = GlobalVenueData.venues;
     final String query = _searchController.text.toLowerCase();
+    final bool isShowingFavorites = _selectedCategory == 'Favorit';
     
     final List<Map<String, dynamic>> filteredVenues = allVenues.where((v) {
+      final bool isApproved = v['status'] == 'Aktif';
       final bool matchesCategory = _selectedCategory == 'Semua' || 
-                                  _selectedCategory == 'Favorit' || // Filter logic handled by VenuePage usually, but here for Search
+                                  isShowingFavorites || 
                                   v['type'] == _selectedCategory;
       final bool matchesSearch = (v['name'] ?? '').toLowerCase().contains(query) || 
                                 (v['location'] ?? '').toLowerCase().contains(query) ||
                                 (v['type'] ?? '').toLowerCase().contains(query);
-      return matchesCategory && matchesSearch;
+      return isApproved && matchesCategory && matchesSearch;
     }).toList();
 
     // Show top 5 or all if filtered

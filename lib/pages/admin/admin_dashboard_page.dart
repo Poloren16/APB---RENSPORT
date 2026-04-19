@@ -6,6 +6,7 @@ import 'package:rensius/models/verification_model.dart';
 import 'package:rensius/utils/alert_utils.dart';
 import 'package:rensius/pages/login_page.dart';
 import 'package:rensius/data/auth_data.dart';
+import 'package:rensius/data/venue_data.dart';
 import 'package:rensius/widgets/empty_state_widget.dart';
 import 'dart:io';
 
@@ -312,10 +313,39 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 _buildDetailRow('Nama Pemohon', req.applicantName),
                 if (req.username != null) _buildDetailRow('Username Akun', req.username!),
                 if (req.phoneNumber != null) _buildDetailRow('Nomor WhatsApp', req.phoneNumber!),
-                if (req.type == 'Venue') _buildDetailRow('Nama Venue', req.venueName ?? '-'),
-                _buildDetailRow('NIK', req.nik),
-                _buildDetailRow('NPWP', req.npwp),
                 if (req.type == 'Venue') _buildDetailRow('Alamat', req.venueAddress ?? '-'),
+                
+                if (req.type == 'Venue' && req.venueData != null) ...[
+                  const SizedBox(height: 16),
+                  const Text('Detail Lapangan:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  ...(req.venueData!['courts'] as List).map((court) => Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.blue.shade100),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(court['name'] ?? 'Lapangan', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text(court['type'] ?? '', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text('Ukuran: ${court['size'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+                        Text('Lantai: ${court['floorType'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+                        Text('Kategori: ${court['courtCategory'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  )).toList(),
+                ],
+
                 const SizedBox(height: 16),
                 const Text('Lampiran:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 const SizedBox(height: 8),
@@ -448,20 +478,39 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     // But for this mock, await the save directly
     await GlobalVerificationData.updateRequestStatus(req.id, newStatus, reason: reason);
 
-    // If Approved, create the actual login account
-    if (newStatus == 'Approved' && req.username != null) {
-      await GlobalAuthData.registerAccount(UserAccount(
-        username: req.username!,
-        password: req.password ?? '123456',
-        role: req.type,
-        applicantName: req.applicantName,
-        email: req.email ?? '',
-        phoneNumber: req.phoneNumber ?? '',
-      ));
+    // If Approved, handle specific logic for Owner / Venue
+    if (newStatus == 'Approved') {
+      if (req.type == 'Owner' && req.username != null) {
+        await GlobalAuthData.registerAccount(UserAccount(
+          username: req.username!,
+          password: req.password ?? '123456',
+          role: req.type,
+          applicantName: req.applicantName,
+          email: req.email ?? '',
+          phoneNumber: req.phoneNumber ?? '',
+        ));
+      } else if (req.type == 'Venue' && req.venueData != null) {
+        // Update venue status in GlobalVenueData
+        final vName = req.venueName;
+        final vIndex = GlobalVenueData.venues.indexWhere((v) => v['name'] == vName && v['status'] == 'Menunggu Verifikasi');
+        if (vIndex != -1) {
+          GlobalVenueData.venues[vIndex]['status'] = 'Aktif';
+        } else {
+          // If somehow not in list (e.g. data cleared), add it
+          var data = Map<String, dynamic>.from(req.venueData!);
+          data['status'] = 'Aktif';
+          GlobalVenueData.venues.add(data);
+        }
+      }
     } 
-    // If Rejected, make sure no account exists (cleanup)
-    else if (newStatus == 'Rejected' && req.username != null) {
-      await GlobalAuthData.deleteAccount(req.username!);
+    // If Rejected
+    else if (newStatus == 'Rejected') {
+      if (req.type == 'Owner' && req.username != null) {
+        await GlobalAuthData.deleteAccount(req.username!);
+      } else if (req.type == 'Venue') {
+        // Remove pending venue or mark as rejected
+        GlobalVenueData.venues.removeWhere((v) => v['name'] == req.venueName && v['status'] == 'Menunggu Verifikasi');
+      }
     }
 
     if (mounted) {

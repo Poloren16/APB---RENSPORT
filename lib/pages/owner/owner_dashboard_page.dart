@@ -33,7 +33,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       _buildHomeContent(),
-      const ManagementVenuePage(),
+      ManagementVenuePage(username: widget.username, role: widget.role),
       OwnerActivityPage(username: widget.username),
       ChatPage(username: widget.username, role: widget.role),
       AkunPage(
