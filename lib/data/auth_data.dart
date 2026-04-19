@@ -170,6 +170,14 @@ class GlobalAuthData {
     }
   }
 
+  static UserAccount? getAccountByEmail(String email) {
+    try {
+      return accounts.firstWhere((a) => a.email.toLowerCase() == email.toLowerCase());
+    } catch (e) {
+      return null;
+    }
+  }
+
   static bool usernameExists(String username) {
     return accounts.any((a) => a.username == username);
   }
