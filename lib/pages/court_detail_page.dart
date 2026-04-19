@@ -505,8 +505,16 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   }
 
   Widget _buildTimeGroup(int groupIdx, _TimeGroup group) {
-    final available =
-        group.slots.where((s) => s.isAvailable).length;
+    final dateStr = BookingUtils.formatDate(_selectedDate);
+    final available = group.slots.where((s) {
+      if (!s.isAvailable) return false;
+      return !BookingUtils.isSlotBooked(
+        venueName: widget.venueName,
+        courtName: widget.courtName,
+        dateStr: dateStr,
+        timeSlot: s.time,
+      );
+    }).length;
     final isExpanded = _expandedGroups.contains(groupIdx);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
