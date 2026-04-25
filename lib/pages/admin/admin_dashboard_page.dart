@@ -303,11 +303,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   void _showDetailDialog(VerificationRequest req) {
+    final venueData = req.venueData;
+    final courts = venueData?['courts'] as List<dynamic>? ?? [];
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(req.type == 'Owner' ? 'Detail Owner' : 'Detail Venue'),
+        title: Row(
+          children: [
+            Icon(
+              req.type == 'Owner' ? Icons.person_pin : Icons.stadium,
+              color: AppColors.primary, size: 22,
+            ),
+            const SizedBox(width: 8),
+            Text(req.type == 'Owner' ? 'Detail Verifikasi Owner' : 'Detail Verifikasi Venue'),
+          ],
+        ),
         content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
@@ -315,15 +327,158 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildDetailRow('Nama Pemohon', req.applicantName),
-                if (req.username != null) _buildDetailRow('Username Akun', req.username!),
-                if (req.phoneNumber != null) _buildDetailRow('Nomor WhatsApp', req.phoneNumber!),
-                if (req.type == 'Venue') _buildDetailRow('Nama Venue', req.venueName ?? '-'),
-                _buildDetailRow('NIK', req.nik),
-                _buildDetailRow('NPWP', req.npwp),
-                if (req.type == 'Venue') _buildDetailRow('Alamat', req.venueAddress ?? '-'),
+                // ── Info Pemohon ──────────────────────────────
+                _buildSectionHeader('Informasi Pemohon'),
+                _buildDetailRow('Nama Lengkap', req.applicantName),
+                if (req.username != null) _buildDetailRow('Username', req.username!),
+                if (req.phoneNumber != null) _buildDetailRow('No. WhatsApp', req.phoneNumber!),
+                if (req.email.isNotEmpty) _buildDetailRow('Email', req.email),
+
+                // ── Data Legal (NIK/NPWP) ─────────────────────
+                const SizedBox(height: 12),
+                _buildSectionHeader('Dokumen Legal'),
+                _buildDetailRow('NIK', req.nik.isNotEmpty && req.nik != '-' ? req.nik : 'Tidak diisi'),
+                _buildDetailRow('NPWP', req.npwp.isNotEmpty && req.npwp != '-' ? req.npwp : 'Tidak diisi'),
+
+                // ── Data Venue (khusus type Venue) ────────────
+                if (req.type == 'Venue') ...[
+                  const SizedBox(height: 12),
+                  _buildSectionHeader('Informasi Venue'),
+                  _buildDetailRow('Nama Venue', req.venueName ?? '-'),
+                  if ((req.venueProvinsi ?? '').isNotEmpty)
+                    _buildDetailRow('Provinsi', req.venueProvinsi!),
+                  if ((req.venueKota ?? '').isNotEmpty)
+                    _buildDetailRow('Kota', req.venueKota!),
+                  if ((req.venueAddress ?? '').isNotEmpty)
+                    _buildDetailRow('Alamat Jalan', req.venueAddress!),
+
+                  // Koordinat Maps
+                  if (req.venueLat != null && req.venueLng != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on, color: Colors.blue, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Koordinat Maps', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                Text(
+                                  'Lat: ${double.tryParse(req.venueLat!)?.toStringAsFixed(6) ?? req.venueLat}\nLng: ${double.tryParse(req.venueLng!)?.toStringAsFixed(6) ?? req.venueLng}',
+                                  style: TextStyle(fontSize: 11, color: Colors.blue.shade800),
+                                ),
+                                Text(
+                                  'https://maps.google.com/?q=${req.venueLat},${req.venueLng}',
+                                  style: TextStyle(fontSize: 10, color: Colors.blue.shade600, decoration: TextDecoration.underline),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Daftar Courts
+                  if (courts.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _buildSectionHeader('Lapangan (${courts.length})'),
+                    ...courts.map((c) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(c['name'] ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                _buildChip(c['type'] ?? '-', Icons.sports),
+                                _buildChip(c['courtCategory'] ?? '-', Icons.home),
+                                _buildChip(c['floorType'] ?? '-', Icons.layers),
+                                if ((c['size'] ?? '').isNotEmpty) _buildChip(c['size'], Icons.straighten),
+                                // Multi-select facilities
+                                ...((c['facilities'] as List<dynamic>? ?? 
+                                     (c['facility'] != null ? [c['facility']] : [])).map(
+                                  (f) => _buildChip(f.toString(), Icons.check_circle_outline),
+                                )),
+                                // Services count
+                                if ((c['services'] as List<dynamic>? ?? []).isNotEmpty)
+                                  _buildChip('${(c['services'] as List).length} Layanan', Icons.shopping_bag_outlined),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    )),
+                  ],
+                ],
+
+                // ── Foto Lapangan (jika ada) ──────────────────
+                if (req.type == 'Venue') ...[
+                  const SizedBox(height: 16),
+                  _buildSectionHeader('Foto Venue'),
+                  Builder(builder: (context) {
+                    final imagePaths = venueData?['imagePaths'] as List<dynamic>? 
+                        ?? venueData?['images'] as List<dynamic>? 
+                        ?? [];
+                    if (imagePaths.isEmpty) {
+                      return Container(
+                        height: 80,
+                        decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+                        child: const Center(child: Text('Belum ada foto venue', style: TextStyle(color: Colors.grey, fontSize: 12))),
+                      );
+                    }
+                    return SizedBox(
+                      height: 100,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: imagePaths.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, i) {
+                          final path = imagePaths[i].toString();
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              File(path),
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 100,
+                                height: 100,
+                                color: Colors.grey.shade200,
+                                child: const Icon(Icons.broken_image, color: Colors.grey),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }),
+                ],
+
+                // ── Foto KTP ──────────────────────────────────
                 const SizedBox(height: 16),
-                const Text('Lampiran:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const Text('Foto KTP / Identitas:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 const SizedBox(height: 8),
                 Container(
                   height: 180,
@@ -336,7 +491,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      if (req.documentUrl.isNotEmpty && 
+                      if (req.documentUrl.isNotEmpty &&
                           (req.documentUrl.contains('/') || req.documentUrl.contains('\\')))
                         Positioned.fill(
                           child: kIsWeb
@@ -392,7 +547,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      Navigator.pop(context); // Close Detail Dialog first
+                      Navigator.pop(context);
                       await _handleStatusChange(req, 'Approved');
                     },
                     style: ElevatedButton.styleFrom(
@@ -422,6 +577,37 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       ),
     );
   }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(width: 4, height: 16, decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: 8),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChip(String label, IconData icon) {
+    return Chip(
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.all(2),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: Colors.grey.shade600),
+          const SizedBox(width: 3),
+          Text(label, style: const TextStyle(fontSize: 11)),
+        ],
+      ),
+      backgroundColor: Colors.grey.shade100,
+      side: BorderSide(color: Colors.grey.shade300),
+    );
+  }
+
 
   Future<void> _showRejectDialog(VerificationRequest req) async {
     final controller = TextEditingController();

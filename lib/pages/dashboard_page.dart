@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../theme/app_colors.dart';
 import '../utils/booking_utils.dart';
 import 'notifikasi.dart';
@@ -142,9 +143,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: pages[_selectedIndex],
-      ),
+      body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         items: const <BottomNavigationBarItem>[
@@ -210,13 +209,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
     final bool hasNoResults = filteredVenues.isEmpty;
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(20.0),
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20.0),
             child: Row(
               children: [
                 CircleAvatar(
@@ -419,6 +418,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -483,6 +483,27 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  String _getDashboardPriceDisplay(Map<String, dynamic> venue) {
+    final courts = venue['courts'] as List<dynamic>? ?? [];
+    final prices = <int>[];
+    for (final c in courts) {
+      final priceDay = c['priceDay'] as Map? ?? {};
+      for (final val in priceDay.values) {
+        final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+        if (v.isNotEmpty) {
+          final n = int.tryParse(v);
+          if (n != null && n > 0) prices.add(n);
+        }
+      }
+    }
+    if (prices.isEmpty) return venue['price']?.toString() ?? 'Hubungi Pengelola';
+    prices.sort();
+    final min = prices.first;
+    final max = prices.last;
+    String fmt(int n) => 'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+\$)'), (m) => '${m[1]}.')}';
+    return min == max ? '${fmt(min)}/jam' : '${fmt(min)} - ${fmt(max)}/jam';
+  }
+
   Widget _buildVenueCard(Map<String, dynamic> venue) {
     return Container(
       decoration: BoxDecoration(
@@ -544,11 +565,23 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(15),
-              child: Container(
-                  width: 100,
-                  height: 100,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.image, size: 50, color: Colors.grey)),
+              child: Builder(builder: (context) {
+                final imgPath = venue['image']?.toString() ?? '';
+                if (imgPath.isNotEmpty) {
+                  return Image.file(
+                    File(imgPath),
+                    width: 100, height: 100, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 100, height: 100, color: Colors.grey[300],
+                      child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                    ),
+                  );
+                }
+                return Container(
+                  width: 100, height: 100, color: Colors.grey[300],
+                  child: const Icon(Icons.stadium, size: 50, color: Colors.grey),
+                );
+              }),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -568,7 +601,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 4),
                   _buildIconText(Icons.sports_tennis, venue['type'] ?? 'Umum'),
                   const SizedBox(height: 8),
-                  Text(venue['price'] ?? 'Hubungi Pengelola',
+                  Text(_getDashboardPriceDisplay(venue),
                       style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
@@ -698,20 +731,40 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildTimeSlotsRow(String venueName, String courtName) {
+    // Ambil availability dari data court yang diisi owner
+    const dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    final dayName = dayNames[_selectedDate.weekday % 7];
+
+    final venueData = GlobalVenueData.venues.where((v) => v['name'] == venueName);
+    List<String> slots = [];
+    if (venueData.isNotEmpty) {
+      final courts = venueData.first['courts'] as List<dynamic>? ?? [];
+      final court = courts.where((c) => c['name'] == courtName);
+      if (court.isNotEmpty) {
+        final avail = (court.first['availability'] as Map?)?[dayName];
+        if (avail != null) {
+          slots = List<String>.from(avail)..sort();
+        }
+      }
+    }
+
+    // Fallback jika tidak ada data availability
+    if (slots.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'Venue tidak beroperasi pada hari ini.',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: [
-          _buildTimeSlot(venueName, courtName, '08:00', isAvailable: true),
-          _buildTimeSlot(venueName, courtName, '10:00', isAvailable: true),
-          _buildTimeSlot(venueName, courtName, '11:00', isAvailable: true),
-          _buildTimeSlot(venueName, courtName, '12:00', isAvailable: true),
-          _buildTimeSlot(venueName, courtName, '13:00', isAvailable: true),
-          _buildTimeSlot(venueName, courtName, '14:00', isAvailable: true),
-          _buildTimeSlot(venueName, courtName, '16:00', isAvailable: true),
-          _buildTimeSlot(venueName, courtName, '18:00', isAvailable: true),
-          _buildTimeSlot(venueName, courtName, '20:00', isAvailable: true),
-        ],
+        children: slots
+            .map((time) => _buildTimeSlot(venueName, courtName, time, isAvailable: true))
+            .toList(),
       ),
     );
   }

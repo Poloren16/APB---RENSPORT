@@ -7,6 +7,15 @@ class GlobalVenueData {
   static List<Map<String, dynamic>> cart = [];
   static List<Map<String, dynamic>> venues = [];
 
+  /// Returns venues owned by a specific owner username.
+  /// If ownerUsername is null or empty, returns all venues.
+  static List<Map<String, dynamic>> getVenuesForOwner(String? ownerUsername) {
+    if (ownerUsername == null || ownerUsername.isEmpty) return venues;
+    return venues
+        .where((v) => v['ownerUsername'] == ownerUsername)
+        .toList();
+  }
+
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     final String? venuesJson = prefs.getString(_storageKey);

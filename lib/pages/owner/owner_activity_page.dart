@@ -18,6 +18,30 @@ class OwnerActivityPage extends StatefulWidget {
 class _OwnerActivityPageState extends State<OwnerActivityPage> {
   String _selectedVenue = 'Semua';
 
+  /// Returns only transactions belonging to this owner's venues.
+  /// If [venueName] is provided and not 'Semua', further filters by that venue.
+  List<Map<String, dynamic>> _getOwnerTransactions([String? venueName]) {
+    final ownerVenueNames = GlobalVenueData.getVenuesForOwner(widget.username)
+        .map((v) => v['name'] as String)
+        .toSet();
+
+    final all = [...BookingHistoryPage.mockHistory, ...BookingHistoryPage.mockPastHistory];
+    final ownerTx = all.where((b) => ownerVenueNames.contains(b['venueName'])).toList();
+
+    final filter = venueName ?? _selectedVenue;
+    if (filter == 'Semua') return ownerTx;
+    return ownerTx.where((b) => b['venueName'] == filter).toList();
+  }
+
+  int _calculateOwnerRevenue(String period) {
+    final all = _getOwnerTransactions();
+    final total = all.fold(0, (sum, b) => sum + (int.tryParse(b['price'].toString()) ?? 0));
+    if (period == 'Bulan Ini') return (total * 0.8).toInt();
+    if (period == 'Minggu Ini') return (total * 0.3).toInt();
+    if (period == 'Hari Ini') return (total * 0.1).toInt();
+    return total;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,7 +79,7 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
   }
 
   Widget _buildInsightsSection() {
-    final transactions = BookingUtils.getTransactionsForOwner(_selectedVenue);
+    final transactions = _getOwnerTransactions(_selectedVenue);
     Map<String, int> courtCounts = {};
     for (var tx in transactions) {
       String c = tx['courtName'] ?? 'Tidak Diketahui';
@@ -121,7 +145,11 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
   }
 
   Widget _buildVenueFilter() {
-    final venues = ['Semua', ...GlobalVenueData.venues.map((v) => v['name'] as String)];
+    // Only show venues belonging to this owner
+    final ownerVenueNames = GlobalVenueData.getVenuesForOwner(widget.username)
+        .map((v) => v['name'] as String)
+        .toList();
+    final venues = ['Semua', ...ownerVenueNames];
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -152,10 +180,10 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
   }
 
   Widget _buildIncomeSummary() {
-    final int today = BookingUtils.calculateRevenue(venueName: _selectedVenue, period: 'Hari Ini');
-    final int week = BookingUtils.calculateRevenue(venueName: _selectedVenue, period: 'Minggu Ini');
-    final int month = BookingUtils.calculateRevenue(venueName: _selectedVenue, period: 'Bulan Ini');
-    final int total = BookingUtils.calculateRevenue(venueName: _selectedVenue, period: 'Total');
+    final int today = _calculateOwnerRevenue('Hari Ini');
+    final int week = _calculateOwnerRevenue('Minggu Ini');
+    final int month = _calculateOwnerRevenue('Bulan Ini');
+    final int total = _calculateOwnerRevenue('Total');
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -275,7 +303,7 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
   }
 
   void _showDetailReport() {
-    final transactions = BookingUtils.getTransactionsForOwner(_selectedVenue).reversed.take(7).toList();
+    final transactions = _getOwnerTransactions(_selectedVenue).reversed.take(7).toList();
     
     showModalBottomSheet(
       context: context,
@@ -331,7 +359,7 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
   }
 
   Widget _buildTransactionList() {
-    final transactions = BookingUtils.getTransactionsForOwner(_selectedVenue).reversed.toList();
+    final transactions = _getOwnerTransactions(_selectedVenue).reversed.toList();
 
     if (transactions.isEmpty) {
       return const EmptyStateWidget(

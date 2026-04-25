@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../theme/app_colors.dart';
 import '../widgets/shared/venue_category_chips.dart';
 import '../widgets/shared/venue_date_picker.dart';
@@ -122,7 +123,8 @@ class _VenuePageState extends State<VenuePage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
+      body: SafeArea(
+        child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -350,7 +352,30 @@ class _VenuePageState extends State<VenuePage> {
           ],
         ),
       ),
+    ),
     );
+  }
+
+  // Helper: hitung harga terkecil-terbesar dari semua courts
+  String _getPriceDisplay(Map<String, dynamic> venue) {
+    final courts = venue['courts'] as List<dynamic>? ?? [];
+    final prices = <int>[];
+    for (final c in courts) {
+      final priceDay = c['priceDay'] as Map? ?? {};
+      for (final val in priceDay.values) {
+        final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+        if (v.isNotEmpty) {
+          final n = int.tryParse(v);
+          if (n != null && n > 0) prices.add(n);
+        }
+      }
+    }
+    if (prices.isEmpty) return venue['price']?.toString() ?? 'Hubungi Pengelola';
+    prices.sort();
+    final min = prices.first;
+    final max = prices.last;
+    String fmt(int n) => 'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+\$)'), (m) => '${m[1]}.')}';
+    return min == max ? '${fmt(min)}/jam' : '${fmt(min)} - ${fmt(max)}/jam';
   }
 
   Widget _buildDetailedVenueCard(Map<String, dynamic> venue) {
@@ -405,12 +430,23 @@ class _VenuePageState extends State<VenuePage> {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(15),
-                            child: Container(
-                              width: 120,
-                              height: 120,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                            ),
+                            child: Builder(builder: (context) {
+                              final imgPath = venue['image']?.toString() ?? '';
+                              if (imgPath.isNotEmpty) {
+                                return Image.file(
+                                  File(imgPath),
+                                  width: 120, height: 120, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    width: 120, height: 120, color: Colors.grey[300],
+                                    child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                                  ),
+                                );
+                              }
+                              return Container(
+                                width: 120, height: 120, color: Colors.grey[300],
+                                child: const Icon(Icons.stadium, size: 50, color: Colors.grey),
+                              );
+                            }),
                           ),
                           Positioned(
                             bottom: 8,
@@ -498,7 +534,7 @@ class _VenuePageState extends State<VenuePage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              venue['price'] ?? 'Hubungi Pengelola',
+                              _getPriceDisplay(venue),
                               style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
@@ -517,7 +553,7 @@ class _VenuePageState extends State<VenuePage> {
                 const Divider(height: 1),
                 ...courts.map((court) => Column(
                   children: [
-                    _buildCourtItem(venueName, court),
+                    _buildCourtItem(venueName, court, venue),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 15),
                       child: Divider(height: 1),
@@ -551,7 +587,7 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildCourtItem(String venueName, Map<String, dynamic> court) {
+  Widget _buildCourtItem(String venueName, Map<String, dynamic> court, Map<String, dynamic> venue) {
     final String courtName = court['name'] ?? 'Unknown Court';
     final String sportType = court['type'] ?? 'Tenis';
 
@@ -566,12 +602,25 @@ class _VenuePageState extends State<VenuePage> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.image, size: 30, color: Colors.grey),
-                ),
+                child: Builder(builder: (context) {
+                  // Coba ambil gambar dari court atau dari venue
+                  final venueImages = venue['images'] as List<dynamic>? ?? venue['imagePaths'] as List<dynamic>? ?? [];
+                  final courtImg = venueImages.isNotEmpty ? venueImages.first.toString() : '';
+                  if (courtImg.isNotEmpty) {
+                    return Image.file(
+                      File(courtImg),
+                      width: 60, height: 60, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 60, height: 60, color: Colors.grey[200],
+                        child: const Icon(Icons.image, size: 30, color: Colors.grey),
+                      ),
+                    );
+                  }
+                  return Container(
+                    width: 60, height: 60, color: Colors.grey[200],
+                    child: const Icon(Icons.sports, size: 30, color: Colors.grey),
+                  );
+                }),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -612,19 +661,23 @@ class _VenuePageState extends State<VenuePage> {
           const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildTimeSlot(venueName, courtName, sportType, '08:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, sportType, '10:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, sportType, '11:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, sportType, '12:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, sportType, '13:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, sportType, '14:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, sportType, '16:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, sportType, '18:00', isAvailable: true),
-                _buildTimeSlot(venueName, courtName, sportType, '20:00', isAvailable: true),
-              ],
-            ),
+            child: Builder(builder: (context) {
+              // Ambil hari aktif dari nama hari sesuai tanggal yang dipilih
+              const dayNames = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+              final dayIdx = _selectedDate.weekday - 1; // 1=Mon..7=Sun
+              final activeDay = dayNames[dayIdx];
+              final availability = court['availability'] as Map? ?? {};
+              final slots = availability[activeDay] as List<dynamic>? ?? [];
+              if (slots.isEmpty) {
+                return const Text('Tidak ada jadwal', style: TextStyle(color: Colors.grey, fontSize: 11));
+              }
+              final sortedSlots = List<String>.from(slots)..sort();
+              return Row(
+                children: sortedSlots.map((time) =>
+                  _buildTimeSlot(venueName, courtName, sportType, time, isAvailable: true)
+                ).toList(),
+              );
+            }),
           ),
         ],
       ),

@@ -7,6 +7,8 @@ import '../chat_page.dart';
 import 'owner_activity_page.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../data/auth_data.dart';
+import '../../data/venue_data.dart';
+import '../../utils/booking_utils.dart';
 
 class OwnerDashboardPage extends StatefulWidget {
   final String username;
@@ -35,7 +37,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       _buildHomeContent(),
-      const ManagementVenuePage(),
+      ManagementVenuePage(ownerUsername: widget.username),
       OwnerActivityPage(username: widget.username),
       ChatPage(username: widget.username, role: widget.role),
       AkunPage(
@@ -47,9 +49,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: pages[_selectedIndex],
-      ),
+      body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
@@ -88,7 +88,8 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   }
 
   Widget _buildHomeContent() {
-    return SingleChildScrollView(
+    return SafeArea(
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,6 +107,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
           const SizedBox(height: 32),
         ],
       ),
+    ),
     );
   }
 
@@ -189,9 +191,20 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   }
 
   Widget _buildRecentBookings() {
-    final List<Map<String, dynamic>> realBookings = []; // Will be connected to Global Data later
+    // Filter by owner's venues
+    final ownerVenues = GlobalVenueData.getVenuesForOwner(widget.username)
+        .map((v) => v['name'] as String)
+        .toSet();
 
-    if (realBookings.isEmpty) {
+    final recentBookings = BookingUtils
+        .getTransactionsForOwner(null)
+        .where((b) => ownerVenues.contains(b['venueName']))
+        .toList()
+        .reversed
+        .take(5)
+        .toList();
+
+    if (recentBookings.isEmpty) {
             return Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
@@ -206,7 +219,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     }
 
     return Column(
-      children: realBookings.map((booking) => _buildBookingItem(booking)).toList(),
+      children: recentBookings.map((booking) => _buildBookingItem(booking)).toList(),
     );
   }
 
@@ -234,14 +247,14 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(booking['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text(booking['court'], style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text(booking['courtName'] ?? booking['name'] ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(booking['venueName'] ?? booking['court'] ?? '-', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         const Icon(Icons.access_time, size: 12, color: Colors.grey),
                         const SizedBox(width: 4),
-                        Text(booking['time'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text(booking['time'] ?? '-', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                       ],
                     ),
                   ],
@@ -287,7 +300,9 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             children: [
               const Text('Total Pembayaran:', style: TextStyle(fontSize: 11, color: Colors.grey)),
               Text(
-                _formatCurrency(booking['price'] as int),
+                _formatCurrency((booking['price'] is int) 
+                    ? booking['price'] as int 
+                    : int.tryParse(booking['price'].toString()) ?? 0),
                 style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 15),
               ),
             ],

@@ -27,18 +27,60 @@ class _AddVenuePageState extends State<AddVenuePage> {
   late TextEditingController _kotaController;
   late TextEditingController _jalanController;
   late TextEditingController _dllController;
+  String? _selectedProvinsi;
+  String? _selectedKota;
   
   static const List<String> _facilitiesOptions = ['Kamar Mandi', 'Parkiran', 'Kantin', 'Mushola', 'Locker Room'];
   static const List<String> _courtTypeOptions = ['Indoor', 'Outdoor'];
   static const List<String> _floorTypeOptions = ['Vinyl', 'Rumput Sintetis', 'Semen', 'Parquet', 'Karpet'];
   static const List<String> _timeOptions = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'];
   static const List<String> _daysOfWeek = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
+  // Data Provinsi & Kota Indonesia
+  static const Map<String, List<String>> _provinceCityData = {
+    'Aceh': ['Banda Aceh', 'Lhokseumawe', 'Langsa', 'Sabang', 'Subulussalam'],
+    'Sumatera Utara': ['Medan', 'Pematangsiantar', 'Binjai', 'Tebing Tinggi', 'Tanjungbalai'],
+    'Sumatera Barat': ['Padang', 'Bukittinggi', 'Payakumbuh', 'Pariaman', 'Solok'],
+    'Riau': ['Pekanbaru', 'Dumai', 'Siak', 'Bengkalis', 'Kampar'],
+    'Kepulauan Riau': ['Tanjungpinang', 'Batam', 'Bintan', 'Karimun', 'Natuna'],
+    'Jambi': ['Jambi', 'Sungai Penuh', 'Muaro Bungo', 'Tebo', 'Merangin'],
+    'Sumatera Selatan': ['Palembang', 'Lubuklinggau', 'Prabumulih', 'Pagaralam', 'Baturaja'],
+    'Bangka Belitung': ['Pangkalpinang', 'Bangka', 'Belitung', 'Bangka Tengah', 'Bangka Barat'],
+    'Bengkulu': ['Bengkulu', 'Kepahiang', 'Rejang Lebong', 'Lebong', 'Muko Muko'],
+    'Lampung': ['Bandar Lampung', 'Metro', 'Pringsewu', 'Kota Agung', 'Liwa'],
+    'Banten': ['Serang', 'Tangerang', 'Tangerang Selatan', 'Cilegon', 'Lebak'],
+    'DKI Jakarta': ['Jakarta Pusat', 'Jakarta Utara', 'Jakarta Barat', 'Jakarta Selatan', 'Jakarta Timur', 'Kepulauan Seribu'],
+    'Jawa Barat': ['Bandung', 'Bekasi', 'Bogor', 'Cimahi', 'Cirebon', 'Depok', 'Sukabumi', 'Tasikmalaya'],
+    'Jawa Tengah': ['Semarang', 'Solo', 'Magelang', 'Pekalongan', 'Salatiga', 'Tegal', 'Purwokerto'],
+    'DI Yogyakarta': ['Yogyakarta', 'Sleman', 'Bantul', 'Kulonprogo', 'Gunungkidul'],
+    'Jawa Timur': ['Surabaya', 'Malang', 'Kediri', 'Blitar', 'Madiun', 'Mojokerto', 'Pasuruan', 'Probolinggo'],
+    'Bali': ['Denpasar', 'Gianyar', 'Tabanan', 'Badung', 'Buleleng', 'Klungkung'],
+    'Nusa Tenggara Barat': ['Mataram', 'Bima', 'Sumbawa', 'Dompu', 'Lombok Timur'],
+    'Nusa Tenggara Timur': ['Kupang', 'Ende', 'Maumere', 'Ruteng', 'Waingapu'],
+    'Kalimantan Barat': ['Pontianak', 'Singkawang', 'Sanggau', 'Sintang', 'Ketapang'],
+    'Kalimantan Tengah': ['Palangka Raya', 'Sampit', 'Pangkalan Bun', 'Kuala Kapuas', 'Buntok'],
+    'Kalimantan Selatan': ['Banjarmasin', 'Banjarbaru', 'Martapura', 'Pelaihari', 'Amuntai'],
+    'Kalimantan Timur': ['Samarinda', 'Balikpapan', 'Bontang', 'Sangatta', 'Tenggarong'],
+    'Kalimantan Utara': ['Tanjung Selor', 'Tarakan', 'Nunukan', 'Malinau', 'Bulungan'],
+    'Sulawesi Utara': ['Manado', 'Bitung', 'Tomohon', 'Kotamobagu', 'Tondano'],
+    'Gorontalo': ['Gorontalo', 'Limboto', 'Kwandang', 'Atinggola', 'Marisa'],
+    'Sulawesi Tengah': ['Palu', 'Luwuk', 'Poso', 'Buol', 'Parigi'],
+    'Sulawesi Barat': ['Mamuju', 'Majene', 'Polewali', 'Pasangkayu', 'Mamasa'],
+    'Sulawesi Selatan': ['Makassar', 'Parepare', 'Palopo', 'Bone', 'Gowa'],
+    'Sulawesi Tenggara': ['Kendari', 'Bau-Bau', 'Kolaka', 'Muna', 'Konawe'],
+    'Maluku': ['Ambon', 'Tual', 'Masohi', 'Namlea', 'Saumlaki'],
+    'Maluku Utara': ['Sofifi', 'Ternate', 'Tidore', 'Tobelo', 'Labuha'],
+    'Papua': ['Jayapura', 'Merauke', 'Timika', 'Biak', 'Nabire'],
+    'Papua Barat': ['Manokwari', 'Sorong', 'Fakfak', 'Kaimana', 'Bintuni'],
+  };
   
   List<Map<String, dynamic>> _courts = []; 
 
   final ImagePicker _picker = ImagePicker();
   List<XFile> _selectedImages = [];
   int _thumbnailIndex = 0;
+  String? _venueLat;
+  String? _venueLng;
 
   @override
   void initState() {
@@ -48,13 +90,30 @@ class _AddVenuePageState extends State<AddVenuePage> {
     _kotaController = TextEditingController(text: widget.venueToEdit?['location'] ?? '');
     _jalanController = TextEditingController(text: widget.venueToEdit?['address'] ?? '');
     _dllController = TextEditingController(text: widget.venueToEdit?['dll'] ?? '');
-    
+    _selectedProvinsi = widget.venueToEdit?['provinsi'];
+    _selectedKota = widget.venueToEdit?['location'];
+
+    // Load existing images when editing
+    if (widget.venueToEdit != null) {
+      _venueLat = widget.venueToEdit!['lat']?.toString();
+      _venueLng = widget.venueToEdit!['lng']?.toString();
+
+      final existingImages = widget.venueToEdit!['images'] as List<dynamic>?
+          ?? widget.venueToEdit!['imagePaths'] as List<dynamic>?
+          ?? [];
+      _selectedImages = existingImages
+          .map((p) => XFile(p.toString()))
+          .toList();
+      if (_selectedImages.isNotEmpty) _thumbnailIndex = 0;
+    }
+
     if (widget.venueToEdit != null && widget.venueToEdit!['courts'] != null) {
-      _courts = List<Map<String, dynamic>>.from(
+        _courts = List<Map<String, dynamic>>.from(
         (widget.venueToEdit!['courts'] as List).map((c) {
           final map = Map<String, dynamic>.from(c);
           map['isExpanded'] = false;
           map['activeDayIndex'] = 0;
+          _normalizeCourt(map);
 
           if (map['availability'] == null) {
             map['availability'] = {
@@ -85,7 +144,18 @@ class _AddVenuePageState extends State<AddVenuePage> {
     }
   }
 
-    Future<void> _pickImages() async {
+  // Pastikan 'facilities' (List) ada di setiap court yang di-load dari edit
+  void _normalizeCourt(Map<String, dynamic> map) {
+    if (map['facilities'] == null) {
+      // Backward compat: lama pakai 'facility' (String)
+      final oldFacility = map['facility'] as String?;
+      map['facilities'] = oldFacility != null && oldFacility.isNotEmpty ? [oldFacility] : <String>[];
+    } else if (map['facilities'] is List) {
+      map['facilities'] = List<String>.from(map['facilities']);
+    }
+  }
+
+  Future<void> _pickImages() async {
     if (_selectedImages.length >= 10) {
       AlertUtils.showToast(context, 'Maksimal 10 foto diperbolehkan.');
       return;
@@ -140,7 +210,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
         'type': 'Futsal',
         'courtCategory': 'Indoor',
         'floorType': 'Vinyl',
-        'facility': _facilitiesOptions[0],
+        'facilities': <String>[],  // multi-select
         'priceDay': { for (var day in _daysOfWeek) day: '' },
         'services': <Map<String, dynamic>>[],
         'activeDayIndex': 0,
@@ -164,11 +234,51 @@ class _AddVenuePageState extends State<AddVenuePage> {
 
   void _saveVenue() async {
     if (_formKey.currentState!.validate()) {
+      // Konfirmasi sebelum kirim ke admin
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.send_rounded, color: AppColors.primary),
+              SizedBox(width: 10),
+              Text('Konfirmasi Submit', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Text(
+            'Data venue akan dikirimkan ke Admin untuk diverifikasi.\n\nPastikan semua informasi sudah benar sebelum melanjutkan.',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey,
+                side: const BorderSide(color: Colors.grey),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Cek Lagi'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Ya, Kirim'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+
       final newVenue = {
         'name': _nameController.text.trim(),
-        'location': _kotaController.text.trim(),
+        'location': _selectedKota ?? _kotaController.text.trim(),
         'address': _jalanController.text.trim(),
-        'provinsi': _provinsiController.text.trim(),
+        'provinsi': _selectedProvinsi ?? _provinsiController.text.trim(),
         'dll': _dllController.text.trim(),
         'type': _courts.isNotEmpty ? _courts[0]['type'] : 'Umum',
         'price': widget.venueToEdit?['price'] ?? 'Hubungi Pengelola',
@@ -182,7 +292,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
             'type': c['type'] ?? 'Umum',
             'courtCategory': c['courtCategory'] ?? 'Indoor',
             'floorType': c['floorType'] ?? 'Vinyl',
-            'facility': c['facility'] ?? _facilitiesOptions[0],
+            'facilities': c['facilities'] is List ? List<String>.from(c['facilities']) : (c['facility'] != null ? [c['facility']] : <String>[]),
             'priceDay': c['priceDay'],
             'services': c['services'],
             'availability': (availability as Map).map((day, times) {
@@ -192,7 +302,11 @@ class _AddVenuePageState extends State<AddVenuePage> {
           };
                 }).toList(),
         'images': _selectedImages.map((e) => e.path).toList(),
+        'imagePaths': _selectedImages.map((e) => e.path).toList(),  // alias for admin dialog
         'image': _selectedImages.isNotEmpty ? _selectedImages[_thumbnailIndex].path : '',
+        'ownerUsername': GlobalAuthData.currentUser?.username ?? '',
+        'lat': double.tryParse(_venueLat ?? '') ?? 0.0,
+        'lng': double.tryParse(_venueLng ?? '') ?? 0.0,
       };
 
       if (widget.venueToEdit != null && widget.index != null) {
@@ -210,20 +324,31 @@ class _AddVenuePageState extends State<AddVenuePage> {
       } else {
         // NEW VENUE: Submit for verification
         final user = GlobalAuthData.currentUser;
+        // Ambil NIK & NPWP dari data akun owner yang sudah terdaftar
+        final ownerVerifReq = GlobalVerificationData.requests
+            .where((r) => r.type == 'Owner' && r.username == user?.username)
+            .toList();
+        final ownerNik  = ownerVerifReq.isNotEmpty ? ownerVerifReq.last.nik  : '-';
+        final ownerNpwp = ownerVerifReq.isNotEmpty ? ownerVerifReq.last.npwp : '-';
+
         final req = VerificationRequest(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           applicantName: user?.applicantName ?? 'Owner',
           email: user?.email ?? '',
           username: user?.username,
           phoneNumber: user?.phoneNumber,
-          nik: '-', // Placeholder as not needed for venue creation
-          npwp: '-', 
-          documentUrl: '', // Could be added if needed
+          nik: ownerNik,
+          npwp: ownerNpwp,
+          documentUrl: '',
           type: 'Venue',
           status: 'Pending',
           submittedAt: DateTime.now(),
           venueName: newVenue['name'],
           venueAddress: newVenue['address'],
+          venueProvinsi: newVenue['provinsi'],
+          venueKota: newVenue['location'],
+          venueLat: _venueLat,
+          venueLng: _venueLng,
           venueData: newVenue,
         );
 
@@ -263,9 +388,27 @@ class _AddVenuePageState extends State<AddVenuePage> {
               _buildCard([
                 _buildTextField(_nameController, 'Nama Venue', Icons.stadium),
                 const SizedBox(height: 16),
-                _buildTextField(_provinsiController, 'Provinsi', Icons.map),
+                _buildSearchableDropdown(
+                  label: 'Provinsi',
+                  icon: Icons.map,
+                  value: _selectedProvinsi,
+                  items: _provinceCityData.keys.toList(),
+                  onSelected: (val) => setState(() {
+                    _selectedProvinsi = val;
+                    _selectedKota = null; // reset kota
+                  }),
+                ),
                 const SizedBox(height: 16),
-                _buildTextField(_kotaController, 'Kota', Icons.location_city),
+                _buildSearchableDropdown(
+                  label: 'Kota',
+                  icon: Icons.location_city,
+                  value: _selectedKota,
+                  items: _selectedProvinsi != null
+                      ? (_provinceCityData[_selectedProvinsi!] ?? [])
+                      : _provinceCityData.values.expand((e) => e).toList(),
+                  onSelected: (val) => setState(() => _selectedKota = val),
+                  hint: _selectedProvinsi == null ? 'Pilih Provinsi dulu' : 'Pilih Kota',
+                ),
                 const SizedBox(height: 16),
                 _buildTextField(_jalanController, 'Jalan / Alamat Lengkap', Icons.add_location_alt_outlined),
                 const SizedBox(height: 16),
@@ -280,10 +423,17 @@ class _AddVenuePageState extends State<AddVenuePage> {
                         context,
                         MaterialPageRoute(builder: (context) => MapPickerPage()),
                       );
-                      if (result != null && result is String) {
+                      if (result != null && result is Map<String, dynamic>) {
                         setState(() {
-                          _dllController.text = result;
+                          _venueLat = result['lat']?.toString();
+                          _venueLng = result['lng']?.toString();
+                          if (_venueLat != null && _venueLng != null) {
+                            _dllController.text = 'Koordinat: $_venueLat, $_venueLng';
+                          }
                         });
+                      } else if (result != null && result is String) {
+                        // backward compat
+                        setState(() => _dllController.text = result);
                       }
                     },
                     icon: const Icon(Icons.location_on, color: AppColors.primary),
@@ -425,18 +575,102 @@ class _AddVenuePageState extends State<AddVenuePage> {
                           );
                     }
                   ),
-                  const SizedBox(height: 16),
-                  _buildLabelOnlyTextField('Ukuran Lapangan (Contoh: P 25 X L 15)', (val) => _courts[index]['size'] = val, initial: court['size']),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: court['facility'],
-                    decoration: const InputDecoration(labelText: 'Fasilitas Lapangan', border: OutlineInputBorder(), floatingLabelBehavior: FloatingLabelBehavior.always),
-                    items: _facilitiesOptions.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
-                    onChanged: (val) => setState(() => _courts[index]['facility'] = val),
+                  // Ukuran lapangan: 2 kolom P dan L
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          key: ValueKey('sizeP_$index'),
+                          initialValue: (court['size'] ?? '').toString().split('X').firstOrNull?.replaceAll(RegExp(r'[^0-9]'), '').trim(),
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Panjang (m)',
+                            prefixText: 'P  ',
+                            floatingLabelBehavior: FloatingLabelBehavior.always,
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (val) {
+                            final parts = (court['size'] ?? '').toString().split('X');
+                            final l = parts.length > 1 ? parts[1].replaceAll(RegExp(r'[^0-9]'), '').trim() : '';
+                            _courts[index]['size'] = 'P $val X L $l';
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          key: ValueKey('sizeL_$index'),
+                          initialValue: (court['size'] ?? '').toString().split('X').length > 1
+                              ? (court['size'] ?? '').toString().split('X')[1].replaceAll(RegExp(r'[^0-9]'), '').trim()
+                              : '',
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Lebar (m)',
+                            prefixText: 'L  ',
+                            floatingLabelBehavior: FloatingLabelBehavior.always,
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (val) {
+                            final parts = (court['size'] ?? '').toString().split('X');
+                            final p = parts.isNotEmpty ? parts[0].replaceAll(RegExp(r'[^0-9]'), '').trim() : '';
+                            _courts[index]['size'] = 'P $p X L $val';
+                          },
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 16),
+                  // Fasilitas multi-select
+                  const Text('Fasilitas Lapangan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                  const SizedBox(height: 8),
+                  Builder(builder: (context) {
+                    final List<String> selected = List<String>.from(court['facilities'] ?? []);
+                    return Wrap(
+                      spacing: 8, runSpacing: 6,
+                      children: _facilitiesOptions.map((f) {
+                        final isSelected = selected.contains(f);
+                        return FilterChip(
+                          label: Text(f, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black87)),
+                          selected: isSelected,
+                          selectedColor: AppColors.primary,
+                          checkmarkColor: Colors.white,
+                          showCheckmark: true,
+                          onSelected: (val) => setState(() {
+                            final List<String> cur = List<String>.from(_courts[index]['facilities'] ?? []);
+                            if (val) cur.add(f); else cur.remove(f);
+                            _courts[index]['facilities'] = cur;
+                          }),
+                        );
+                      }).toList(),
+                    );
+                  }),
+                  // ── Jadwal & Harga ───────────────────────────────────────
                   const SizedBox(height: 24),
-                  const Text('Jadwal & Harga Harian', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Jadwal & Harga', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      // Toggle mode harga
+                      ChoiceChip(
+                        label: Text(
+                          court['priceMode'] == 'perSlot' ? 'Harga Per Jam' : 'Harga Sama Semua',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        selected: court['priceMode'] == 'perSlot',
+                        selectedColor: AppColors.primary,
+                        labelStyle: TextStyle(
+                          color: court['priceMode'] == 'perSlot' ? Colors.white : Colors.black87,
+                          fontSize: 11,
+                        ),
+                        showCheckmark: false,
+                        onSelected: (val) => setState(() {
+                          _courts[index]['priceMode'] = val ? 'perSlot' : 'perDay';
+                        }),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
+                  // Pilih Hari
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -459,33 +693,121 @@ class _AddVenuePageState extends State<AddVenuePage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildLabelOnlyTextField('Harga Lapangan - $activeDay (Rp / Jam)', (val) => setState(() => priceDay[activeDay] = val), initial: priceDay[activeDay], isNumber: true, prefix: 'Rp '),
-                  const SizedBox(height: 16),
-                  Text('Ketersediaan Jam ($activeDay):', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey)),
-                  const SizedBox(height: 12),
+
+                  // Jika mode harga per hari (sama semua jam)
+                  if ((court['priceMode'] ?? 'perDay') == 'perDay') ...
+                    [
+                      TextFormField(
+                        key: ValueKey('price_${index}_$activeDay'),
+                        initialValue: priceDay[activeDay] ?? '',
+                        onChanged: (val) => setState(() => priceDay[activeDay] = val),
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Harga - $activeDay (Rp/Jam, berlaku semua jam)',
+                          prefixText: 'Rp ',
+                          floatingLabelBehavior: FloatingLabelBehavior.always,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                  // Ketersediaan Jam + Tombol Pilih Semua
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Ketersediaan Jam ($activeDay):', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey)),
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            final dynamic dayData = availabilityData?[activeDay];
+                            final allSelected = _timeOptions.every((t) =>
+                              dayData is Set ? dayData.contains(t) : (dayData as List?)?.contains(t) == true);
+                            if (allSelected) {
+                              // Hapus semua
+                              if (dayData is Set) dayData.clear();
+                              else availabilityData[activeDay] = <String>{};
+                            } else {
+                              // Pilih semua
+                              if (dayData is Set) {
+                                dayData.addAll(_timeOptions);
+                              } else {
+                                availabilityData[activeDay] = Set<String>.from(_timeOptions);
+                              }
+                            }
+                          });
+                        },
+                        icon: const Icon(Icons.select_all, size: 14),
+                        label: Builder(builder: (context) {
+                          final dynamic dayData = availabilityData?[activeDay];
+                          final allSelected = _timeOptions.every((t) =>
+                            dayData is Set ? dayData.contains(t) : (dayData as List?)?.contains(t) == true);
+                          return Text(allSelected ? 'Hapus Semua' : 'Pilih Semua', style: const TextStyle(fontSize: 12));
+                        }),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   if (availabilityData != null && availabilityData[activeDay] != null)
                     Wrap(
                       spacing: 8, runSpacing: 8,
                       children: _timeOptions.map((time) {
                         final dynamic dayData = availabilityData[activeDay];
                         final bool isSelected = dayData is Set ? dayData.contains(time) : (dayData as List).contains(time);
-                        return FilterChip(
-                          label: Text(time, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black87)),
-                          selected: isSelected,
-                          selectedColor: AppColors.primary,
-                          checkmarkColor: Colors.white,
-                          showCheckmark: false,
-                          onSelected: (selected) {
-                            setState(() {
-                              if (dayData is Set) {
-                                if (selected) dayData.add(time); else dayData.remove(time);
-                              } else {
-                                final List<String> newList = List<String>.from(dayData);
-                                if (selected) newList.add(time); else newList.remove(time);
-                                availabilityData[activeDay] = newList;
-                              }
-                            });
-                          },
+                        // pricePerSlot map: key = 'day_time'
+                        final Map<String, String> pricePerSlot = (court['pricePerSlot'] as Map<String, String>?) ?? {};
+                        final slotKey = '${activeDay}_$time';
+
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            FilterChip(
+                              label: Text(time, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black87)),
+                              selected: isSelected,
+                              selectedColor: AppColors.primary,
+                              checkmarkColor: Colors.white,
+                              showCheckmark: false,
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (dayData is Set) {
+                                    if (selected) dayData.add(time); else dayData.remove(time);
+                                  } else {
+                                    final List<String> newList = List<String>.from(dayData);
+                                    if (selected) newList.add(time); else newList.remove(time);
+                                    availabilityData[activeDay] = newList;
+                                  }
+                                });
+                              },
+                            ),
+                            // Jika mode per jam, tampilkan input harga kecil di bawah chip
+                            if ((court['priceMode'] ?? 'perDay') == 'perSlot' && isSelected)
+                              SizedBox(
+                                width: 80,
+                                child: TextFormField(
+                                  initialValue: pricePerSlot[slotKey] ?? '',
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(fontSize: 10),
+                                  decoration: InputDecoration(
+                                    hintText: 'Rp',
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                  ),
+                                  onChanged: (val) {
+                                    if (_courts[index]['pricePerSlot'] == null) {
+                                      _courts[index]['pricePerSlot'] = <String, String>{};
+                                    }
+                                    (_courts[index]['pricePerSlot'] as Map<String, String>)[slotKey] = val;
+                                  },
+                                ),
+                              ),
+                          ],
                         );
                       }).toList(),
                     ),
@@ -745,6 +1067,63 @@ class _AddVenuePageState extends State<AddVenuePage> {
     );
   }
 
+  Widget _buildSearchableDropdown({
+    required String label,
+    required IconData icon,
+    required String? value,
+    required List<String> items,
+    required void Function(String) onSelected,
+    String? hint,
+  }) {
+    return GestureDetector(
+      onTap: () async {
+        final selected = await showDialog<String>(
+          context: context,
+          builder: (context) => _SearchableDropdownDialog(
+            title: label,
+            items: items,
+            selected: value,
+          ),
+        );
+        if (selected != null) onSelected(selected);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade400),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppColors.textSecondary, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value ?? hint ?? 'Pilih $label',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: value != null ? AppColors.textPrimary : Colors.grey.shade400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextField(TextEditingController controller, String label, IconData icon) {
     return TextFormField(
       controller: controller,
@@ -759,6 +1138,117 @@ class _AddVenuePageState extends State<AddVenuePage> {
   }
 }
 
+/// Dialog pencarian untuk Provinsi / Kota — tampilan ala Shopee
+class _SearchableDropdownDialog extends StatefulWidget {
+  final String title;
+  final List<String> items;
+  final String? selected;
 
+  const _SearchableDropdownDialog({
+    required this.title,
+    required this.items,
+    this.selected,
+  });
 
+  @override
+  State<_SearchableDropdownDialog> createState() => _SearchableDropdownDialogState();
+}
 
+class _SearchableDropdownDialogState extends State<_SearchableDropdownDialog> {
+  late List<String> _filtered;
+  final TextEditingController _searchCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = List.from(widget.items);
+    _searchCtrl.addListener(() {
+      final q = _searchCtrl.text.toLowerCase();
+      setState(() {
+        _filtered = widget.items.where((e) => e.toLowerCase().contains(q)).toList();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
+            child: Row(
+              children: [
+                Text(
+                  'Pilih ${widget.title}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: TextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Cari ${widget.title}...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchCtrl.text.isNotEmpty
+                    ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () => _searchCtrl.clear())
+                    : null,
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          // List
+          Flexible(
+            child: _filtered.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text('Tidak ditemukan', style: TextStyle(color: Colors.grey)),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _filtered.length,
+                    itemBuilder: (context, idx) {
+                      final item = _filtered[idx];
+                      final isSelected = item == widget.selected;
+                      return ListTile(
+                        title: Text(item, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
+                        tileColor: isSelected ? AppColors.primary.withValues(alpha: 0.05) : null,
+                        onTap: () => Navigator.pop(context, item),
+                        dense: true,
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -48,46 +48,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   final Set<int> _expandedGroups = {};
   final Map<String, int> _selectedServices = {};
 
-  static const List<_TimeGroup> _timeGroups = [
-    _TimeGroup(
-      period: 'Pagi ke Siang',
-      range: '06:00 - 10:00',
-      icon: Icons.wb_twilight_rounded,
-      slots: [
-        _TimeSlot('06:00 - 07:00', 150000, 125000, true),
-        _TimeSlot('07:00 - 08:00', 150000, 125000, true),
-        _TimeSlot('08:00 - 09:00', 150000, 125000, true),
-        _TimeSlot('09:00 - 10:00', 150000, 125000, true),
-      ],
-    ),
-    _TimeGroup(
-      period: 'Siang ke Sore',
-      range: '10:00 - 16:00',
-      icon: Icons.wb_sunny_rounded,
-      slots: [
-        _TimeSlot('10:00 - 11:00', 150000, 125000, true),
-        _TimeSlot('11:00 - 12:00', 150000, 125000, true),
-        _TimeSlot('12:00 - 13:00', 150000, 125000, true),
-        _TimeSlot('13:00 - 14:00', 150000, 125000, true),
-        _TimeSlot('14:00 - 15:00', 150000, 125000, true),
-        _TimeSlot('15:00 - 16:00', 150000, 125000, true),
-      ],
-    ),
-    _TimeGroup(
-      period: 'Sore ke Malam',
-      range: '16:00 - 22:00',
-      icon: Icons.nightlight_round,
-      slots: [
-        _TimeSlot('16:00 - 17:00', 175000, 125000, true),
-        _TimeSlot('17:00 - 18:00', 175000, 150000, true),
-        _TimeSlot('18:00 - 19:00', 175000, 150000, true),
-        _TimeSlot('19:00 - 20:00', 175000, 150000, true),
-        _TimeSlot('20:00 - 21:00', 175000, 150000, true),
-        _TimeSlot('21:00 - 22:00', 175000, 150000, true),
-        _TimeSlot('22:00 - 23:00', 175000, 150000, true),
-      ],
-    ),
-  ];
+  // _timeGroups sekarang digenerate secara dinamis dari data court
+  // Lihat getter _dynamicTimeGroups di bawah
 
   @override
   void initState() {
@@ -102,9 +64,10 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     
     if (widget.initialSelectedSlot != null) {
       String? foundKey;
-      for (int g = 0; g < _timeGroups.length; g++) {
-        for (int s = 0; s < _timeGroups[g].slots.length; s++) {
-          if (_timeGroups[g].slots[s].time == widget.initialSelectedSlot) {
+      final groups = _dynamicTimeGroups;
+      for (int g = 0; g < groups.length; g++) {
+        for (int s = 0; s < groups[g].slots.length; s++) {
+          if (groups[g].slots[s].time == widget.initialSelectedSlot) {
             foundKey = '${g}_$s';
             _expandedGroups.add(g);
             break;
@@ -131,48 +94,132 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     )}';
   }
 
+  // Ambil data court yang sesuai dari GlobalVenueData
+  Map<String, dynamic> get _courtData {
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    if (venueResults.isEmpty) return {};
+    final venue = venueResults.first;
+    final courts = venue['courts'] as List<dynamic>? ?? [];
+    final courtResults = courts.where((c) => c['name'] == widget.courtName);
+    return courtResults.isNotEmpty ? Map<String, dynamic>.from(courtResults.first) : {};
+  }
+
+  /// Menghasilkan time groups dari data court yang disimpan owner
+  List<_TimeGroup> get _dynamicTimeGroups {
+    final court = _courtData;
+    const dayNames = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+    final dayIdx = _selectedDate.weekday - 1; // 1=Mon..7=Sun
+    final activeDay = dayNames[dayIdx];
+
+    final availability = court['availability'] as Map? ?? {};
+    final rawSlots = availability[activeDay];
+    final List<String> slotList = rawSlots is List
+        ? List<String>.from(rawSlots)
+        : rawSlots is Set ? List<String>.from(rawSlots) : [];
+    slotList.sort();
+
+    final priceDay = court['priceDay'] as Map? ?? {};
+    final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
+    final String priceMode = court['priceMode'] ?? 'perDay';
+
+    // Harga default dari hari aktif
+    final dayPriceStr = priceDay[activeDay]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    final dayPrice = int.tryParse(dayPriceStr) ?? 0;
+
+    // Kelompokkan slot ke 3 periode waktu
+    final pagi = <_TimeSlot>[];   // 00:00-12:00
+    final siang = <_TimeSlot>[];  // 12:00-17:00
+    final malam = <_TimeSlot>[];  // 17:00-24:00
+
+    for (final startStr in slotList) {
+      final startHour = int.tryParse(startStr.split(':')[0]) ?? 0;
+      final endHour = startHour + 1;
+      final endStr = '${endHour.toString().padLeft(2, '0')}:00';
+      final timeRange = '$startStr - $endStr';
+
+      // Cari harga per slot jika mode perSlot
+      int slotPrice = dayPrice;
+      if (priceMode == 'perSlot') {
+        final key = '${activeDay}_$startStr';
+        final slotPriceStr = pricePerSlot[key]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+        slotPrice = int.tryParse(slotPriceStr) ?? dayPrice;
+      }
+
+      final slot = _TimeSlot(timeRange, slotPrice, slotPrice, true);
+      if (startHour < 12) pagi.add(slot);
+      else if (startHour < 17) siang.add(slot);
+      else malam.add(slot);
+    }
+
+    final groups = <_TimeGroup>[];
+    if (pagi.isNotEmpty) {
+      groups.add(_TimeGroup(
+        period: 'Pagi',
+        range: '${pagi.first.time.split(' - ')[0]} - ${pagi.last.time.split(' - ')[1]}',
+        icon: Icons.wb_twilight_rounded,
+        slots: pagi,
+      ));
+    }
+    if (siang.isNotEmpty) {
+      groups.add(_TimeGroup(
+        period: 'Siang - Sore',
+        range: '${siang.first.time.split(' - ')[0]} - ${siang.last.time.split(' - ')[1]}',
+        icon: Icons.wb_sunny_rounded,
+        slots: siang,
+      ));
+    }
+    if (malam.isNotEmpty) {
+      groups.add(_TimeGroup(
+        period: 'Sore - Malam',
+        range: '${malam.first.time.split(' - ')[0]} - ${malam.last.time.split(' - ')[1]}',
+        icon: Icons.nightlight_round,
+        slots: malam,
+      ));
+    }
+    return groups;
+  }
+
   int get _totalPrice {
     int total = _selectedSlots.fold(0, (sum, key) {
       final parts = key.split('_');
       final g = int.tryParse(parts[0]) ?? 0;
       final s = int.tryParse(parts[1]) ?? 0;
-      return sum + _timeGroups[g].slots[s].price;
+      final groups = _dynamicTimeGroups;
+      if (g < groups.length && s < groups[g].slots.length) {
+        return sum + groups[g].slots[s].price;
+      }
+      return sum;
     });
 
     _selectedServices.forEach((id, qty) {
-      final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
-      final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-      final services = venue['services'] as List<dynamic>? ?? [];
-      final serviceResults = services.where((s) => s['id'] == id);
+      final court = _courtData;
+      final services = court['services'] as List<dynamic>? ?? [];
+      final serviceResults = services.where((s) => s['name'] == id || s['id']?.toString() == id);
       if (serviceResults.isNotEmpty) {
         final service = serviceResults.first;
-        total += (service['price'] as int) * qty;
+        final price = service['price'];
+        total += (price is int ? price : int.tryParse(price.toString().replaceAll(RegExp(r'[^0-9]'), '')) ?? 0) * qty;
       }
     });
 
     return total;
   }
 
-  String get _bookingPeriod {
-    final now = DateTime.now();
-    final end = DateTime(now.year, now.month + 1, 0);
-    const m = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-    return '${now.day} ${m[now.month]} ${now.year} - ${end.day} ${m[end.month]} ${end.year}';
-  }
-
   List<String> get _selectedTimeStrings {
+    final groups = _dynamicTimeGroups;
     final times = _selectedSlots.map((key) {
       final parts = key.split('_');
       final g = int.tryParse(parts[0]) ?? 0;
       final s = int.tryParse(parts[1]) ?? 0;
-      return _timeGroups[g].slots[s].time.split(' - ')[0];
-    }).toList();
+      if (g < groups.length && s < groups[g].slots.length) {
+        return groups[g].slots[s].time.split(' - ')[0];
+      }
+      return '';
+    }).where((t) => t.isNotEmpty).toList();
     times.sort();
     return times;
   }
+
 
   static String _monthName(int month) {
     const names = [
@@ -486,15 +533,25 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                       style: TextStyle(
                           color: _accent, fontWeight: FontWeight.w500),
                     ),
-                    TextSpan(text: _bookingPeriod),
+                    TextSpan(text: () {
+                        final now = DateTime.now();
+                        final end = DateTime(now.year, now.month + 1, 0);
+                        const m = ['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+                        return '${now.day} ${m[now.month]} ${now.year} - ${end.day} ${m[end.month]} ${end.year}';
+                      }()),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 8),
-            ..._timeGroups.asMap().entries.map(
+            ..._dynamicTimeGroups.asMap().entries.map(
                   (e) => _buildTimeGroup(e.key, e.value),
                 ),
+          if (_dynamicTimeGroups.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: Text('Tidak ada jadwal tersedia untuk hari ini.', style: TextStyle(color: Colors.grey))),
+            ),
           ] else ...[
             _buildServicesList(),
           ],
@@ -749,7 +806,13 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                         final s = int.tryParse(parts[1]) ?? 0;
                         return {
                           'court': widget.courtName,
-                          'time': _timeGroups[g].slots[s].time,
+                          'time': () {
+                            final groups = _dynamicTimeGroups;
+                            if (g < groups.length && s < groups[g].slots.length) {
+                              return groups[g].slots[s].time;
+                            }
+                            return '';
+                          }(),
                         };
                       }).toList();
                       Navigator.push(
@@ -794,9 +857,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   }
 
   Widget _buildServicesList() {
-    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
-    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-    final services = venue['services'] as List<dynamic>? ?? [];
+    final court = _courtData;
+    final services = court['services'] as List<dynamic>? ?? [];
     if (services.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
@@ -824,12 +886,15 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   }
 
   Widget _buildServiceItem(Map<String, dynamic> service) {
-    final id = service['id'] as String;
-    final name = service['name'] as String;
-    final price = service['price'] as int;
-    final stock = service['stock'] as int;
-    final unit = service['unit'] as String;
+    // Support both formats: owner format {name, price, unit} and legacy {id, name, price, stock, unit}
+    final id = service['id']?.toString() ?? service['name']?.toString() ?? 'service_${service.hashCode}';
+    final name = service['name']?.toString() ?? 'Layanan';
+    final priceRaw = service['price'];
+    final price = priceRaw is int ? priceRaw : int.tryParse(priceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '0') ?? 0;
+    final stock = service['stock'] != null ? (service['stock'] as int) : 99; // unlimited if no stock defined
+    final unit = service['unit']?.toString() ?? 'Pcs';
     final currentQty = _selectedServices[id] ?? 0;
+    final hasStock = stock > 0;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -844,7 +909,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: _accent.withOpacity(0.1),
+              color: _accent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.shopping_bag_outlined, color: _accent),
@@ -859,13 +924,14 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 Text(
-                  '${_formatPrice(price)} / $unit',
+                  price > 0 ? '${_formatPrice(price)} / $unit' : 'Gratis / $unit',
                   style: const TextStyle(color: _accent, fontWeight: FontWeight.w600, fontSize: 12),
                 ),
-                Text(
-                  'Stok: $stock',
-                  style: TextStyle(color: stock == 0 ? Colors.red : Colors.grey, fontSize: 11),
-                ),
+                if (service['stock'] != null)
+                  Text(
+                    'Stok: $stock',
+                    style: TextStyle(color: stock == 0 ? Colors.red : Colors.grey, fontSize: 11),
+                  ),
               ],
             ),
           ),
@@ -893,14 +959,14 @@ class _CourtDetailPageState extends State<CourtDetailPage>
               ),
               const SizedBox(width: 8),
               IconButton(
-                onPressed: currentQty < stock
+                onPressed: hasStock && currentQty < stock
                     ? () {
                         setState(() {
                           _selectedServices[id] = currentQty + 1;
                         });
                       }
                     : null,
-                icon: Icon(Icons.add_circle_outline, color: currentQty < stock ? _accent : Colors.grey),
+                icon: Icon(Icons.add_circle_outline, color: hasStock && currentQty < stock ? _accent : Colors.grey),
                 iconSize: 22,
               ),
             ],
