@@ -8,6 +8,7 @@ import 'package:rensius/pages/login_page.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/data/venue_data.dart';
 import 'package:rensius/widgets/empty_state_widget.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 
 class AdminDashboardPage extends StatefulWidget {
@@ -375,11 +376,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                   'Lat: ${double.tryParse(req.venueLat!)?.toStringAsFixed(6) ?? req.venueLat}\nLng: ${double.tryParse(req.venueLng!)?.toStringAsFixed(6) ?? req.venueLng}',
                                   style: TextStyle(fontSize: 11, color: Colors.blue.shade800),
                                 ),
-                                Text(
-                                  'https://maps.google.com/?q=${req.venueLat},${req.venueLng}',
-                                  style: TextStyle(fontSize: 10, color: Colors.blue.shade600, decoration: TextDecoration.underline),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                GestureDetector(
+                                  onTap: () async {
+                                    final url = Uri.parse('https://maps.google.com/?q=${req.venueLat},${req.venueLng}');
+                                    if (await canLaunchUrl(url)) {
+                                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                                    }
+                                  },
+                                  child: Text(
+                                    'https://maps.google.com/?q=${req.venueLat},${req.venueLng}',
+                                    style: TextStyle(fontSize: 10, color: Colors.blue.shade600, decoration: TextDecoration.underline),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ],
                             ),
@@ -480,47 +489,61 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 const SizedBox(height: 16),
                 const Text('Foto KTP / Identitas:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 const SizedBox(height: 8),
-                Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (req.documentUrl.isNotEmpty &&
-                          (req.documentUrl.contains('/') || req.documentUrl.contains('\\')))
-                        Positioned.fill(
-                          child: kIsWeb
-                              ? Image.network(
-                                  req.documentUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
-                                )
-                              : Image.file(
-                                  File(req.documentUrl),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
-                                ),
-                        )
-                      else if (req.documentUrl.startsWith('assets/'))
-                        Positioned.fill(
-                          child: Image.asset(req.documentUrl, fit: BoxFit.cover),
-                        )
-                      else
-                        const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.image, size: 48, color: Colors.grey),
-                            Text('Dokumen tidak tersedia', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
+                Builder(builder: (context) {
+                  String displayDocUrl = req.documentUrl;
+                  if (req.type == 'Venue' && (req.username != null || req.email.isNotEmpty)) {
+                    final ownerReqs = GlobalVerificationData.requests
+                        .where((r) => r.type == 'Owner' && 
+                            ((req.username != null && r.username?.toLowerCase() == req.username?.toLowerCase()) || 
+                             r.email.toLowerCase() == req.email.toLowerCase()))
+                        .toList();
+                    if (ownerReqs.isNotEmpty && ownerReqs.last.documentUrl.isNotEmpty) {
+                      displayDocUrl = ownerReqs.last.documentUrl;
+                    }
+                  }
+                  
+                  return Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (displayDocUrl.isNotEmpty &&
+                            (displayDocUrl.contains('/') || displayDocUrl.contains('\\')))
+                          Positioned.fill(
+                            child: kIsWeb
+                                ? Image.network(
+                                    displayDocUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+                                  )
+                                : Image.file(
+                                    File(displayDocUrl),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+                                  ),
+                          )
+                        else if (displayDocUrl.startsWith('assets/'))
+                          Positioned.fill(
+                            child: Image.asset(displayDocUrl, fit: BoxFit.cover),
+                          )
+                        else
+                          const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.image, size: 48, color: Colors.grey),
+                              Text('Dokumen tidak tersedia', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            ],
+                          ),
+                      ],
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -677,6 +700,80 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     }
   }
 
+  void _showOwnerKtpDialog(UserAccount acc) {
+    // Find the verification request for this owner to get documentUrl
+    final req = GlobalVerificationData.requests
+        .where((r) => r.username == acc.username)
+        .toList();
+    final documentUrl = req.isNotEmpty ? req.first.documentUrl : '';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.badge, color: Colors.teal, size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Foto KTP – ${acc.applicantName}',
+                style: const TextStyle(fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('@${acc.username}', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+            const SizedBox(height: 12),
+            Container(
+              height: 200,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: documentUrl.isNotEmpty && (documentUrl.contains('/') || documentUrl.contains('\\'))
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: kIsWeb
+                          ? Image.network(documentUrl, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildErrorImage())
+                          : Image.file(File(documentUrl), fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildErrorImage()),
+                    )
+                  : const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.badge_outlined, size: 48, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Foto KTP tidak tersedia', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Tutup', style: TextStyle(color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ACCOUNT MANAGEMENT (NEW)
   Widget _buildAccountManagement(String role) {
     // Filter accounts by role
@@ -760,6 +857,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           if (isDeletable)
             Row(
               children: [
+                if (acc.role == 'Owner')
+                  IconButton(
+                    icon: const Icon(Icons.badge_outlined, color: Colors.teal),
+                    tooltip: 'Lihat KTP',
+                    onPressed: () => _showOwnerKtpDialog(acc),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.edit_note_rounded, color: AppColors.primary),
                   onPressed: () => _showEditAccountDialog(acc),

@@ -9,6 +9,8 @@ import 'package:rensius/models/verification_model.dart';
 import 'package:rensius/utils/validation_utils.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 class OwnerRegisterPage extends StatefulWidget {
   const OwnerRegisterPage({super.key});
@@ -225,7 +227,20 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       return;
     }
 
-    // 1. Create real request and add to global data
+    // 1. Copy KTP image to permanent storage so it persists
+    String savedDocumentUrl = '';
+    if (_imageFile != null && !kIsWeb) {
+      final appDir = await getApplicationDocumentsDirectory();
+      final ktpDir = Directory('${appDir.path}/ktp_uploads');
+      if (!await ktpDir.exists()) await ktpDir.create(recursive: true);
+      final fileName = 'ktp_${DateTime.now().millisecondsSinceEpoch}${p.extension(_imageFile!.path)}';
+      final savedFile = await File(_imageFile!.path).copy('${ktpDir.path}/$fileName');
+      savedDocumentUrl = savedFile.path;
+    } else if (_imageFile != null && kIsWeb) {
+      savedDocumentUrl = _imageFile!.path;
+    }
+
+    // 2. Create real request and add to global data
     final newRequest = VerificationRequest(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       applicantName: _nameController.text,
@@ -235,7 +250,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       password: _passwordController.text.trim(), // Save for later creation
       nik: _nikController.text,
       npwp: _npwpController.text,
-      documentUrl: _imageFile?.path ?? '',
+      documentUrl: savedDocumentUrl,
       type: 'Owner',
       submittedAt: DateTime.now(),
     );
