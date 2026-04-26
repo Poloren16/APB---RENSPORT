@@ -6,6 +6,7 @@ import 'package:rensius/pages/owner/owner_login_page.dart';
 import 'package:rensius/data/verification_data.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/models/verification_model.dart';
+import 'package:rensius/utils/validation_utils.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -94,8 +95,9 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         return false;
       }
       
-      if (pass.length < 6) {
-        _showValidationError('Kata sandi harus minimal 6 karakter.');
+      final passwordError = ValidationUtils.validatePassword(pass);
+      if (passwordError != null) {
+        _showValidationError(passwordError);
         return false;
       }
 

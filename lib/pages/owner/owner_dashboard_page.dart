@@ -224,6 +224,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   }
 
   Widget _buildBookingItem(Map<String, dynamic> booking) {
+    final services = booking['services'];
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -272,7 +273,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               ),
             ],
           ),
-          if ((booking['services'] as List).isNotEmpty) ...[
+          if (services != null && (services is List && services.isNotEmpty || services is String && services.isNotEmpty)) ...[
             const SizedBox(height: 12),
             const Divider(height: 1),
             const SizedBox(height: 12),
@@ -281,7 +282,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: (booking['services'] as List).map((s) => Container(
+              children: (services is List ? services : services.toString().split(', ')).map((s) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,

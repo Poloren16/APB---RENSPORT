@@ -398,7 +398,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          item['services'],
+                          item['services'] is List ? (item['services'] as List).join(', ') : item['services'].toString(),
                           style: const TextStyle(
                             fontSize: 12,
                             color: AppColors.primary,
