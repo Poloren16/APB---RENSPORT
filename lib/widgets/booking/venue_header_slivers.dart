@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../../theme/app_colors.dart';
 import '../../models/review_model.dart';
 import '../../data/venue_data.dart';
@@ -170,55 +171,62 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
             ),
           ],
           flexibleSpace: FlexibleSpaceBar(
-            background: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Gradient background as venue image placeholder
-                Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF0E21A0),
-                        Color(0xFF1A3CC8),
-                        Color(0xFF0A4D8F),
-                      ],
+            background: Builder(builder: (context) {
+              // Coba load foto venue dari GlobalVenueData
+              final venueMatch = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+              final imgPath = venueMatch.isNotEmpty ? (venueMatch.first['image']?.toString() ?? '') : '';
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (imgPath.isNotEmpty)
+                    Image.file(
+                      File(imgPath),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft, end: Alignment.bottomRight,
+                            colors: [Color(0xFF0E21A0), Color(0xFF1A3CC8), Color(0xFF0A4D8F)],
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          colors: [Color(0xFF0E21A0), Color(0xFF1A3CC8), Color(0xFF0A4D8F)],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                // Court visual
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 30),
-                      Icon(Icons.sports_tennis,
-                          size: 64, color: Colors.white.withValues(alpha: 0.5)),
-                    ],
-                  ),
-                ),
-                // Dark gradient overlay at bottom
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: 80,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.5),
-                          Colors.transparent,
+                  if (imgPath.isEmpty)
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 30),
+                          Icon(Icons.sports_tennis, size: 64, color: Colors.white.withValues(alpha: 0.5)),
                         ],
                       ),
                     ),
+                  // Dark gradient overlay at bottom
+                  Positioned(
+                    bottom: 0, left: 0, right: 0,
+                    child: Container(
+                      height: 80,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter, end: Alignment.topCenter,
+                          colors: [Colors.black.withValues(alpha: 0.5), Colors.transparent],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              );
+            }),
           ),
         ),
 
@@ -318,23 +326,49 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                 _infoRow(Icons.location_on_outlined, widget.venueAddress,
                     actionText: 'Lihat Peta', onActionTap: widget.onOpenMaps),
                 const SizedBox(height: 12),
-                // Facilities chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _facilityChip(Icons.wc, 'Toilet'),
-                      const SizedBox(width: 8),
-                      _facilityChip(Icons.local_parking, 'Parkir'),
-                      const SizedBox(width: 8),
-                      _facilityChip(Icons.restaurant, 'Makanan & Minuman'),
-                      const SizedBox(width: 8),
-                      _facilityChip(Icons.mosque, 'Prayer Room'),
-                      const SizedBox(width: 8),
-                      _facilityChip(Icons.rule, 'Venue Rules'),
-                    ],
-                  ),
-                ),
+                // Facilities chips — dari data court nyata
+                Builder(builder: (context) {
+                  final venueMatch = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+                  final List<String> allFacilities = [];
+                  if (venueMatch.isNotEmpty) {
+                    final courts = venueMatch.first['courts'] as List<dynamic>? ?? [];
+                    for (final c in courts) {
+                      final facs = c['facilities'] as List<dynamic>?
+                          ?? (c['facility'] != null ? [c['facility']] : []);
+                      for (final f in facs) {
+                        final fs = f.toString();
+                        if (!allFacilities.contains(fs)) allFacilities.add(fs);
+                      }
+                    }
+                  }
+                  // Fallback minimal
+                  if (allFacilities.isEmpty) return const SizedBox.shrink();
+
+                  final Map<String, IconData> facilityIcons = {
+                    'Kamar Mandi': Icons.wc,
+                    'Parkiran': Icons.local_parking,
+                    'Kantin': Icons.restaurant,
+                    'Mushola': Icons.mosque,
+                    'Locker Room': Icons.lock_outline,
+                    'Toilet': Icons.wc,
+                    'Parkir': Icons.local_parking,
+                    'Makanan & Minuman': Icons.restaurant,
+                    'Prayer Room': Icons.mosque,
+                  };
+
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: allFacilities.asMap().entries.map((e) => Padding(
+                        padding: EdgeInsets.only(right: e.key < allFacilities.length - 1 ? 8 : 0),
+                        child: _facilityChip(
+                          facilityIcons[e.value] ?? Icons.check_circle_outline,
+                          e.value,
+                        ),
+                      )).toList(),
+                    ),
+                  );
+                }),
               ],
             ),
           ),

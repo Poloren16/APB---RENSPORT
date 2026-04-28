@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/utils/alert_utils.dart';
+import 'package:rensius/utils/validation_utils.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -66,9 +67,10 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // 5. Password Length
-    if (password.length < 6) {
-      _showError('Kata sandi minimal 6 karakter.');
+    // 5. Password Strength
+    final passwordError = ValidationUtils.validatePassword(password);
+    if (passwordError != null) {
+      _showError(passwordError);
       return;
     }
 
@@ -187,7 +189,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Minimal 6 karakter',
+                    hintText: 'Minimal 8 karakter, A-Z, 0-9, & simbol',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
                     suffixIcon: IconButton(
                       icon: Icon(

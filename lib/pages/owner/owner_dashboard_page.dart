@@ -5,6 +5,10 @@ import '../notifikasi.dart';
 import '../akun_page.dart';
 import '../chat_page.dart';
 import 'owner_activity_page.dart';
+import '../../widgets/empty_state_widget.dart';
+import '../../data/auth_data.dart';
+import '../../data/venue_data.dart';
+import '../../utils/booking_utils.dart';
 
 class OwnerDashboardPage extends StatefulWidget {
   final String username;
@@ -33,7 +37,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       _buildHomeContent(),
-      ManagementVenuePage(username: widget.username, role: widget.role),
+      ManagementVenuePage(ownerUsername: widget.username),
       OwnerActivityPage(username: widget.username),
       ChatPage(username: widget.username, role: widget.role),
       AkunPage(
@@ -45,9 +49,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: pages[_selectedIndex],
-      ),
+      body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
@@ -86,7 +88,8 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   }
 
   Widget _buildHomeContent() {
-    return SingleChildScrollView(
+    return SafeArea(
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,17 +107,22 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
           const SizedBox(height: 32),
         ],
       ),
+    ),
     );
   }
 
   Widget _buildHeader() {
+    final account = GlobalAuthData.getAccount(widget.username);
+    final displayName = account?.applicantName ?? widget.username;
+    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : 'O';
+
     return Row(
       children: [
         CircleAvatar(
           radius: 24,
           backgroundColor: AppColors.primary,
           child: Text(
-            widget.username.isNotEmpty ? widget.username[0].toUpperCase() : 'O',
+            initial,
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
@@ -124,7 +132,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Halo, ${widget.username}',
+                'Halo, $displayName',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const Text(
@@ -137,7 +145,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
         IconButton(
           icon: const Icon(Icons.notifications_outlined, color: AppColors.primary),
           onPressed: () => Navigator.push(
-            context, 
+            context,
             MaterialPageRoute(
               builder: (context) => NotifikasiPage(
                 username: widget.username,
@@ -153,9 +161,9 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   Widget _buildQuickStats() {
     return Row(
       children: [
-        _buildStatCard('Booking Hari Ini', '12', Icons.calendar_today, Colors.blue),
+        _buildStatCard('Booking Hari Ini', '0', Icons.calendar_today, Colors.blue),
         const SizedBox(width: 16),
-        _buildStatCard('Pendapatan', 'Rp 2.400.000', Icons.payments_outlined, Colors.green),
+        _buildStatCard('Pendapatan', 'Rp 0', Icons.payments_outlined, Colors.green),
       ],
     );
   }
@@ -183,36 +191,40 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   }
 
   Widget _buildRecentBookings() {
-    final List<Map<String, dynamic>> mockBookings = [
-      {
-        'name': 'Budi Santoso',
-        'court': 'BEC Tennis Court Lap.A',
-        'time': '18:00 - 19:00',
-        'price': 125000,
-        'services': ['Raket Tenis (x2)', 'Sepatu Tenis (x1)'],
-      },
-      {
-        'name': 'Sari Wijaya',
-        'court': 'BEC Tennis Court Lap.B',
-        'time': '08:00 - 10:00',
-        'price': 250000,
-        'services': [],
-      },
-      {
-        'name': 'Andi Pratama',
-        'court': 'BEC Tennis Court Lap.A',
-        'time': '20:00 - 21:00',
-        'price': 125000,
-        'services': ['Bola Tennis (x1)'],
-      },
-    ];
+    // Filter by owner's venues
+    final ownerVenues = GlobalVenueData.getVenuesForOwner(widget.username)
+        .map((v) => v['name'] as String)
+        .toSet();
+
+    final recentBookings = BookingUtils
+        .getTransactionsForOwner(null)
+        .where((b) => ownerVenues.contains(b['venueName']))
+        .toList()
+        .reversed
+        .take(5)
+        .toList();
+
+    if (recentBookings.isEmpty) {
+            return Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const EmptyStateWidget(
+          message: 'Belum Ada Pesanan',
+          subMessage: 'Pantau terus bisnis Anda, pesanan terbaru akan muncul di sini!',
+        ),
+      );
+    }
 
     return Column(
-      children: mockBookings.map((booking) => _buildBookingItem(booking)).toList(),
+      children: recentBookings.map((booking) => _buildBookingItem(booking)).toList(),
     );
   }
 
   Widget _buildBookingItem(Map<String, dynamic> booking) {
+    final services = booking['services'];
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -236,14 +248,14 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(booking['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text(booking['court'], style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text(booking['courtName'] ?? booking['name'] ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(booking['venueName'] ?? booking['court'] ?? '-', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         const Icon(Icons.access_time, size: 12, color: Colors.grey),
                         const SizedBox(width: 4),
-                        Text(booking['time'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        Text(booking['time'] ?? '-', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                       ],
                     ),
                   ],
@@ -261,7 +273,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               ),
             ],
           ),
-          if ((booking['services'] as List).isNotEmpty) ...[
+          if (services != null && (services is List && services.isNotEmpty || services is String && services.isNotEmpty)) ...[
             const SizedBox(height: 12),
             const Divider(height: 1),
             const SizedBox(height: 12),
@@ -270,7 +282,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: (booking['services'] as List).map((s) => Container(
+              children: (services is List ? services : services.toString().split(', ')).map((s) => Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
@@ -289,7 +301,9 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             children: [
               const Text('Total Pembayaran:', style: TextStyle(fontSize: 11, color: Colors.grey)),
               Text(
-                _formatCurrency(booking['price'] as int),
+                _formatCurrency((booking['price'] is int) 
+                    ? booking['price'] as int 
+                    : int.tryParse(booking['price'].toString()) ?? 0),
                 style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 15),
               ),
             ],

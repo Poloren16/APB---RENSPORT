@@ -3,6 +3,7 @@ import '../theme/app_colors.dart';
 import '../utils/alert_utils.dart';
 import '../data/auth_data.dart';
 import '../data/verification_data.dart';
+import '../utils/validation_utils.dart';
 import 'login_page.dart';
 
 class PengaturanKeamananPage extends StatefulWidget {
@@ -138,7 +139,11 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   }
 
   void _showChangePhoneDialog() {
-    final TextEditingController phoneController = TextEditingController(text: currentPhone == 'Belum Diatur' ? '' : currentPhone);
+    String displayPhone = currentPhone == 'Belum Diatur' ? '' : currentPhone;
+    if (displayPhone.startsWith('+62')) {
+      displayPhone = displayPhone.replaceFirst('+62', '').trim();
+    }
+    final TextEditingController phoneController = TextEditingController(text: displayPhone);
     showDialog(
       context: context,
       builder: (context) {
@@ -201,8 +206,9 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (passwordController.text.length < 6) {
-                  AlertUtils.showToast(context, 'Kata sandi harus minimal 6 karakter', isSuccess: false);
+                final passwordError = ValidationUtils.validatePassword(passwordController.text);
+                if (passwordError != null) {
+                  AlertUtils.showToast(context, passwordError, isSuccess: false);
                   return;
                 }
                 await GlobalAuthData.updateAccount(widget.username, newPassword: passwordController.text);

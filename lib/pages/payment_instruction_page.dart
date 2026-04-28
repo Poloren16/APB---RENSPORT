@@ -86,7 +86,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         if (serviceResults.isEmpty) return 'Unknown Service';
         final service = serviceResults.first;
         return '${service['name']} (x${e.value})';
-      }).join(', '),
+      }).toList(),
     };
 
     // Perform atomic slot reservation

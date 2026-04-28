@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_colors.dart';
 import '../data/auth_data.dart';
+import '../data/verification_data.dart';
 import '../utils/alert_utils.dart';
 import 'pengaturan_keamanan_page.dart';
 
@@ -409,6 +410,57 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
             );
           },
         ),
+
+        // KTP Section for Owner
+        if (widget.role.toLowerCase() == 'owner') ...[
+          const SizedBox(height: 24),
+          const Text('Foto KTP / Identitas', style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Builder(builder: (context) {
+            final reqs = GlobalVerificationData.requests
+                .where((r) => r.type == 'Owner' && 
+                    (r.username?.toLowerCase() == widget.username.toLowerCase() || 
+                     r.email.toLowerCase() == widget.email.toLowerCase()))
+                .toList();
+            final documentUrl = reqs.isNotEmpty ? reqs.first.documentUrl : '';
+            return Container(
+              height: 180,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: documentUrl.isNotEmpty && (documentUrl.contains('/') || documentUrl.contains('\\'))
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: kIsWeb
+                          ? Image.network(documentUrl, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                  Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                                  Text('Foto tidak dapat ditampilkan', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                ]),
+                              ))
+                          : Image.file(File(documentUrl), fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                  Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                                  Text('Foto tidak dapat ditampilkan', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                ]),
+                              )),
+                    )
+                  : const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.badge_outlined, size: 48, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Foto KTP belum diunggah', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+            );
+          }),
+        ],
         ],
       ),
     );

@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:rensius/theme/app_colors.dart';
 import 'package:rensius/data/venue_data.dart';
-import 'package:rensius/utils/alert_utils.dart';
 import 'package:rensius/widgets/empty_state_widget.dart';
 import 'venue_info_page.dart';
 import 'add_venue_page.dart';
 
 class ManagementVenuePage extends StatefulWidget {
-  final String username;
-  final String role;
-
-  const ManagementVenuePage({super.key, required this.username, required this.role});
+  final String ownerUsername;
+  const ManagementVenuePage({super.key, required this.ownerUsername});
 
   @override
   State<ManagementVenuePage> createState() => _ManagementVenuePageState();
 }
 
 class _ManagementVenuePageState extends State<ManagementVenuePage> {
-  // Use global data for venues
-  List<Map<String, dynamic>> get _venues => GlobalVenueData.venues;
+  // Only show venues belonging to this owner
+  List<Map<String, dynamic>> get _venues =>
+      GlobalVenueData.getVenuesForOwner(widget.ownerUsername);
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +62,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => AddVenuePage(username: widget.username, role: widget.role)),
+            MaterialPageRoute(builder: (context) => const AddVenuePage()),
           ).then((_) => setState(() {})); // Refresh list after adding
         },
         backgroundColor: AppColors.primary,
@@ -163,17 +161,20 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _venues.length,
-      itemBuilder: (context, index) {
+      itemBuilder: (context, listIndex) {
+        // Find real index in GlobalVenueData.venues for edit/delete
+        final venue = _venues[listIndex];
+        final globalIndex = GlobalVenueData.venues.indexOf(venue);
         return Padding(
           padding: const EdgeInsets.only(bottom: 16.0),
-          child: _buildVenueCard(index),
+          child: _buildVenueCard(listIndex, globalIndex),
         );
       },
     );
   }
 
-  Widget _buildVenueCard(int index) {
-    final venue = _venues[index];
+  Widget _buildVenueCard(int listIndex, int globalIndex) {
+    final venue = _venues[listIndex];
     final isActive = venue['status'] == 'Active';
 
     return Container(
@@ -268,12 +269,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AddVenuePage(
-                          venueToEdit: venue, 
-                          index: index,
-                          username: widget.username,
-                          role: widget.role,
-                        ),
+                        builder: (context) => AddVenuePage(venueToEdit: venue, index: globalIndex),
                       ),
                     ).then((_) => setState(() {})); // Refresh list after editing
                   },
@@ -281,7 +277,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
-                  onPressed: () => _confirmDelete(index),
+                  onPressed: () => _confirmDelete(globalIndex),
                   tooltip: 'Hapus Venue',
                 ),
               ],

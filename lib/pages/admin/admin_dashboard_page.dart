@@ -8,6 +8,7 @@ import 'package:rensius/pages/login_page.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/data/venue_data.dart';
 import 'package:rensius/widgets/empty_state_widget.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 
 class AdminDashboardPage extends StatefulWidget {
@@ -81,37 +82,42 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Widget _buildTopStats() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
       color: AppColors.primary,
-      child: Row(
-        children: [
-          _buildHeaderStat('Total Akun', '${GlobalAuthData.accounts.where((a) => a.role == 'Owner').length}', Icons.people_alt),
-          const SizedBox(width: 16),
-          _buildHeaderStat('Menunggu', '${GlobalVerificationData.requests.where((r) => r.status == 'Pending').length}', Icons.pending_actions),
-          const SizedBox(width: 16),
-          _buildHeaderStat('Terverifikasi', '${GlobalVerificationData.requests.where((r) => r.status == 'Approved').length}', Icons.verified_user),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Row(
+          children: [
+            _buildHeaderStat('Total User', '${GlobalAuthData.accounts.where((a) => a.role == 'End User').length}', Icons.person_outline),
+            const SizedBox(width: 12),
+            _buildHeaderStat('Total Owner', '${GlobalAuthData.accounts.where((a) => a.role == 'Owner').length}', Icons.business_center_outlined),
+            const SizedBox(width: 12),
+            _buildHeaderStat('Menunggu', '${GlobalVerificationData.requests.where((r) => r.status == 'Pending').length}', Icons.pending_actions),
+            const SizedBox(width: 12),
+            _buildHeaderStat('Terverifikasi', '${GlobalVerificationData.requests.where((r) => r.status == 'Approved').length}', Icons.verified_user_outlined),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeaderStat(String title, String value, IconData icon) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: Colors.white.withOpacity(0.8), size: 18),
-            const SizedBox(height: 8),
-            Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-            Text(title, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11)),
-          ],
-        ),
+    return Container(
+      width: 140,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.white.withOpacity(0.8), size: 18),
+          const SizedBox(height: 8),
+          Text(value,
+              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(title, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11)),
+        ],
       ),
     );
   }
@@ -298,11 +304,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   void _showDetailDialog(VerificationRequest req) {
+    final venueData = req.venueData;
+    final courts = venueData?['courts'] as List<dynamic>? ?? [];
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(req.type == 'Owner' ? 'Detail Owner' : 'Detail Venue'),
+        title: Row(
+          children: [
+            Icon(
+              req.type == 'Owner' ? Icons.person_pin : Icons.stadium,
+              color: AppColors.primary, size: 22,
+            ),
+            const SizedBox(width: 8),
+            Text(req.type == 'Owner' ? 'Detail Verifikasi Owner' : 'Detail Verifikasi Venue'),
+          ],
+        ),
         content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
@@ -310,86 +328,222 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildDetailRow('Nama Pemohon', req.applicantName),
-                if (req.username != null) _buildDetailRow('Username Akun', req.username!),
-                if (req.phoneNumber != null) _buildDetailRow('Nomor WhatsApp', req.phoneNumber!),
-                if (req.type == 'Venue') _buildDetailRow('Alamat', req.venueAddress ?? '-'),
-                
-                if (req.type == 'Venue' && req.venueData != null) ...[
-                  const SizedBox(height: 16),
-                  const Text('Detail Lapangan:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  const SizedBox(height: 8),
-                  ...(req.venueData!['courts'] as List).map((court) => Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.blue.shade100),
+                // ── Info Pemohon ──────────────────────────────
+                _buildSectionHeader('Informasi Pemohon'),
+                _buildDetailRow('Nama Lengkap', req.applicantName),
+                if (req.username != null) _buildDetailRow('Username', req.username!),
+                if (req.phoneNumber != null) _buildDetailRow('No. WhatsApp', req.phoneNumber!),
+                if (req.email.isNotEmpty) _buildDetailRow('Email', req.email),
+
+                // ── Data Legal (NIK/NPWP) ─────────────────────
+                const SizedBox(height: 12),
+                _buildSectionHeader('Dokumen Legal'),
+                _buildDetailRow('NIK', req.nik.isNotEmpty && req.nik != '-' ? req.nik : 'Tidak diisi'),
+                _buildDetailRow('NPWP', req.npwp.isNotEmpty && req.npwp != '-' ? req.npwp : 'Tidak diisi'),
+
+                // ── Data Venue (khusus type Venue) ────────────
+                if (req.type == 'Venue') ...[
+                  const SizedBox(height: 12),
+                  _buildSectionHeader('Informasi Venue'),
+                  _buildDetailRow('Nama Venue', req.venueName ?? '-'),
+                  if ((req.venueProvinsi ?? '').isNotEmpty)
+                    _buildDetailRow('Provinsi', req.venueProvinsi!),
+                  if ((req.venueKota ?? '').isNotEmpty)
+                    _buildDetailRow('Kota', req.venueKota!),
+                  if ((req.venueAddress ?? '').isNotEmpty)
+                    _buildDetailRow('Alamat Jalan', req.venueAddress!),
+
+                  // Koordinat Maps
+                  if (req.venueLat != null && req.venueLng != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on, color: Colors.blue, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Koordinat Maps', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                Text(
+                                  'Lat: ${double.tryParse(req.venueLat!)?.toStringAsFixed(6) ?? req.venueLat}\nLng: ${double.tryParse(req.venueLng!)?.toStringAsFixed(6) ?? req.venueLng}',
+                                  style: TextStyle(fontSize: 11, color: Colors.blue.shade800),
+                                ),
+                                GestureDetector(
+                                  onTap: () async {
+                                    final url = Uri.parse('https://maps.google.com/?q=${req.venueLat},${req.venueLng}');
+                                    if (await canLaunchUrl(url)) {
+                                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                                    }
+                                  },
+                                  child: Text(
+                                    'https://maps.google.com/?q=${req.venueLat},${req.venueLng}',
+                                    style: TextStyle(fontSize: 10, color: Colors.blue.shade600, decoration: TextDecoration.underline),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ],
+
+                  // Daftar Courts
+                  if (courts.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _buildSectionHeader('Lapangan (${courts.length})'),
+                    ...courts.map((c) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(court['name'] ?? 'Lapangan', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            Text(court['type'] ?? '', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                            Text(c['name'] ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                _buildChip(c['type'] ?? '-', Icons.sports),
+                                _buildChip(c['courtCategory'] ?? '-', Icons.home),
+                                _buildChip(c['floorType'] ?? '-', Icons.layers),
+                                if ((c['size'] ?? '').isNotEmpty) _buildChip(c['size'], Icons.straighten),
+                                // Multi-select facilities
+                                ...((c['facilities'] as List<dynamic>? ?? 
+                                     (c['facility'] != null ? [c['facility']] : [])).map(
+                                  (f) => _buildChip(f.toString(), Icons.check_circle_outline),
+                                )),
+                                // Services count
+                                if ((c['services'] as List<dynamic>? ?? []).isNotEmpty)
+                                  _buildChip('${(c['services'] as List).length} Layanan', Icons.shopping_bag_outlined),
+                              ],
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text('Ukuran: ${court['size'] ?? '-'}', style: const TextStyle(fontSize: 12)),
-                        Text('Lantai: ${court['floorType'] ?? '-'}', style: const TextStyle(fontSize: 12)),
-                        Text('Kategori: ${court['courtCategory'] ?? '-'}', style: const TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                  )).toList(),
+                      ),
+                    )),
+                  ],
                 ],
 
+                // ── Foto Lapangan (jika ada) ──────────────────
+                if (req.type == 'Venue') ...[
+                  const SizedBox(height: 16),
+                  _buildSectionHeader('Foto Venue'),
+                  Builder(builder: (context) {
+                    final imagePaths = venueData?['imagePaths'] as List<dynamic>? 
+                        ?? venueData?['images'] as List<dynamic>? 
+                        ?? [];
+                    if (imagePaths.isEmpty) {
+                      return Container(
+                        height: 80,
+                        decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+                        child: const Center(child: Text('Belum ada foto venue', style: TextStyle(color: Colors.grey, fontSize: 12))),
+                      );
+                    }
+                    return SizedBox(
+                      height: 100,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: imagePaths.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, i) {
+                          final path = imagePaths[i].toString();
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              File(path),
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 100,
+                                height: 100,
+                                color: Colors.grey.shade200,
+                                child: const Icon(Icons.broken_image, color: Colors.grey),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }),
+                ],
+
+                // ── Foto KTP ──────────────────────────────────
                 const SizedBox(height: 16),
-                const Text('Lampiran:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const Text('Foto KTP / Identitas:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 const SizedBox(height: 8),
-                Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (req.documentUrl.isNotEmpty && 
-                          (req.documentUrl.contains('/') || req.documentUrl.contains('\\')))
-                        Positioned.fill(
-                          child: kIsWeb
-                              ? Image.network(
-                                  req.documentUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
-                                )
-                              : Image.file(
-                                  File(req.documentUrl),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
-                                ),
-                        )
-                      else if (req.documentUrl.startsWith('assets/'))
-                        Positioned.fill(
-                          child: Image.asset(req.documentUrl, fit: BoxFit.cover),
-                        )
-                      else
-                        const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.image, size: 48, color: Colors.grey),
-                            Text('Dokumen tidak tersedia', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
+                Builder(builder: (context) {
+                  String displayDocUrl = req.documentUrl;
+                  if (req.type == 'Venue' && (req.username != null || req.email.isNotEmpty)) {
+                    final ownerReqs = GlobalVerificationData.requests
+                        .where((r) => r.type == 'Owner' && 
+                            ((req.username != null && r.username?.toLowerCase() == req.username?.toLowerCase()) || 
+                             r.email.toLowerCase() == req.email.toLowerCase()))
+                        .toList();
+                    if (ownerReqs.isNotEmpty && ownerReqs.last.documentUrl.isNotEmpty) {
+                      displayDocUrl = ownerReqs.last.documentUrl;
+                    }
+                  }
+                  
+                  return Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (displayDocUrl.isNotEmpty &&
+                            (displayDocUrl.contains('/') || displayDocUrl.contains('\\')))
+                          Positioned.fill(
+                            child: kIsWeb
+                                ? Image.network(
+                                    displayDocUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+                                  )
+                                : Image.file(
+                                    File(displayDocUrl),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+                                  ),
+                          )
+                        else if (displayDocUrl.startsWith('assets/'))
+                          Positioned.fill(
+                            child: Image.asset(displayDocUrl, fit: BoxFit.cover),
+                          )
+                        else
+                          const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.image, size: 48, color: Colors.grey),
+                              Text('Dokumen tidak tersedia', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                            ],
+                          ),
+                      ],
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -416,7 +570,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      Navigator.pop(context); // Close Detail Dialog first
+                      Navigator.pop(context);
                       await _handleStatusChange(req, 'Approved');
                     },
                     style: ElevatedButton.styleFrom(
@@ -446,6 +600,37 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       ),
     );
   }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(width: 4, height: 16, decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: 8),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChip(String label, IconData icon) {
+    return Chip(
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.all(2),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: Colors.grey.shade600),
+          const SizedBox(width: 3),
+          Text(label, style: const TextStyle(fontSize: 11)),
+        ],
+      ),
+      backgroundColor: Colors.grey.shade100,
+      side: BorderSide(color: Colors.grey.shade300),
+    );
+  }
+
 
   Future<void> _showRejectDialog(VerificationRequest req) async {
     final controller = TextEditingController();
@@ -478,39 +663,25 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     // But for this mock, await the save directly
     await GlobalVerificationData.updateRequestStatus(req.id, newStatus, reason: reason);
 
-    // If Approved, handle specific logic for Owner / Venue
+    // If Approved, handle based on type
     if (newStatus == 'Approved') {
       if (req.type == 'Owner' && req.username != null) {
         await GlobalAuthData.registerAccount(UserAccount(
           username: req.username!,
           password: req.password ?? '123456',
-          role: req.type,
+          role: 'Owner',
           applicantName: req.applicantName,
-          email: req.email ?? '',
+          email: req.email,
           phoneNumber: req.phoneNumber ?? '',
         ));
       } else if (req.type == 'Venue' && req.venueData != null) {
-        // Update venue status in GlobalVenueData
-        final vName = req.venueName;
-        final vIndex = GlobalVenueData.venues.indexWhere((v) => v['name'] == vName && v['status'] == 'Menunggu Verifikasi');
-        if (vIndex != -1) {
-          GlobalVenueData.venues[vIndex]['status'] = 'Aktif';
-        } else {
-          // If somehow not in list (e.g. data cleared), add it
-          var data = Map<String, dynamic>.from(req.venueData!);
-          data['status'] = 'Aktif';
-          GlobalVenueData.venues.add(data);
-        }
+        // Publish venue to public list
+        await GlobalVenueData.addVenue(req.venueData!);
       }
     } 
-    // If Rejected
-    else if (newStatus == 'Rejected') {
-      if (req.type == 'Owner' && req.username != null) {
-        await GlobalAuthData.deleteAccount(req.username!);
-      } else if (req.type == 'Venue') {
-        // Remove pending venue or mark as rejected
-        GlobalVenueData.venues.removeWhere((v) => v['name'] == req.venueName && v['status'] == 'Menunggu Verifikasi');
-      }
+    // If Rejected, handle cleanup
+    else if (newStatus == 'Rejected' && req.type == 'Owner' && req.username != null) {
+      await GlobalAuthData.deleteAccount(req.username!);
     }
 
     if (mounted) {
@@ -527,6 +698,80 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         message: 'Permintaan ${req.applicantName} telah $newStatus.',
       );
     }
+  }
+
+  void _showOwnerKtpDialog(UserAccount acc) {
+    // Find the verification request for this owner to get documentUrl
+    final req = GlobalVerificationData.requests
+        .where((r) => r.username == acc.username)
+        .toList();
+    final documentUrl = req.isNotEmpty ? req.first.documentUrl : '';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.badge, color: Colors.teal, size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Foto KTP – ${acc.applicantName}',
+                style: const TextStyle(fontSize: 16),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('@${acc.username}', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+            const SizedBox(height: 12),
+            Container(
+              height: 200,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: documentUrl.isNotEmpty && (documentUrl.contains('/') || documentUrl.contains('\\'))
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: kIsWeb
+                          ? Image.network(documentUrl, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildErrorImage())
+                          : Image.file(File(documentUrl), fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildErrorImage()),
+                    )
+                  : const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.badge_outlined, size: 48, color: Colors.grey),
+                        SizedBox(height: 8),
+                        Text('Foto KTP tidak tersedia', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Tutup', style: TextStyle(color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // ACCOUNT MANAGEMENT (NEW)
@@ -612,6 +857,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           if (isDeletable)
             Row(
               children: [
+                if (acc.role == 'Owner')
+                  IconButton(
+                    icon: const Icon(Icons.badge_outlined, color: Colors.teal),
+                    tooltip: 'Lihat KTP',
+                    onPressed: () => _showOwnerKtpDialog(acc),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.edit_note_rounded, color: AppColors.primary),
                   onPressed: () => _showEditAccountDialog(acc),
@@ -702,17 +953,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       onPressed: () async {
                         Navigator.pop(context);
                         
-                        // Sync with verification records
+                        // 1. Sync with verification records
                         final reqIndex = GlobalVerificationData.requests.indexWhere((r) => r.username == acc.username);
                         if (reqIndex != -1) {
                           await GlobalVerificationData.updateRequestStatus(
-                            GlobalVerificationData.requests[reqIndex].id,
-                            'Rejected',
-                            reason: 'Akun dihapus oleh Admin',
+                            GlobalVerificationData.requests[reqIndex].id, 
+                            'Rejected', 
+                            reason: 'Akun dihapus oleh Admin'
                           );
                         }
                         
+                        // 2. Delete the account
                         await GlobalAuthData.deleteAccount(acc.username);
+                        
                         setState(() {}); // Refresh list
                         if (mounted) {
                           AlertUtils.showToast(context, 'Akun berhasil dihapus');

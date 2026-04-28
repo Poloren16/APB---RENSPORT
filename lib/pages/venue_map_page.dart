@@ -41,14 +41,20 @@ class _VenueMapPageState extends State<VenueMapPage> {
   }
 
   Future<void> _openInExternalApp() async {
-    final googleMapsUrl = Uri.parse(
+    // Gunakan geo: URI supaya langsung buka Google Maps dengan koordinat (bukan nama)
+    final geoUri = Uri.parse('geo:${widget.latitude},${widget.longitude}?q=${widget.latitude},${widget.longitude}');
+    // Fallback: https URL dengan lat,lng koordinat
+    final webUri = Uri.parse(
         'https://www.google.com/maps/search/?api=1&query=${widget.latitude},${widget.longitude}');
-    if (await canLaunchUrl(googleMapsUrl)) {
-      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+
+    if (await canLaunchUrl(geoUri)) {
+      await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+    } else if (await canLaunchUrl(webUri)) {
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open map app')),
+          const SnackBar(content: Text('Tidak dapat membuka aplikasi peta')),
         );
       }
     }
