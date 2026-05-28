@@ -30,20 +30,19 @@ class GlobalNotificationData {
   }
 
   static List<AppNotification> getNotificationsForUser(String username, String role) {
-    // If admin/owner, maybe see all 'admin' notifications. We'll use 'owner' or 'admin' as pseudo-usernames.
     String queryUser = (role == 'Admin' || role == 'Owner') ? 'admin' : username;
-    return notifications.where((n) => n.username == queryUser).toList();
+    return notifications.where((n) => n.username == queryUser || n.username == 'all').toList();
   }
 
   static int getUnreadCount(String username, String role) {
     String queryUser = (role == 'Admin' || role == 'Owner') ? 'admin' : username;
-    return notifications.where((n) => n.username == queryUser && !n.isRead).length;
+    return notifications.where((n) => (n.username == queryUser || n.username == 'all') && !n.isRead).length;
   }
 
   static void markAllAsRead(String username, String role) {
     String queryUser = (role == 'Admin' || role == 'Owner') ? 'admin' : username;
     for (var n in notifications) {
-      if (n.username == queryUser) {
+      if (n.username == queryUser || n.username == 'all') {
         n.isRead = true;
       }
     }

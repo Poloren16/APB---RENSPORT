@@ -28,6 +28,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
   late TextEditingController _phoneController;
   late TextEditingController _usernameController;
   late TextEditingController _passwordController;
+  late TextEditingController _confirmPasswordController;
   
   // Controllers Step 2
   late TextEditingController _nikController;
@@ -36,6 +37,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
   final ImagePicker _picker = ImagePicker();
   XFile? _imageFile;
   bool _documentUploaded = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   void initState() {
@@ -45,6 +47,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
     _phoneController = TextEditingController();
     _usernameController = TextEditingController();
     _passwordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
     _nikController = TextEditingController();
     _npwpController = TextEditingController();
   }
@@ -56,6 +59,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
     _phoneController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _nikController.dispose();
     _npwpController.dispose();
     super.dispose();
@@ -68,8 +72,9 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       final phone = _phoneController.text.trim();
       final user = _usernameController.text.trim();
       final pass = _passwordController.text.trim();
+      final confirmPass = _confirmPasswordController.text.trim();
 
-      if (name.isEmpty || email.isEmpty || phone.isEmpty || user.isEmpty || pass.isEmpty) {
+      if (name.isEmpty || email.isEmpty || phone.isEmpty || user.isEmpty || pass.isEmpty || confirmPass.isEmpty) {
         _showValidationError('Harap isi semua informasi profil dan akun.');
         return false;
       }
@@ -89,13 +94,40 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       }
       
       // Check if username exists
-      if (GlobalAuthData.usernameExists(user)) {
+      if (GlobalAuthData.usernameExists(user) || 
+          GlobalVerificationData.requests.any((r) => r.username == user)) {
         _showValidationError('Nama pengguna ini sudah digunakan. Silakan pilih yang lain.');
         return false;
       }
+
+      // Check if email exists
+      if (GlobalAuthData.emailExists(email) || 
+          GlobalVerificationData.requests.any((r) => r.email.toLowerCase().trim() == email.toLowerCase().trim())) {
+        _showValidationError('Email ini sudah terdaftar. Silakan pilih email lain.');
+        return false;
+      }
+
+      // Check if phone number exists
+      if (GlobalAuthData.phoneExists(phone) || 
+          GlobalVerificationData.requests.any((r) => r.phoneNumber?.replaceAll(RegExp(r'[^0-9]'), '') == phone.replaceAll(RegExp(r'[^0-9]'), ''))) {
+        _showValidationError('Nomor telepon ini sudah terdaftar. Silakan pilih nomor lain.');
+        return false;
+      }
       
-      if (pass.length < 6) {
-        _showValidationError('Kata sandi harus minimal 6 karakter.');
+      if (pass != confirmPass) {
+        _showValidationError('Konfirmasi kata sandi tidak cocok.');
+        return false;
+      }
+      
+      final uppercaseRegex = RegExp(r'[A-Z]');
+      final numericRegex = RegExp(r'[0-9]');
+      final symbolRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>\-_=+\\\/\[\]]');
+
+      if (pass.length < 8 ||
+          !uppercaseRegex.hasMatch(pass) ||
+          !numericRegex.hasMatch(pass) ||
+          !symbolRegex.hasMatch(pass)) {
+        _showValidationError('Kata sandi harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.');
         return false;
       }
 
@@ -362,6 +394,8 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         _buildTextField(_usernameController, 'Nama Pengguna', Icons.alternate_email_rounded),
         const SizedBox(height: 16),
         _buildPasswordField(),
+        const SizedBox(height: 16),
+        _buildConfirmPasswordField(),
       ],
     );
   }
@@ -418,11 +452,38 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
           controller: _passwordController,
           obscureText: !_isPasswordVisible,
           decoration: InputDecoration(
-            hintText: 'Masukkan Kata Sandi',
+            hintText: 'Minimal 8 karakter (1 kapital, 1 angka, 1 simbol)',
             prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
             suffixIcon: IconButton(
               icon: Icon(_isPasswordVisible ? Icons.visibility_off : Icons.visibility, color: AppColors.textSecondary),
               onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConfirmPasswordField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Konfirmasi Kata Sandi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.textPrimary)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _confirmPasswordController,
+          obscureText: !_isConfirmPasswordVisible,
+          decoration: InputDecoration(
+            hintText: 'Ulangi kata sandi Anda',
+            prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
+            suffixIcon: IconButton(
+              icon: Icon(_isConfirmPasswordVisible ? Icons.visibility_off : Icons.visibility, color: AppColors.textSecondary),
+              onPressed: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
             ),
             filled: true,
             fillColor: Colors.white,

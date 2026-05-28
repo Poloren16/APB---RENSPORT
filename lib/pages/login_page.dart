@@ -34,7 +34,7 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => DashboardPage(username: account.applicantName, role: 'End User'),
+          builder: (context) => DashboardPage(username: account.username, role: 'End User'),
         ),
       );
     } else if (account != null) {
@@ -108,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 // Login Form
                 const Text(
-                  'Selamat Datang Kembali',
+                  'Selamat Datang',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,

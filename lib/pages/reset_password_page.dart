@@ -25,8 +25,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       return;
     }
 
-    if (password.length < 6) {
-      AlertUtils.showToast(context, 'Kata sandi minimal 6 karakter', isSuccess: false);
+    final uppercaseRegex = RegExp(r'[A-Z]');
+    final numericRegex = RegExp(r'[0-9]');
+    final symbolRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>\-_=+\\\/\[\]]');
+
+    if (password.length < 8 ||
+        !uppercaseRegex.hasMatch(password) ||
+        !numericRegex.hasMatch(password) ||
+        !symbolRegex.hasMatch(password)) {
+      AlertUtils.showToast(context, 'Kata sandi harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.', isSuccess: false);
       return;
     }
 
@@ -127,7 +134,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 controller: _passwordController,
                 obscureText: !_isPasswordVisible,
                 decoration: InputDecoration(
-                  hintText: 'Minimal 6 karakter',
+                  hintText: 'Minimal 8 karakter (1 kapital, 1 angka, 1 simbol)',
                   prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
                   suffixIcon: IconButton(
                     icon: Icon(

@@ -34,17 +34,6 @@ class BookingUtils {
     _reservedSlots.add(key);
   }
 
-  /// Initial mock booked slots for consistency across all pages
-  /// This ensures that 12:00 and 14:00 are consistently full even on first load,
-  /// but ONLY for the current date.
-  static bool _isInitialMockBooked(String dateStr, String startTime) {
-    final todayStr = formatDate(DateTime.now());
-    if (dateStr != todayStr) return false; // Available for any other date
-    
-    // We'll mark 12:00 and 14:00 as full for today
-    return startTime == '12:00' || startTime == '14:00';
-  }
-
   /// Checks if a slot is booked globally
   static bool isSlotBooked({
     required String venueName,

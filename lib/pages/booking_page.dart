@@ -42,32 +42,87 @@ class _BookingPageState extends State<BookingPage>
 
   final List<String> _tabs = ['Pilih Jadwal', 'Layanan'];
 
-  // Slot waktu
-  final List<Map<String, dynamic>> _timeSlots = [
-    {'time': '06:00 - 07:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
-    {'time': '07:00 - 08:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
-    {'time': '08:00 - 09:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
-    {'time': '09:00 - 10:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
-    {'time': '10:00 - 11:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
-    {'time': '11:00 - 12:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
-    {'time': '12:00 - 13:00', 'price': 100000, 'originalPrice': 125000, 'available': false, 'booked': true},
-    {'time': '13:00 - 14:00', 'price': 100000, 'originalPrice': 125000, 'available': true, 'booked': false},
-    {'time': '14:00 - 15:00', 'price': 100000, 'originalPrice': 125000, 'available': false, 'booked': true},
-    {'time': '15:00 - 16:00', 'price': 125000, 'originalPrice': 150000, 'available': true, 'booked': false},
-    {'time': '16:00 - 17:00', 'price': 125000, 'originalPrice': 150000, 'available': true, 'booked': false},
-    {'time': '17:00 - 18:00', 'price': 125000, 'originalPrice': 150000, 'available': true, 'booked': false},
-    {'time': '18:00 - 19:00', 'price': 125000, 'originalPrice': 150000, 'available': true, 'booked': false},
-    {'time': '19:00 - 20:00', 'price': 125000, 'originalPrice': 150000, 'available': true, 'booked': false},
-    {'time': '20:00 - 21:00', 'price': 125000, 'originalPrice': 150000, 'available': true, 'booked': false},
-    {'time': '21:00 - 22:00', 'price': 125000, 'originalPrice': 150000, 'available': false, 'booked': true},
-  ];
+  // Diisi secara dinamis dari data venue — BUKAN hardcoded lagi
+  final List<Map<String, dynamic>> _timeSlots = [];
 
   final List<Map<String, dynamic>> _courts = [];
+
+  static const List<String> _dayNames = [
+    'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu',
+  ];
+
+  /// Generate time slots dari data availability & price yang diisi owner.
+  /// Dipanggil saat init dan saat tanggal berubah.
+  void _rebuildSlotsForDate(DateTime date) {
+    _timeSlots.clear();
+    final String dayName = _dayNames[date.weekday % 7];
+
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    if (venueResults.isEmpty) {
+      // Fallback minimal jika tidak ada data
+      _addFallbackSlots();
+      return;
+    }
+
+    final venue = venueResults.first;
+    final courts = venue['courts'] as List<dynamic>? ?? [];
+
+    if (courts.isEmpty) {
+      _addFallbackSlots();
+      return;
+    }
+
+    // Ambil data dari court pertama sebagai basis slot (semua court berbagi jam operasional)
+    final firstCourt = courts.first as Map;
+    final availability = (firstCourt['availability'] as Map?)?[dayName];
+    final priceDay = (firstCourt['priceDay'] as Map?)?[dayName];
+
+    if (availability == null || (availability as List).isEmpty) {
+      // Hari libur / tidak beroperasi
+      return;
+    }
+
+    final int price = int.tryParse(
+      priceDay?.toString().replaceAll('.', '').replaceAll(',', '') ?? '100000',
+    ) ?? 100000;
+    final int originalPrice = (price * 1.25).toInt();
+
+    final List<String> slots = List<String>.from(availability);
+    slots.sort();
+
+    for (final timeStr in slots) {
+      final parts = timeStr.split(':');
+      final hour = int.tryParse(parts[0]) ?? 6;
+      final nextHour = (hour + 1).toString().padLeft(2, '0');
+      _timeSlots.add({
+        'time': '$timeStr - $nextHour:00',
+        'price': price,
+        'originalPrice': originalPrice,
+        'available': true,
+        'booked': false,
+      });
+    }
+  }
+
+  void _addFallbackSlots() {
+    // Slot default minimal jika venue tidak punya data availability
+    const fallbackHours = ['08:00','09:00','10:00','11:00','13:00','15:00','16:00','17:00'];
+    for (final t in fallbackHours) {
+      final h = int.tryParse(t.split(':')[0]) ?? 8;
+      _timeSlots.add({
+        'time': '$t - ${(h + 1).toString().padLeft(2, '0')}:00',
+        'price': 100000,
+        'originalPrice': 125000,
+        'available': true,
+        'booked': false,
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    
+
     // Load dynamic courts for the venue
     final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
     if (venueResults.isNotEmpty) {
@@ -78,6 +133,9 @@ class _BookingPageState extends State<BookingPage>
           _courts.add({
             'name': c['name'] ?? 'Lapangan',
             'type': c['type'] ?? widget.venueType,
+            'size': c['size'] ?? '-',
+            'courtCategory': c['courtCategory'] ?? '-',
+            'floorType': c['floorType'] ?? '-',
           });
         }
       }
@@ -86,9 +144,18 @@ class _BookingPageState extends State<BookingPage>
     // Fallback if no courts found
     if (_courts.isEmpty) {
       _courts.addAll([
-        {'name': '${widget.venueName} Court 1', 'type': widget.venueType},
+        {
+          'name': '${widget.venueName} Court 1',
+          'type': widget.venueType,
+          'size': '-',
+          'courtCategory': '-',
+          'floorType': '-',
+        },
       ]);
     }
+
+    // Build initial time slots
+    _rebuildSlotsForDate(_selectedDate);
 
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(() {
@@ -114,22 +181,47 @@ class _BookingPageState extends State<BookingPage>
 
   int get _totalSelected => _selectedSlots.length;
   
+  /// Kumpulkan semua services dari semua courts venue ini
+  List<Map<String, dynamic>> get _allServices {
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    if (venueResults.isEmpty) return [];
+    final courts = venueResults.first['courts'] as List<dynamic>? ?? [];
+    final seen = <String>{};
+    final result = <Map<String, dynamic>>[];
+    for (final c in courts) {
+      final services = c['services'] as List<dynamic>? ?? [];
+      for (final s in services) {
+        final sMap = Map<String, dynamic>.from(s as Map);
+        final name = sMap['name']?.toString() ?? '';
+        if (name.isNotEmpty && !seen.contains(name)) {
+          seen.add(name);
+          result.add(sMap);
+        }
+      }
+    }
+    return result;
+  }
+
   int get _totalPrice {
     int total = _selectedSlots.fold(0, (sum, key) {
       final parts = key.split('_');
       final slotIndex = int.tryParse(parts[0]) ?? 0;
-      return sum + (_timeSlots[slotIndex]['price'] as int);
+      if (slotIndex < _timeSlots.length) {
+        return sum + (_timeSlots[slotIndex]['price'] as int? ?? 0);
+      }
+      return sum;
     });
 
-    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
-    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-    final services = venue['services'] as List<dynamic>? ?? [];
-    
-    _selectedServices.forEach((id, qty) {
-      final serviceResults = services.where((s) => s['id'] == id);
+    final services = _allServices;
+    _selectedServices.forEach((name, qty) {
+      final serviceResults = services.where((s) => s['name'] == name || s['id']?.toString() == name);
       if (serviceResults.isNotEmpty) {
         final service = serviceResults.first;
-        total += (service['price'] as int) * qty;
+        final priceRaw = service['price'];
+        final price = priceRaw is int
+            ? priceRaw
+            : int.tryParse(priceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
+        total += price * qty;
       }
     });
 
@@ -193,8 +285,30 @@ class _BookingPageState extends State<BookingPage>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-        final currentDayName = days[_selectedDate.weekday % 7];
+        const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+        final currentDayName = days[(_selectedDate.weekday - 1) % 7];
+
+        // Ambil availability dari court pertama venue ini
+        final venueRes = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+        final courtData = venueRes.isNotEmpty
+            ? ((venueRes.first['courts'] as List<dynamic>?) ?? [])
+            : <dynamic>[];
+        final availability = courtData.isNotEmpty
+            ? (courtData.first['availability'] as Map? ?? {})
+            : <dynamic, dynamic>{};
+
+        // Build jam operasional per hari
+        String getHours(String day) {
+          final raw = availability[day];
+          if (raw == null) return 'Tutup';
+          final List<String> slots = raw is List ? List<String>.from(raw) : (raw is Set ? List<String>.from(raw) : []);
+          if (slots.isEmpty) return 'Tutup';
+          slots.sort();
+          final firstHour = int.tryParse(slots.first.split(':')[0]) ?? 0;
+          final lastHour = (int.tryParse(slots.last.split(':')[0]) ?? 22) + 1;
+          return '${firstHour.toString().padLeft(2,'0')}:00 - ${lastHour.toString().padLeft(2,'0')}:00';
+        }
+
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -213,13 +327,7 @@ class _BookingPageState extends State<BookingPage>
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 16),
-                _buildOperationalRow('Minggu', '06:00 - 22:00', currentDayName == 'Minggu'),
-                _buildOperationalRow('Senin', '06:00 - 22:00', currentDayName == 'Senin'),
-                _buildOperationalRow('Selasa', '06:00 - 22:00', currentDayName == 'Selasa'),
-                _buildOperationalRow('Rabu', '06:00 - 21:00', currentDayName == 'Rabu'),
-                _buildOperationalRow('Kamis', '06:00 - 22:00', currentDayName == 'Kamis'),
-                _buildOperationalRow('Jumat', '06:00 - 22:00', currentDayName == 'Jumat'),
-                _buildOperationalRow('Sabtu', '06:00 - 22:00', currentDayName == 'Sabtu'),
+                ...days.map((d) => _buildOperationalRow(d, getHours(d), d == currentDayName)).toList(),
                 const SizedBox(height: 16),
                 Text(
                   '*Jam buka dapat berubah sewaktu-waktu',
@@ -263,16 +371,37 @@ class _BookingPageState extends State<BookingPage>
     final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
     if (venueResults.isNotEmpty) {
       final venue = venueResults.first;
-      final lat = venue['lat'] as double?;
-      final lng = venue['lng'] as double?;
-      
-      if (lat != null && lng != null) {
+
+      // Parse lat/lng — coba dari field 'lat'/'lng' dulu
+      double? lat, lng;
+      final latRaw = venue['lat'];
+      final lngRaw = venue['lng'];
+      lat = latRaw is double ? latRaw
+          : latRaw is num ? latRaw.toDouble()
+          : double.tryParse(latRaw?.toString() ?? '');
+      lng = lngRaw is double ? lngRaw
+          : lngRaw is num ? lngRaw.toDouble()
+          : double.tryParse(lngRaw?.toString() ?? '');
+
+      // Fallback: parse dari field 'dll' → "Koordinat: -6.2088, 106.8456"
+      if ((lat == null || lat == 0.0) || (lng == null || lng == 0.0)) {
+        final dll = venue['dll']?.toString() ?? '';
+        final coordMatch = RegExp(r'Koordinat:\s*(-?[\d.]+),\s*(-?[\d.]+)').firstMatch(dll);
+        if (coordMatch != null) {
+          lat = double.tryParse(coordMatch.group(1) ?? '');
+          lng = double.tryParse(coordMatch.group(2) ?? '');
+        }
+      }
+
+      if (lat != null && lng != null && lat != 0.0 && lng != 0.0) {
+        // ✅ Buka VenueMapPage in-app dengan embed Google Maps
+        if (!mounted) return;
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => VenueMapPage(
-              latitude: lat,
-              longitude: lng,
+              latitude: lat!,
+              longitude: lng!,
               venueName: widget.venueName,
               venueAddress: widget.venueAddress,
             ),
@@ -282,12 +411,34 @@ class _BookingPageState extends State<BookingPage>
       }
     }
 
-    final query = Uri.encodeComponent(widget.venueName + ' ' + widget.venueAddress);
-    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
+    // ❌ Koordinat belum di-set oleh Owner — tampilkan info in-app
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.location_off_outlined, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Lokasi Belum Tersedia', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(
+          'Pengelola venue "${widget.venueName}" belum menambahkan lokasi peta. '
+          'Hubungi venue untuk informasi lokasi lebih lanjut.',
+          style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Oke', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
+
 
   void _showBookingConfirmation(BuildContext context) {
     final monthNames = [
@@ -494,6 +645,7 @@ class _BookingPageState extends State<BookingPage>
                                     setState(() {
                                       _selectedDate = picked;
                                       _selectedSlots.clear();
+                                      _rebuildSlotsForDate(picked);
                                     });
                                   }
                                 },
@@ -518,6 +670,7 @@ class _BookingPageState extends State<BookingPage>
                                 onTap: () => setState(() {
                                   _selectedDate = DateTime.now();
                                   _selectedSlots.clear();
+                                  _rebuildSlotsForDate(DateTime.now());
                                 }),
                                 child: const Text(
                                   'Reset & Ulang',
@@ -535,6 +688,7 @@ class _BookingPageState extends State<BookingPage>
                               setState(() {
                                 _selectedDate = date;
                                 _selectedSlots.clear();
+                                _rebuildSlotsForDate(date);
                               });
                             },
                           ),
@@ -568,9 +722,9 @@ class _BookingPageState extends State<BookingPage>
                               courtName: court['name'] as String,
                               venueName: widget.venueName,
                               sportType: court['type'] as String,
-                              dimensions: 'P 23 X L 10',
-                              courtCategory: 'Outdoor',
-                              floorType: 'Vinyl',
+                              dimensions: court['size']?.toString() ?? '-',
+                              courtCategory: court['courtCategory']?.toString() ?? '-',
+                              floorType: court['floorType']?.toString() ?? '-',
                             ),
                           ),
                         );
@@ -837,9 +991,7 @@ class _BookingPageState extends State<BookingPage>
   }
 
   Widget _buildServiceSection() {
-    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
-    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-    final services = venue['services'] as List<dynamic>? ?? [];
+    final services = _allServices;
 
     if (services.isEmpty) {
       return const SliverToBoxAdapter(
@@ -862,31 +1014,53 @@ class _BookingPageState extends State<BookingPage>
   }
 
   Widget _buildServiceItem(Map<String, dynamic> service) {
-    final id = service['id'] as String;
-    final currentQty = _selectedServices[id] ?? 0;
+    // Support berbagai format: name bisa jadi id, stock mungkin tidak ada
+    final name = service['name']?.toString() ?? 'Layanan';
+    final id = service['id']?.toString() ?? name; // fallback ke name jika tidak ada id
+    final currentQty = _selectedServices[id] ?? _selectedServices[name] ?? 0;
+    final priceRaw = service['price'];
+    final price = priceRaw is int
+        ? priceRaw
+        : int.tryParse(priceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
+    final unit = service['unit']?.toString() ?? 'unit';
+    final stockRaw = service['stock'];
+    final stock = stockRaw is int ? stockRaw : int.tryParse(stockRaw?.toString() ?? '') ?? 99;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
       child: Row(
         children: [
-          Container(width: 50, height: 50, decoration: BoxDecoration(color: AppColors.secondary, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.sports_tennis_rounded, color: AppColors.primary)),
+          Container(width: 50, height: 50, decoration: BoxDecoration(color: AppColors.secondary, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.shopping_bag_rounded, color: AppColors.primary)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(service['name'] ?? 'Layanan', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                Text('${_formatCurrency(service['price'] as int)} / ${service['unit']}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12)),
-                Text('Stok: ${service['stock']}', style: TextStyle(color: (service['stock'] as int) == 0 ? Colors.red : Colors.grey, fontSize: 11)),
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text('${_formatCurrency(price)} / $unit', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12)),
+                if (stockRaw != null)
+                  Text('Stok: $stock', style: TextStyle(color: stock == 0 ? Colors.red : Colors.grey, fontSize: 11)),
               ],
             ),
           ),
           Row(
             children: [
-              IconButton(onPressed: currentQty > 0 ? () => setState(() => currentQty > 1 ? _selectedServices[id] = currentQty - 1 : _selectedServices.remove(id)) : null, icon: Icon(Icons.remove_circle_outline, color: currentQty > 0 ? AppColors.primary : Colors.grey), iconSize: 22),
+              IconButton(
+                onPressed: currentQty > 0 ? () => setState(() {
+                  if (currentQty > 1) _selectedServices[id] = currentQty - 1;
+                  else { _selectedServices.remove(id); _selectedServices.remove(name); }
+                }) : null,
+                icon: Icon(Icons.remove_circle_outline, color: currentQty > 0 ? AppColors.primary : Colors.grey),
+                iconSize: 22,
+              ),
               Text('$currentQty', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              IconButton(onPressed: currentQty < (service['stock'] as int) ? () => setState(() => _selectedServices[id] = currentQty + 1) : null, icon: Icon(Icons.add_circle_outline, color: currentQty < (service['stock'] as int) ? AppColors.primary : Colors.grey), iconSize: 22),
+              IconButton(
+                onPressed: stock > 0 ? () => setState(() => _selectedServices[id] = currentQty + 1) : null,
+                icon: Icon(Icons.add_circle_outline, color: stock > 0 ? AppColors.primary : Colors.grey),
+                iconSize: 22,
+              ),
             ],
           ),
         ],

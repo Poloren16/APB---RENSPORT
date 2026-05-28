@@ -36,7 +36,10 @@ class _MapPickerPageState extends State<MapPickerPage> {
         markers: _markers,
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pop(context, 'Lokasi (${_selectedLocation.latitude.toStringAsFixed(4)}, ${_selectedLocation.longitude.toStringAsFixed(4)})'),
+        onPressed: () => Navigator.pop(context, {
+          'lat': _selectedLocation.latitude,
+          'lng': _selectedLocation.longitude,
+        }),
         label: const Text('Gunakan Lokasi'),
         icon: const Icon(Icons.check),
         backgroundColor: AppColors.primary,

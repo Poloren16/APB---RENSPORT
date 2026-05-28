@@ -38,9 +38,10 @@ class _AkunPageState extends State<AkunPage> {
     // Generate initial letter for avatar
     String initial = applicantName.isNotEmpty ? applicantName[0].toUpperCase() : 'U';
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 16),
           // Profile Card
@@ -257,7 +258,9 @@ class _AkunPageState extends State<AkunPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const ManagementVenuePage(),
+                              builder: (context) => ManagementVenuePage(
+                                ownerUsername: widget.username,
+                              ),
                             ),
                           );
                         }
@@ -279,6 +282,7 @@ class _AkunPageState extends State<AkunPage> {
           ),
         ],
       ),
+    ),
     );
   }
 

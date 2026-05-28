@@ -189,7 +189,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           content: TextField(
             controller: passwordController,
             decoration: InputDecoration(
-              hintText: 'Kata Sandi Baru',
+            hintText: 'Minimal 8 karakter (1 kapital, 1 angka, 1 simbol)',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             obscureText: true,
@@ -201,8 +201,16 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (passwordController.text.length < 6) {
-                  AlertUtils.showToast(context, 'Kata sandi harus minimal 6 karakter', isSuccess: false);
+                final passwordVal = passwordController.text;
+                final uppercaseRegex = RegExp(r'[A-Z]');
+                final numericRegex = RegExp(r'[0-9]');
+                final symbolRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>\-_=+\\\/\[\]]');
+
+                if (passwordVal.length < 8 ||
+                    !uppercaseRegex.hasMatch(passwordVal) ||
+                    !numericRegex.hasMatch(passwordVal) ||
+                    !symbolRegex.hasMatch(passwordVal)) {
+                  AlertUtils.showToast(context, 'Kata sandi harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.', isSuccess: false);
                   return;
                 }
                 await GlobalAuthData.updateAccount(widget.username, newPassword: passwordController.text);

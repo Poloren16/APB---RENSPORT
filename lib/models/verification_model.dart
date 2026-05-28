@@ -11,9 +11,14 @@ class VerificationRequest {
   final String status; // 'Pending', 'Approved', 'Rejected'
   final String? rejectionReason;
   final DateTime submittedAt;
-  final String? venueName; // For venue verification
-  final String? venueAddress; // For venue verification
-  final String? password; // Hidden field to create account later
+  final String? venueName;
+  final String? venueAddress;
+  final String? venueProvinsi;
+  final String? venueKota;
+  final String? venueLat;
+  final String? venueLng;
+  final String? password;
+  final Map<String, dynamic>? venueData;
 
   VerificationRequest({
     required this.id,
@@ -30,7 +35,12 @@ class VerificationRequest {
     required this.submittedAt,
     this.venueName,
     this.venueAddress,
+    this.venueProvinsi,
+    this.venueKota,
+    this.venueLat,
+    this.venueLng,
     this.password,
+    this.venueData,
   });
 
   VerificationRequest copyWith({
@@ -52,7 +62,12 @@ class VerificationRequest {
       submittedAt: submittedAt,
       venueName: venueName,
       venueAddress: venueAddress,
-      password: password ?? this.password,
+      password: this.password,
+      venueProvinsi: this.venueProvinsi,
+      venueKota: this.venueKota,
+      venueLat: this.venueLat,
+      venueLng: this.venueLng,
+      venueData: this.venueData,
     );
   }
 
@@ -72,7 +87,12 @@ class VerificationRequest {
       'submittedAt': submittedAt.toIso8601String(),
       'venueName': venueName,
       'venueAddress': venueAddress,
+      'venueProvinsi': venueProvinsi,
+      'venueKota': venueKota,
+      'venueLat': venueLat,
+      'venueLng': venueLng,
       'password': password,
+      'venueData': venueData,
     };
   }
 
@@ -92,7 +112,12 @@ class VerificationRequest {
       submittedAt: DateTime.parse(map['submittedAt']),
       venueName: map['venueName'],
       venueAddress: map['venueAddress'],
+      venueProvinsi: map['venueProvinsi'],
+      venueKota: map['venueKota'],
+      venueLat: map['venueLat'],
+      venueLng: map['venueLng'],
       password: map['password'],
+      venueData: map['venueData'],
     );
   }
 }

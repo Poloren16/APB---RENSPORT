@@ -19,6 +19,7 @@ class UserAccount {
   
   // v3 fields
   final String? profileImagePath;
+  final String? ktpImagePath; // Separate KTP image path from profile image
   final String gender; // 'Male', 'Female', 'Not Set'
   final String dateOfBirth; // String format 'yyyy-MM-dd'
   final int points;
@@ -36,6 +37,7 @@ class UserAccount {
     this.twitter = '',
     this.facebook = '',
     this.profileImagePath,
+    this.ktpImagePath,
     this.gender = 'Not Set',
     this.dateOfBirth = '',
     this.points = 0,
@@ -55,6 +57,7 @@ class UserAccount {
       'twitter': twitter,
       'facebook': facebook,
       'profileImagePath': profileImagePath,
+      'ktpImagePath': ktpImagePath,
       'gender': gender,
       'dateOfBirth': dateOfBirth,
       'points': points,
@@ -75,6 +78,7 @@ class UserAccount {
       twitter: map['twitter'] ?? '',
       facebook: map['facebook'] ?? '',
       profileImagePath: map['profileImagePath'],
+      ktpImagePath: map['ktpImagePath'],
       gender: map['gender'] ?? 'Not Set',
       dateOfBirth: map['dateOfBirth'] ?? '',
       points: map['points'] ?? 0,
@@ -85,6 +89,7 @@ class UserAccount {
 class GlobalAuthData {
   static const String _storageKey = 'rensius_accounts_v4'; // Bumped version for new default accounts
   static List<UserAccount> accounts = [];
+  static UserAccount? currentUser;
 
   // Initial accounts to be used only if storage is empty
   static final List<UserAccount> _defaultAccounts = [
@@ -92,26 +97,9 @@ class GlobalAuthData {
       username: 'admin',
       password: 'admin123',
       role: 'Admin',
-      applicantName: 'System Admin',
+      applicantName: 'Rensius Admin',
       email: 'admin@rensius.com',
-      phoneNumber: '+6281234567890',
-    ),
-    UserAccount(
-      username: 'user',
-      password: 'user123',
-      role: 'End User',
-      applicantName: 'Muhammad End User',
-      email: 'muhammad@rensius.com',
-      phoneNumber: '+6287711223344',
-      points: 500,
-    ),
-    UserAccount(
-      username: 'owner',
-      password: 'owner123',
-      role: 'Owner',
-      applicantName: 'Budi Venue Owner',
-      email: 'budi@rensius.com',
-      phoneNumber: '+6281122334455',
+      phoneNumber: '+6200000000000',
     ),
   ];
 
@@ -155,9 +143,11 @@ class GlobalAuthData {
 
   static UserAccount? login(String username, String password) {
     try {
-      return accounts.firstWhere(
+      final user = accounts.firstWhere(
         (a) => a.username == username && a.password == password,
       );
+      currentUser = user;
+      return user;
     } catch (e) {
       return null;
     }
@@ -167,7 +157,11 @@ class GlobalAuthData {
     try {
       return accounts.firstWhere((a) => a.username == username);
     } catch (e) {
-      return null;
+      try {
+        return accounts.firstWhere((a) => a.applicantName == username);
+      } catch (e2) {
+        return null;
+      }
     }
   }
 
@@ -181,6 +175,19 @@ class GlobalAuthData {
 
   static bool usernameExists(String username) {
     return accounts.any((a) => a.username == username);
+  }
+
+  static bool emailExists(String email) {
+    return accounts.any((a) => a.email.toLowerCase().trim() == email.toLowerCase().trim());
+  }
+
+  static bool phoneExists(String phone) {
+    final sanitized = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (sanitized.isEmpty) return false;
+    return accounts.any((a) {
+      final accPhone = a.phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
+      return accPhone == sanitized;
+    });
   }
 
   static Future<void> deleteAccount(String username) async {
@@ -200,6 +207,7 @@ class GlobalAuthData {
     String? newTwitter,
     String? newFacebook,
     String? newProfileImage,
+    String? newKtpImage,
     String? newGender,
     String? newDOB,
     int? newPoints,
@@ -220,10 +228,14 @@ class GlobalAuthData {
         twitter: newTwitter ?? old.twitter,
         facebook: newFacebook ?? old.facebook,
         profileImagePath: newProfileImage ?? old.profileImagePath,
+        ktpImagePath: newKtpImage ?? old.ktpImagePath,
         gender: newGender ?? old.gender,
         dateOfBirth: newDOB ?? old.dateOfBirth,
         points: newPoints ?? old.points,
       );
+      if (currentUser?.username == username) {
+        currentUser = accounts[index];
+      }
       await save();
     }
   }
@@ -253,6 +265,7 @@ class GlobalAuthData {
             twitter: acc.twitter,
             facebook: acc.facebook,
             profileImagePath: acc.profileImagePath,
+            ktpImagePath: acc.ktpImagePath ?? req.documentUrl,
             gender: acc.gender,
             dateOfBirth: acc.dateOfBirth,
             points: acc.points,

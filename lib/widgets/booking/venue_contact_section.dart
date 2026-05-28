@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
 import '../../theme/app_colors.dart';
 import '../../data/venue_data.dart';
 import '../../pages/venue_page.dart';
+import '../../pages/booking_page.dart';
 
 class VenueContactSection extends StatefulWidget {
   final String username;
@@ -93,8 +95,21 @@ class _VenueContactSectionState extends State<VenueContactSection> {
     required String types,
     required int price,
     required String distance,
+    required String imagePath,
   }) {
-    return Container(
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BookingPage(
+            username: widget.username,
+            venueName: name,
+            venueType: types,
+            venueAddress: address,
+          ),
+        ),
+      ),
+      child: Container(
       width: 200,
       margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
@@ -112,24 +127,18 @@ class _VenueContactSectionState extends State<VenueContactSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image placeholder
-          Container(
-            height: 80,
-            decoration: BoxDecoration(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF0E21A0).withValues(alpha: 0.8),
-                  const Color(0xFF1A3CC8).withValues(alpha: 0.8),
-                ],
-              ),
-            ),
-            child: Center(
-              child: Icon(Icons.sports_soccer,
-                  color: Colors.white.withValues(alpha: 0.5), size: 32),
+          // Foto venue nyata atau gradient fallback
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: SizedBox(
+              height: 80, width: double.infinity,
+              child: imagePath.isNotEmpty
+                  ? Image.file(
+                      File(imagePath),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _gradientPlaceholder(),
+                    )
+                  : _gradientPlaceholder(),
             ),
           ),
           Padding(
@@ -189,7 +198,7 @@ class _VenueContactSectionState extends State<VenueContactSection> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.formatCurrency(price),
+                      price > 0 ? widget.formatCurrency(price) : 'Hubungi Pengelola',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -210,8 +219,28 @@ class _VenueContactSectionState extends State<VenueContactSection> {
           ),
         ],
       ),
+     ),
     );
   }
+
+  Widget _gradientPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF0E21A0).withValues(alpha: 0.8),
+            const Color(0xFF1A3CC8).withValues(alpha: 0.8),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(Icons.sports_soccer,
+            color: Colors.white.withValues(alpha: 0.5), size: 32),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -334,17 +363,21 @@ class _VenueContactSectionState extends State<VenueContactSection> {
                     });
                   },
                   itemBuilder: (context, index) {
+                    // Harga minimum dari semua priceDay semua courts
                     final venue = recommendations[index];
-                    // Handle dynamic price if it's a string like "IDR 150,000 / Hour"
                     int priceVal = 0;
-                    if (venue['price'] is int) {
-                      priceVal = venue['price'];
-                    } else if (venue['price'] is String) {
-                      final match = RegExp(r'\d+').allMatches(venue['price'].replaceAll(',', ''));
-                      if (match.isNotEmpty) {
-                        priceVal = int.tryParse(match.first.group(0) ?? '0') ?? 0;
+                    final courts = venue['courts'] as List<dynamic>? ?? [];
+                    for (final c in courts) {
+                      final priceDay = c['priceDay'] as Map? ?? {};
+                      for (final val in priceDay.values) {
+                        final n = int.tryParse(val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '');
+                        if (n != null && n > 0 && (priceVal == 0 || n < priceVal)) priceVal = n;
                       }
                     }
+                    // Fallback ke venue['price'] jika tidak ada
+                    if (priceVal == 0 && venue['price'] is int) priceVal = venue['price'];
+
+                    final imgPath = venue['image']?.toString() ?? '';
 
                     return Padding(
                       padding: const EdgeInsets.only(right: 8.0),
@@ -353,7 +386,8 @@ class _VenueContactSectionState extends State<VenueContactSection> {
                           address: venue['location'] ?? 'Unknown',
                           types: venue['type'] ?? 'Sports',
                           price: priceVal,
-                          distance: '3 km'),
+                          distance: '3 km',
+                          imagePath: imgPath),
                     );
                   },
                 ),

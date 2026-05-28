@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'package:rensius/data/auth_data.dart';
+import 'package:rensius/data/verification_data.dart';
 import 'package:rensius/utils/alert_utils.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -66,15 +67,37 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // 5. Password Length
-    if (password.length < 6) {
-      _showError('Kata sandi minimal 6 karakter.');
+    // 5. Password Validation (At least 8 chars, 1 uppercase, 1 symbol, 1 number)
+    final uppercaseRegex = RegExp(r'[A-Z]');
+    final numericRegex = RegExp(r'[0-9]');
+    final symbolRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>\-_=+\\\/\[\]]');
+
+    if (password.length < 8 ||
+        !uppercaseRegex.hasMatch(password) ||
+        !numericRegex.hasMatch(password) ||
+        !symbolRegex.hasMatch(password)) {
+      _showError('Kata sandi harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.');
       return;
     }
 
     // 6. Username Availability
-    if (GlobalAuthData.usernameExists(username)) {
+    if (GlobalAuthData.usernameExists(username) || 
+        GlobalVerificationData.requests.any((r) => r.username == username)) {
       _showError('Nama pengguna sudah digunakan. Silakan pilih yang lain.');
+      return;
+    }
+
+    // 7. Email Availability
+    if (GlobalAuthData.emailExists(email) || 
+        GlobalVerificationData.requests.any((r) => r.email.toLowerCase().trim() == email.toLowerCase().trim())) {
+      _showError('Email ini sudah terdaftar. Silakan pilih email lain.');
+      return;
+    }
+
+    // 8. Phone Number Availability
+    if (GlobalAuthData.phoneExists(phone) || 
+        GlobalVerificationData.requests.any((r) => r.phoneNumber?.replaceAll(RegExp(r'[^0-9]'), '') == phone.replaceAll(RegExp(r'[^0-9]'), ''))) {
+      _showError('Nomor telepon ini sudah terdaftar. Silakan pilih nomor lain.');
       return;
     }
 
@@ -187,7 +210,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Minimal 6 karakter',
+                    hintText: 'Minimal 8 karakter (1 kapital, 1 angka, 1 simbol)',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
                     suffixIcon: IconButton(
                       icon: Icon(

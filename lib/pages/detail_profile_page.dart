@@ -409,6 +409,39 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
             );
           },
         ),
+        if (widget.role.toLowerCase() == 'owner' && account?.ktpImagePath != null && account!.ktpImagePath!.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          const Text('Foto KTP / Identitas', style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          Container(
+            height: 200,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: File(account.ktpImagePath!).existsSync()
+                  ? Image.file(
+                      File(account.ktpImagePath!),
+                      fit: BoxFit.cover,
+                    )
+                  : (account.ktpImagePath!.startsWith('assets/')
+                      ? Image.asset(
+                          account.ktpImagePath!,
+                          fit: BoxFit.cover,
+                        )
+                      : Image.network(
+                          account.ktpImagePath!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Center(
+                            child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                          ),
+                        )),
+            ),
+          ),
+        ],
         ],
       ),
     );

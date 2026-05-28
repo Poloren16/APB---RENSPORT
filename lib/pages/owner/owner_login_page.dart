@@ -41,7 +41,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
           context,
           MaterialPageRoute(
             builder: (context) => OwnerDashboardPage(
-              username: account.applicantName,
+              username: account.username,
               role: 'Owner',
             ),
           ),
