@@ -4,22 +4,28 @@ import 'package:rensius/theme/app_colors.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/data/verification_data.dart';
 import 'package:rensius/data/venue_data.dart';
+import 'package:rensius/services/firebase_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Environment Variables
   await dotenv.load(fileName: ".env");
-  
+
+  // Initialize Firebase services. This becomes active after
+  // lib/firebase_options.dart is generated with FlutterFire CLI.
+  await FirebaseService.initialize();
+
   // Initialize Mock Database Persistence
   await GlobalVerificationData.init();
   await GlobalAuthData.init();
   await GlobalVenueData.init();
-  
+
   // Self-Healing: Sync missing email/phone from registration data
-  await GlobalAuthData.syncWithVerificationData(GlobalVerificationData.requests);
-  
+  await GlobalAuthData.syncWithVerificationData(
+      GlobalVerificationData.requests);
+
   runApp(const RensiusApp());
 }
 
@@ -51,7 +57,8 @@ class RensiusApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,

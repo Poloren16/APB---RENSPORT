@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/data/verification_data.dart';
+import 'package:rensius/services/firebase_auth_service.dart';
+import 'package:rensius/services/firebase_service.dart';
 import 'package:rensius/utils/alert_utils.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -21,6 +24,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _isRegistering = false;
 
   @override
   void dispose() {
@@ -33,7 +37,9 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  void _handleRegister() {
+  Future<void> _handleRegister() async {
+    if (_isRegistering) return;
+
     String name = _nameController.text.trim();
     String username = _usernameController.text.trim();
     String email = _emailController.text.trim();
@@ -67,16 +73,9 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // 5. Password Validation (At least 8 chars, 1 uppercase, 1 symbol, 1 number)
-    final uppercaseRegex = RegExp(r'[A-Z]');
-    final numericRegex = RegExp(r'[0-9]');
-    final symbolRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>\-_=+\\\/\[\]]');
-
-    if (password.length < 8 ||
-        !uppercaseRegex.hasMatch(password) ||
-        !numericRegex.hasMatch(password) ||
-        !symbolRegex.hasMatch(password)) {
-      _showError('Kata sandi harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.');
+    // Firebase Authentication requires a password with at least 6 characters.
+    if (password.length < 6) {
+      _showError('Kata sandi harus minimal 6 karakter.');
       return;
     }
 
@@ -101,7 +100,13 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Register to mock database
+    if (!FirebaseService.isInitialized) {
+      _showError(
+        'Firebase belum aktif. Pastikan konfigurasi Firebase sudah benar, lalu jalankan ulang aplikasi.',
+      );
+      return;
+    }
+
     final newAccount = UserAccount(
       username: username,
       password: password,
@@ -110,7 +115,25 @@ class _RegisterPageState extends State<RegisterPage> {
       email: email,
       phoneNumber: '+62$phone',
     );
-    GlobalAuthData.registerAccount(newAccount);
+
+    setState(() => _isRegistering = true);
+
+    try {
+      await FirebaseAuthService.registerEndUser(account: newAccount);
+      await GlobalAuthData.registerAccount(newAccount);
+    } on FirebaseAuthException catch (error) {
+      _showError(_firebaseAuthErrorMessage(error));
+      return;
+    } on Object catch (error) {
+      _showError('Pendaftaran gagal: $error');
+      return;
+    } finally {
+      if (mounted) {
+        setState(() => _isRegistering = false);
+      }
+    }
+
+    if (!mounted) return;
 
     AlertUtils.showResultDialog(
       context,
@@ -130,6 +153,23 @@ class _RegisterPageState extends State<RegisterPage> {
       title: 'Data Tidak Valid',
       message: message,
     );
+  }
+
+  String _firebaseAuthErrorMessage(FirebaseAuthException error) {
+    switch (error.code) {
+      case 'email-already-in-use':
+        return 'Email ini sudah terdaftar di Firebase Authentication.';
+      case 'invalid-email':
+        return 'Format email tidak valid.';
+      case 'operation-not-allowed':
+        return 'Provider Email/Password belum diaktifkan di Firebase Authentication.';
+      case 'weak-password':
+        return 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.';
+      case 'network-request-failed':
+        return 'Koneksi internet bermasalah. Coba lagi beberapa saat.';
+      default:
+        return error.message ?? 'Pendaftaran Firebase gagal.';
+    }
   }
 
   @override
@@ -210,7 +250,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Minimal 8 karakter (1 kapital, 1 angka, 1 simbol)',
+                    hintText: 'Minimal 6 karakter',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -242,16 +282,19 @@ class _RegisterPageState extends State<RegisterPage> {
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _handleRegister,
+                    onPressed: _isRegistering ? null : _handleRegister,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Daftar Sekarang',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    child: Text(
+                      _isRegistering ? 'Mendaftarkan...' : 'Daftar Sekarang',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

@@ -18,6 +18,11 @@ dependencies:
     sdk: flutter
   google_maps_flutter: ^2.10.0
   flutter_dotenv: ^6.0.0
+  firebase_core: ^4.9.0
+  firebase_auth: ^6.5.1
+  cloud_firestore: ^6.4.1
+  firebase_messaging: ^16.2.2
+  firebase_analytics: ^12.4.1
 
 dev_dependencies:
   flutter_test:
