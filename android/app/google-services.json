@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "786242129327",
+    "project_id": "rensius",
+    "storage_bucket": "rensius.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:786242129327:android:dda1af1c10ca68c9a4335a",
+        "android_client_info": {
+          "package_name": "com.example.rensius"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtqqrc7abHykp8GVFwAeMdGFIZIUf9WJs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
