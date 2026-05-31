@@ -3,7 +3,13 @@ import 'package:rensius/theme/app_colors.dart';
 import 'package:rensius/pages/admin/admin_dashboard_page.dart';
 import 'package:rensius/pages/owner/owner_register_page.dart';
 import 'package:rensius/pages/owner/owner_dashboard_page.dart';
+import 'package:rensius/data/verification_data.dart';
+import 'package:rensius/models/verification_model.dart';
+import 'package:rensius/utils/alert_utils.dart';
 import 'package:rensius/data/auth_data.dart';
+import 'package:rensius/services/supabase_service.dart';
+import 'package:rensius/services/supabase_auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OwnerLoginPage extends StatefulWidget {
   const OwnerLoginPage({super.key});
@@ -17,8 +23,9 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   String? _errorMessage;
+  bool _isLoading = false;
 
-  void _handleLogin() {
+  void _handleLogin() async {
     String username = _usernameController.text.trim();
     String password = _passwordController.text.trim();
 
@@ -27,30 +34,136 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
       return;
     }
 
-    final account = GlobalAuthData.login(username, password);
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
+    });
 
-    if (account != null) {
-      if (account.role == 'Admin') {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminDashboardPage()),
-          (route) => false,
-        );
-      } else if (account.role == 'Owner') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OwnerDashboardPage(
-              username: account.username,
-              role: 'Owner',
-            ),
-          ),
-        );
-      } else {
-        setState(() => _errorMessage = 'Akun ini bukan kategori Pemilik/Admin.');
+    try {
+      // 1. Dapatkan akun dari local data untuk mencocokkan email
+      final localAccount = GlobalAuthData.getAccount(username);
+      
+      // 2. Jika Supabase aktif dan akun bukan Admin, coba login via Supabase Auth
+      if (SupabaseService.isInitialized && 
+          localAccount != null && 
+          localAccount.role != 'Admin' && 
+          localAccount.email.isNotEmpty) {
+        try {
+          await SupabaseAuthService.signInWithEmail(
+            email: localAccount.email,
+            password: password,
+          );
+        } on AuthException catch (e) {
+          // Self-healing: Jika password lokal cocok tapi belum terdaftar di Supabase Auth
+          if (localAccount.password == password && 
+              (e.message.contains('Invalid login credentials') || e.message.contains('invalid_credentials'))) {
+            try {
+              // Daftarkan ulang ke Supabase Auth secara otomatis
+              await SupabaseAuthService.registerEndUser(account: localAccount);
+              // Coba masuk kembali
+              await SupabaseAuthService.signInWithEmail(
+                email: localAccount.email,
+                password: password,
+              );
+            } catch (signUpErr) {
+              setState(() {
+                _errorMessage = 'Gagal sinkronisasi Supabase Auth: ${signUpErr.toString()}';
+                _isLoading = false;
+              });
+              return;
+            }
+          } else {
+            setState(() {
+              _errorMessage = 'Gagal masuk via Supabase: ${e.message}';
+              _isLoading = false;
+            });
+            return;
+          }
+        } on Object catch (e) {
+          // Fallback lokal: Jika password lokal cocok, tetap izinkan masuk secara lokal jika ada kendala koneksi
+          if (localAccount.password == password) {
+            print('Supabase Auth error, falling back to local offline session: $e');
+          } else {
+            setState(() {
+              _errorMessage = 'Gagal masuk via Supabase: ${e.toString()}';
+              _isLoading = false;
+            });
+            return;
+          }
+        }
       }
-    } else {
-      setState(() => _errorMessage = 'Nama pengguna atau kata sandi salah.');
+
+      // 3. Proses login lokal utama
+      final account = GlobalAuthData.login(username, password);
+
+      if (account != null) {
+        if (account.role == 'Admin') {
+          if (!mounted) return;
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminDashboardPage()),
+            (route) => false,
+          );
+        } else if (account.role == 'Owner') {
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OwnerDashboardPage(
+                username: account.username,
+                role: 'Owner',
+              ),
+            ),
+          );
+        } else {
+          setState(() => _errorMessage = 'Akun ini bukan kategori Pemilik/Admin.');
+        }
+      } else {
+        // Cek apakah ada pengajuan verifikasi pending/rejected untuk username ini
+        VerificationRequest? verificationReq;
+        for (var r in GlobalVerificationData.requests) {
+          if (r.username == username && r.type == 'Owner') {
+            verificationReq = r;
+            break;
+          }
+        }
+        
+        if (verificationReq != null) {
+          if (verificationReq.status == 'Pending') {
+            AlertUtils.showResultDialog(
+              context,
+              isSuccess: false,
+              title: 'Sedang Diverifikasi',
+              message: 'Pendaftaran akun Anda masih dalam proses verifikasi oleh Admin. Mohon tunggu beberapa saat.',
+              customIcon: Icons.remove_circle_rounded,
+              customColor: Colors.amber,
+            );
+          } else if (verificationReq.status == 'Rejected') {
+            final reason = verificationReq.rejectionReason ?? 'Dokumen KTP kurang jelas/tidak terbaca';
+            AlertUtils.showResultDialog(
+              context,
+              isSuccess: false,
+              title: 'Pendaftaran Ditolak',
+              message: 'Mohon maaf, pendaftaran Anda ditolak oleh Admin.\n\nAlasan:\n"$reason"\n\nSilakan ketuk OK untuk melakukan pendaftaran ulang dengan berkas yang benar.',
+              onConfirm: () {
+                Navigator.pop(context); // Tutup dialog hasil
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OwnerRegisterPage()),
+                );
+              },
+            );
+          } else {
+            setState(() => _errorMessage = 'Nama pengguna atau kata sandi salah.');
+          }
+        } else {
+          setState(() => _errorMessage = 'Nama pengguna atau kata sandi salah.');
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -144,11 +257,13 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _handleLogin,
-                    child: const Text(
-                      'Masuk',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                    onPressed: _isLoading ? null : _handleLogin,
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Masuk',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 24),

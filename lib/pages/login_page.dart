@@ -5,6 +5,8 @@ import 'package:rensius/pages/dashboard_page.dart';
 import 'package:rensius/pages/owner/owner_login_page.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/pages/forgot_password_page.dart';
+import 'package:rensius/services/supabase_service.dart';
+import 'package:rensius/services/supabase_auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,8 +20,9 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   String? _errorMessage;
+  bool _isLoading = false;
 
-  void _handleUserLogin() {
+  void _handleUserLogin() async {
     String username = _usernameController.text.trim();
     String password = _passwordController.text.trim();
 
@@ -28,19 +31,54 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    final account = GlobalAuthData.login(username, password);
+    setState(() {
+      _errorMessage = null;
+      _isLoading = true;
+    });
 
-    if (account != null && account.role == 'End User') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DashboardPage(username: account.username, role: 'End User'),
-        ),
-      );
-    } else if (account != null) {
-      setState(() => _errorMessage = 'Harap masuk melalui portal Pemilik/Admin.');
-    } else {
-      setState(() => _errorMessage = 'Nama pengguna atau kata sandi salah.');
+    try {
+      // 1. Dapatkan akun dari local data untuk mencocokkan email
+      final localAccount = GlobalAuthData.getAccount(username);
+      
+      // 2. Jika Supabase aktif dan akun bukan Admin, coba login via Supabase Auth
+      if (SupabaseService.isInitialized && 
+          localAccount != null && 
+          localAccount.role != 'Admin' && 
+          localAccount.email.isNotEmpty) {
+        try {
+          await SupabaseAuthService.signInWithEmail(
+            email: localAccount.email,
+            password: password,
+          );
+        } on Object catch (e) {
+          setState(() {
+            _errorMessage = 'Gagal masuk via Supabase: ${e.toString()}';
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
+      // 3. Proses login lokal utama
+      final account = GlobalAuthData.login(username, password);
+
+      if (account != null && account.role == 'End User') {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DashboardPage(username: account.username, role: 'End User'),
+          ),
+        );
+      } else if (account != null) {
+        setState(() => _errorMessage = 'Harap masuk melalui portal Pemilik/Admin.');
+      } else {
+        setState(() => _errorMessage = 'Nama pengguna atau kata sandi salah.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -179,11 +217,13 @@ class _LoginPageState extends State<LoginPage> {
                 SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _handleUserLogin,
-                    child: const Text(
-                      'Masuk',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                    onPressed: _isLoading ? null : _handleUserLogin,
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Masuk',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
                   ),
                 ),
                 

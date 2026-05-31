@@ -95,21 +95,22 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       
       // Check if username exists
       if (GlobalAuthData.usernameExists(user) || 
-          GlobalVerificationData.requests.any((r) => r.username == user)) {
+          GlobalVerificationData.requests.any((r) => r.username == user && r.status != 'Rejected')) {
         _showValidationError('Nama pengguna ini sudah digunakan. Silakan pilih yang lain.');
         return false;
       }
 
       // Check if email exists
       if (GlobalAuthData.emailExists(email) || 
-          GlobalVerificationData.requests.any((r) => r.email.toLowerCase().trim() == email.toLowerCase().trim())) {
+          GlobalVerificationData.requests.any((r) => r.email.toLowerCase().trim() == email.toLowerCase().trim() && r.status != 'Rejected')) {
         _showValidationError('Email ini sudah terdaftar. Silakan pilih email lain.');
         return false;
       }
 
       // Check if phone number exists
-      if (GlobalAuthData.phoneExists(phone) || 
-          GlobalVerificationData.requests.any((r) => r.phoneNumber?.replaceAll(RegExp(r'[^0-9]'), '') == phone.replaceAll(RegExp(r'[^0-9]'), ''))) {
+      final fullPhone = '$_selectedCountryCode$phone';
+      if (GlobalAuthData.phoneExists(fullPhone) || 
+          GlobalVerificationData.requests.any((r) => r.phoneNumber?.replaceAll(RegExp(r'[^0-9]'), '') == fullPhone.replaceAll(RegExp(r'[^0-9]'), '') && r.status != 'Rejected')) {
         _showValidationError('Nomor telepon ini sudah terdaftar. Silakan pilih nomor lain.');
         return false;
       }
@@ -260,7 +261,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       applicantName: _nameController.text,
       email: _emailController.text,
-      phoneNumber: _phoneController.text,
+      phoneNumber: '$_selectedCountryCode${_phoneController.text.trim()}',
       username: _usernameController.text,
       password: _passwordController.text.trim(), // Save for later creation
       nik: _nikController.text,
@@ -396,6 +397,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         _buildPasswordField(),
         const SizedBox(height: 16),
         _buildConfirmPasswordField(),
+        const SizedBox(height: 320),
       ],
     );
   }
@@ -409,6 +411,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         TextField(
           controller: _phoneController,
           keyboardType: TextInputType.phone,
+          scrollPadding: const EdgeInsets.only(bottom: 200),
           decoration: InputDecoration(
             hintText: '812-3456-7890',
             prefixIcon: Container(
@@ -451,6 +454,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         TextField(
           controller: _passwordController,
           obscureText: !_isPasswordVisible,
+          scrollPadding: const EdgeInsets.only(bottom: 200),
           decoration: InputDecoration(
             hintText: 'Minimal 8 karakter (1 kapital, 1 angka, 1 simbol)',
             prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
@@ -478,6 +482,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         TextField(
           controller: _confirmPasswordController,
           obscureText: !_isConfirmPasswordVisible,
+          scrollPadding: const EdgeInsets.only(bottom: 200),
           decoration: InputDecoration(
             hintText: 'Ulangi kata sandi Anda',
             prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
@@ -507,6 +512,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         _buildTextField(_nikController, 'Nomor Identitas (NIK)', Icons.badge_outlined, keyboardType: TextInputType.number),
         const SizedBox(height: 16),
         _buildTextField(_npwpController, 'Nomor Pokok Wajib Pajak (NPWP)', Icons.description_outlined, keyboardType: TextInputType.number),
+        const SizedBox(height: 320),
       ],
     );
   }
@@ -571,6 +577,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
             ],
           ),
         ),
+        const SizedBox(height: 320),
       ],
     );
   }
@@ -584,6 +591,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         TextField(
           controller: controller,
           keyboardType: keyboardType,
+          scrollPadding: const EdgeInsets.only(bottom: 200),
           decoration: InputDecoration(
             hintText: 'Masukkan $hint',
             prefixIcon: Icon(icon, color: AppColors.textSecondary),

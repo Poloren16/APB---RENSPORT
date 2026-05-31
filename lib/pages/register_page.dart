@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_colors.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/data/verification_data.dart';
-import 'package:rensius/services/firebase_auth_service.dart';
-import 'package:rensius/services/firebase_service.dart';
+import 'package:rensius/services/supabase_auth_service.dart';
+import 'package:rensius/services/supabase_service.dart';
 import 'package:rensius/utils/alert_utils.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -73,36 +73,40 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Firebase Authentication requires a password with at least 6 characters.
-    if (password.length < 6) {
-      _showError('Kata sandi harus minimal 6 karakter.');
+    // Strong password validation: min 8 chars, 1 uppercase, 1 digit, 1 symbol
+    final passwordRegex = RegExp(r'^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$&*~_.]).{8,}$');
+    if (!passwordRegex.hasMatch(password)) {
+      _showError(
+        'Kata sandi harus minimal 8 karakter, mengandung setidaknya 1 huruf kapital, 1 angka, dan 1 simbol (!@#\$&*~_.).',
+      );
       return;
     }
 
     // 6. Username Availability
     if (GlobalAuthData.usernameExists(username) || 
-        GlobalVerificationData.requests.any((r) => r.username == username)) {
+        GlobalVerificationData.requests.any((r) => r.username == username && r.status != 'Rejected')) {
       _showError('Nama pengguna sudah digunakan. Silakan pilih yang lain.');
       return;
     }
 
     // 7. Email Availability
     if (GlobalAuthData.emailExists(email) || 
-        GlobalVerificationData.requests.any((r) => r.email.toLowerCase().trim() == email.toLowerCase().trim())) {
+        GlobalVerificationData.requests.any((r) => r.email.toLowerCase().trim() == email.toLowerCase().trim() && r.status != 'Rejected')) {
       _showError('Email ini sudah terdaftar. Silakan pilih email lain.');
       return;
     }
 
     // 8. Phone Number Availability
-    if (GlobalAuthData.phoneExists(phone) || 
-        GlobalVerificationData.requests.any((r) => r.phoneNumber?.replaceAll(RegExp(r'[^0-9]'), '') == phone.replaceAll(RegExp(r'[^0-9]'), ''))) {
+    final String fullPhone = '+62$phone';
+    if (GlobalAuthData.phoneExists(fullPhone) || 
+        GlobalVerificationData.requests.any((r) => r.phoneNumber?.replaceAll(RegExp(r'[^0-9]'), '') == fullPhone.replaceAll(RegExp(r'[^0-9]'), '') && r.status != 'Rejected')) {
       _showError('Nomor telepon ini sudah terdaftar. Silakan pilih nomor lain.');
       return;
     }
 
-    if (!FirebaseService.isInitialized) {
+    if (!SupabaseService.isInitialized) {
       _showError(
-        'Firebase belum aktif. Pastikan konfigurasi Firebase sudah benar, lalu jalankan ulang aplikasi.',
+        'Supabase belum aktif. Pastikan konfigurasi Supabase sudah benar, lalu jalankan ulang aplikasi.',
       );
       return;
     }
@@ -119,10 +123,10 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isRegistering = true);
 
     try {
-      await FirebaseAuthService.registerEndUser(account: newAccount);
+      await SupabaseAuthService.registerEndUser(account: newAccount);
       await GlobalAuthData.registerAccount(newAccount);
-    } on FirebaseAuthException catch (error) {
-      _showError(_firebaseAuthErrorMessage(error));
+    } on AuthException catch (error) {
+      _showError(_supabaseAuthErrorMessage(error));
       return;
     } on Object catch (error) {
       _showError('Pendaftaran gagal: $error');
@@ -155,21 +159,18 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  String _firebaseAuthErrorMessage(FirebaseAuthException error) {
-    switch (error.code) {
-      case 'email-already-in-use':
-        return 'Email ini sudah terdaftar di Firebase Authentication.';
-      case 'invalid-email':
-        return 'Format email tidak valid.';
-      case 'operation-not-allowed':
-        return 'Provider Email/Password belum diaktifkan di Firebase Authentication.';
-      case 'weak-password':
-        return 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.';
-      case 'network-request-failed':
-        return 'Koneksi internet bermasalah. Coba lagi beberapa saat.';
-      default:
-        return error.message ?? 'Pendaftaran Firebase gagal.';
+  String _supabaseAuthErrorMessage(AuthException error) {
+    final msg = error.message.toLowerCase();
+    if (msg.contains('already registered') || msg.contains('already exists')) {
+      return 'Email ini sudah terdaftar di sistem Supabase.';
+    } else if (msg.contains('invalid email')) {
+      return 'Format email tidak valid.';
+    } else if (msg.contains('should be at least') || msg.contains('weak')) {
+      return 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.';
+    } else if (msg.contains('network') || msg.contains('connect') || msg.contains('request failed')) {
+      return 'Koneksi internet bermasalah. Coba lagi beberapa saat.';
     }
+    return error.message;
   }
 
   @override
@@ -250,7 +251,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
-                    hintText: 'Minimal 6 karakter',
+                    hintText: 'Min. 8 karakter (Kapital, Angka, Simbol)',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
                     suffixIcon: IconButton(
                       icon: Icon(

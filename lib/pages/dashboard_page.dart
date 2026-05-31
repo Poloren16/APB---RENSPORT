@@ -123,7 +123,10 @@ class _DashboardPageState extends State<DashboardPage> {
         initialCategory: _selectedCategory == 'Favorit' ? 'Favorite' : _selectedCategory,
         initialDate: _selectedDate,
       ),
-      BookingHistoryPage(username: widget.username),
+      BookingHistoryPage(
+        username: widget.username,
+        onNavigateToVenue: () => _onItemTapped(1),
+      ),
       AkunPage(username: widget.username, role: widget.role),
     ];
 
@@ -487,16 +490,38 @@ class _DashboardPageState extends State<DashboardPage> {
               borderRadius: BorderRadius.circular(15),
               child: Builder(builder: (context) {
                 final imgPath = venue['image']?.toString() ?? '';
-                if (imgPath.isNotEmpty) {
-                  return Image.file(
-                    File(imgPath),
-                    width: 100, height: 100, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 100, height: 100, color: Colors.grey[300],
-                      child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                    ),
-                  );
-                }
+                 if (imgPath.isNotEmpty) {
+                   final isRemote = imgPath.startsWith('http://') || imgPath.startsWith('https://');
+                   final isAsset = imgPath.startsWith('assets/');
+                   if (isRemote) {
+                     return Image.network(
+                       imgPath,
+                       width: 100, height: 100, fit: BoxFit.cover,
+                       errorBuilder: (_, __, ___) => Container(
+                         width: 100, height: 100, color: Colors.grey[300],
+                         child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                       ),
+                     );
+                   } else if (isAsset) {
+                     return Image.asset(
+                       imgPath,
+                       width: 100, height: 100, fit: BoxFit.cover,
+                       errorBuilder: (_, __, ___) => Container(
+                         width: 100, height: 100, color: Colors.grey[300],
+                         child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                       ),
+                     );
+                   } else {
+                     return Image.file(
+                       File(imgPath),
+                       width: 100, height: 100, fit: BoxFit.cover,
+                       errorBuilder: (_, __, ___) => Container(
+                         width: 100, height: 100, color: Colors.grey[300],
+                         child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                       ),
+                     );
+                   }
+                 }
                 return Container(
                   width: 100, height: 100, color: Colors.grey[300],
                   child: const Icon(Icons.stadium, size: 50, color: Colors.grey),

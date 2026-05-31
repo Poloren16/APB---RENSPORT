@@ -8,6 +8,8 @@ class AlertUtils {
     required String title,
     required String message,
     VoidCallback? onConfirm,
+    IconData? customIcon,
+    Color? customColor,
   }) {
     showGeneralDialog(
       context: context,
@@ -35,12 +37,12 @@ class AlertUtils {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: (isSuccess ? Colors.green : Colors.red).withOpacity(0.1),
+                      color: (customColor ?? (isSuccess ? Colors.green : Colors.red)).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isSuccess ? Icons.check_circle_rounded : Icons.cancel_rounded,
-                      color: isSuccess ? Colors.green : Colors.red,
+                      customIcon ?? (isSuccess ? Icons.check_circle_rounded : Icons.cancel_rounded),
+                      color: customColor ?? (isSuccess ? Colors.green : Colors.red),
                       size: 72,
                     ),
                   ),
@@ -74,8 +76,8 @@ class AlertUtils {
                         if (onConfirm != null) onConfirm();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isSuccess ? Colors.green : Colors.red,
-                        foregroundColor: Colors.white,
+                        backgroundColor: customColor ?? (isSuccess ? Colors.green : Colors.red),
+                        foregroundColor: (customColor == Colors.amber || customColor == Colors.yellow) ? Colors.black87 : Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),

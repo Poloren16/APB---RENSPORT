@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../utils/booking_utils.dart';
 import './payment_instruction_page.dart';
 import '../data/venue_data.dart';
 import '../data/auth_data.dart';
+import '../services/midtrans_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../utils/alert_utils.dart';
+
 
 class PaymentPage extends StatefulWidget {
   final String username;
@@ -654,46 +657,108 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  void _processPayment() {
-    // Hapus item dari keranjang jika berasal dari keranjang
-    if (widget.items.isNotEmpty) {
-      for (var item in widget.items) {
-        GlobalVenueData.cart.removeWhere((cartItem) => 
-          cartItem['venueName'] == item['venueName'] &&
-          cartItem['courtName'] == item['courtName'] &&
-          cartItem['date'] == item['date'] &&
-          cartItem['timeSlot'] == item['timeSlot']
-        );
-      }
-    }
-
+  void _processPayment() async {
+    final account = GlobalAuthData.getAccount(widget.username);
+    final email = account?.email ?? 'customer@rensius.com';
+    final phone = account?.phoneNumber ?? '081234567890';
     final orderId = 'ID${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PaymentInstructionPage(
-          paymentMethodId: _selectedPaymentMethodId ?? 'qris',
-          paymentMethodName: _selectedPaymentMethodId?.toUpperCase() ?? 'QRIS',
-          amount: _totalPrice,
-          usedPoints: _usePoints ? (_availablePoints > (widget.items.fold(0, (s, i) => s + (i['price'] as int)) + (widget.items.isEmpty ? widget.price : 0)) ? (widget.items.fold(0, (s, i) => s + (i['price'] as int)) + (widget.items.isEmpty ? widget.price : 0)) : _availablePoints) : 0,
-          orderId: orderId,
-          venueName: widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName,
-          courtName: widget.items.isNotEmpty 
-              ? (widget.items.length == 1 ? widget.items.first['courtName'] : '${widget.items.length} Lapangan') 
-              : widget.courtName,
-          date: widget.items.isNotEmpty ? widget.items.first['date'] : widget.date,
-          timeRange: widget.items.isNotEmpty ? widget.items.first['timeSlot'] : widget.timeRange,
-          individualSlots: widget.individualSlots.isNotEmpty 
-              ? widget.individualSlots 
-              : widget.items.map((item) => {
-                  'court': item['courtName']?.toString() ?? '',
-                  'time': item['timeSlot']?.toString() ?? '',
-                }).toList(),
-          selectedServices: _localSelectedServices,
-          username: widget.username,
-          role: widget.role,
+
+    // Tampilkan loading overlay
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(color: AppColors.primary),
+            SizedBox(width: 20),
+            Expanded(child: Text("Menghubungkan dengan Midtrans...")),
+          ],
         ),
       ),
     );
+
+    try {
+      // Hubungkan live dengan Midtrans
+      final snapData = await MidtransService.createTransaction(
+        orderId: orderId,
+        grossAmount: _totalPrice,
+        username: widget.username,
+        email: email,
+        phone: phone,
+        courtName: widget.items.isNotEmpty 
+            ? (widget.items.length == 1 ? widget.items.first['courtName'] : '${widget.items.length} Lapangan') 
+            : widget.courtName,
+        venueName: widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName,
+      );
+
+      // Tutup loading dialog
+      if (mounted) Navigator.pop(context);
+
+      final redirectUrl = snapData['redirect_url'] as String?;
+
+      if (redirectUrl != null) {
+        final uri = Uri.parse(redirectUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      }
+
+      // Hapus item dari keranjang jika berasal dari keranjang
+      if (widget.items.isNotEmpty) {
+        for (var item in widget.items) {
+          GlobalVenueData.cart.removeWhere((cartItem) => 
+            cartItem['venueName'] == item['venueName'] &&
+            cartItem['courtName'] == item['courtName'] &&
+            cartItem['date'] == item['date'] &&
+            cartItem['timeSlot'] == item['timeSlot']
+          );
+        }
+      }
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PaymentInstructionPage(
+              paymentMethodId: _selectedPaymentMethodId ?? 'qris',
+              paymentMethodName: _selectedPaymentMethodId?.toUpperCase() ?? 'QRIS',
+              amount: _totalPrice,
+              usedPoints: _usePoints ? (_availablePoints > (widget.items.fold(0, (s, i) => s + (i['price'] as int)) + (widget.items.isEmpty ? widget.price : 0)) ? (widget.items.fold(0, (s, i) => s + (i['price'] as int)) + (widget.items.isEmpty ? widget.price : 0)) : _availablePoints) : 0,
+              orderId: orderId,
+              venueName: widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName,
+              courtName: widget.items.isNotEmpty 
+                  ? (widget.items.length == 1 ? widget.items.first['courtName'] : '${widget.items.length} Lapangan') 
+                  : widget.courtName,
+              date: widget.items.isNotEmpty ? widget.items.first['date'] : widget.date,
+              timeRange: widget.items.isNotEmpty ? widget.items.first['timeSlot'] : widget.timeRange,
+              individualSlots: widget.individualSlots.isNotEmpty 
+                  ? widget.individualSlots 
+                  : widget.items.map((item) => {
+                      'court': item['courtName']?.toString() ?? '',
+                      'time': item['timeSlot']?.toString() ?? '',
+                    }).toList(),
+              selectedServices: _localSelectedServices,
+              username: widget.username,
+              role: widget.role,
+              redirectUrl: redirectUrl,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Tutup loading dialog jika error
+      if (mounted) Navigator.pop(context);
+      
+      // Tampilkan error
+      if (mounted) {
+        AlertUtils.showResultDialog(
+          context,
+          isSuccess: false,
+          title: "Gagal Menghubungkan",
+          message: e.toString().replaceAll("Exception: ", ""),
+        );
+      }
+    }
   }
 }

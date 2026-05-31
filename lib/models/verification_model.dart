@@ -46,6 +46,7 @@ class VerificationRequest {
   VerificationRequest copyWith({
     String? status,
     String? rejectionReason,
+    String? documentUrl,
   }) {
     return VerificationRequest(
       id: id,
@@ -55,7 +56,7 @@ class VerificationRequest {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       nik: nik,
       npwp: npwp,
-      documentUrl: documentUrl,
+      documentUrl: documentUrl ?? this.documentUrl,
       type: type,
       status: status ?? this.status,
       rejectionReason: rejectionReason ?? this.rejectionReason,

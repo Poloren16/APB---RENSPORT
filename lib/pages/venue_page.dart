@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:io';
 import '../theme/app_colors.dart';
 import '../widgets/shared/venue_category_chips.dart';
@@ -121,126 +122,193 @@ class _VenuePageState extends State<VenuePage> {
       }).toList();
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Section
-            Stack(
-              children: [
-                Container(
-                  height: 130,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(30),
-                      bottomRight: Radius.circular(30),
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Section
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: statusBarHeight + 135,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF0A1975), // Rich deep navy blue
+                          Color(0xFF152FD6), // Bright dynamic royal blue
+                        ],
+                      ),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(36),
+                        bottomRight: Radius.circular(36),
+                      ),
+                    ),
+                    padding: EdgeInsets.only(
+                      top: statusBarHeight + 14,
+                      left: 24,
+                      right: 24,
+                      bottom: 28,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.stadium_rounded, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                isShowingFavorites ? 'Venue Favorit' : 'Temukan Venue',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isShowingFavorites 
+                                    ? 'Daftar lapangan pilihan Anda' 
+                                    : 'Pilih lapangan dan mulai bermain!',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.75),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => KeranjangPage(
+                                  username: widget.username,
+                                  role: widget.role,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                                ),
+                                child: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 20),
+                              ),
+                              if (GlobalVenueData.cart.isNotEmpty)
+                                Positioned(
+                                  right: -2,
+                                  top: -2,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(5),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: const Color(0xFF152FD6), width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.1),
+                                          blurRadius: 4,
+                                        )
+                                      ]
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 10,
+                                      minHeight: 10,
+                                    ),
+                                  ),
+                                )
+                            ],
+                          ),
+                        )
+                      ],
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.stadium, color: Colors.white, size: 30),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          isShowingFavorites ? 'Venue Favorit Kamu' : 'Temukan Beragam Venue!',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: -22,
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Cari Venue',
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
+                          suffixIcon: _searchController.text.isNotEmpty 
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 20, color: Colors.grey), 
+                                  onPressed: () => _searchController.clear(),
+                                ) 
+                              : null,
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
                           ),
                         ),
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => KeranjangPage(
-                                username: widget.username,
-                                role: widget.role,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Stack(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-                            ),
-                            if (GlobalVenueData.cart.isNotEmpty)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  constraints: const BoxConstraints(
-                                    minWidth: 8,
-                                    minHeight: 8,
-                                  ),
-                                ),
-                              )
-                          ],
-                        ),
-                      )
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 70, left: 20, right: 20),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Cari Venue',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _searchController.text.isNotEmpty 
-                            ? IconButton(icon: const Icon(Icons.clear, size: 20), onPressed: () => _searchController.clear()) 
-                            : null,
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-  
-            const SizedBox(height: 20),
+                ],
+              ),
+    
+              const SizedBox(height: 38),
   
             // Categories Section
             Padding(
@@ -433,14 +501,36 @@ class _VenuePageState extends State<VenuePage> {
                             child: Builder(builder: (context) {
                               final imgPath = venue['image']?.toString() ?? '';
                               if (imgPath.isNotEmpty) {
-                                return Image.file(
-                                  File(imgPath),
-                                  width: 120, height: 120, fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    width: 120, height: 120, color: Colors.grey[300],
-                                    child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                                  ),
-                                );
+                                final isRemote = imgPath.startsWith('http://') || imgPath.startsWith('https://');
+                                final isAsset = imgPath.startsWith('assets/');
+                                if (isRemote) {
+                                  return Image.network(
+                                    imgPath,
+                                    width: 120, height: 120, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      width: 120, height: 120, color: Colors.grey[300],
+                                      child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                                    ),
+                                  );
+                                } else if (isAsset) {
+                                  return Image.asset(
+                                    imgPath,
+                                    width: 120, height: 120, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      width: 120, height: 120, color: Colors.grey[300],
+                                      child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                                    ),
+                                  );
+                                } else {
+                                  return Image.file(
+                                    File(imgPath),
+                                    width: 120, height: 120, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      width: 120, height: 120, color: Colors.grey[300],
+                                      child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                                    ),
+                                  );
+                                }
                               }
                               return Container(
                                 width: 120, height: 120, color: Colors.grey[300],
@@ -607,14 +697,36 @@ class _VenuePageState extends State<VenuePage> {
                   final venueImages = venue['images'] as List<dynamic>? ?? venue['imagePaths'] as List<dynamic>? ?? [];
                   final courtImg = venueImages.isNotEmpty ? venueImages.first.toString() : '';
                   if (courtImg.isNotEmpty) {
-                    return Image.file(
-                      File(courtImg),
-                      width: 60, height: 60, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 60, height: 60, color: Colors.grey[200],
-                        child: const Icon(Icons.image, size: 30, color: Colors.grey),
-                      ),
-                    );
+                    final isRemote = courtImg.startsWith('http://') || courtImg.startsWith('https://');
+                    final isAsset = courtImg.startsWith('assets/');
+                    if (isRemote) {
+                      return Image.network(
+                        courtImg,
+                        width: 60, height: 60, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 60, height: 60, color: Colors.grey[200],
+                          child: const Icon(Icons.image, size: 30, color: Colors.grey),
+                        ),
+                      );
+                    } else if (isAsset) {
+                      return Image.asset(
+                        courtImg,
+                        width: 60, height: 60, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 60, height: 60, color: Colors.grey[200],
+                          child: const Icon(Icons.image, size: 30, color: Colors.grey),
+                        ),
+                      );
+                    } else {
+                      return Image.file(
+                        File(courtImg),
+                        width: 60, height: 60, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 60, height: 60, color: Colors.grey[200],
+                          child: const Icon(Icons.image, size: 30, color: Colors.grey),
+                        ),
+                      );
+                    }
                   }
                   return Container(
                     width: 60, height: 60, color: Colors.grey[200],

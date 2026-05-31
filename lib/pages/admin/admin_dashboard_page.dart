@@ -9,6 +9,10 @@ import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/data/venue_data.dart';
 import 'package:rensius/data/notification_data.dart';
 import 'package:rensius/widgets/empty_state_widget.dart';
+import 'package:rensius/services/notification_service.dart';
+import 'package:rensius/services/supabase_service.dart';
+import 'package:rensius/services/supabase_auth_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 
 class AdminDashboardPage extends StatefulWidget {
@@ -275,7 +279,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Widget _buildStatusBadge(String status) {
-    Color color = Colors.orange;
+    Color color = Colors.amber;
     if (status == 'Approved') color = Colors.green;
     if (status == 'Rejected') color = Colors.red;
 
@@ -313,7 +317,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               color: AppColors.primary, size: 22,
             ),
             const SizedBox(width: 8),
-            Text(req.type == 'Owner' ? 'Detail Verifikasi Owner' : 'Detail Verifikasi Venue'),
+            Expanded(
+              child: Text(
+                req.type == 'Owner' ? 'Detail Verifikasi Owner' : 'Detail Verifikasi Venue',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
           ],
         ),
         content: SizedBox(
@@ -451,20 +462,61 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         separatorBuilder: (_, __) => const SizedBox(width: 8),
                         itemBuilder: (context, i) {
                           final path = imagePaths[i].toString();
+                          final isRemote = path.startsWith('http://') || path.startsWith('https://');
+                          final isAsset = path.startsWith('assets/');
                           return ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              File(path),
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                width: 100,
-                                height: 100,
-                                color: Colors.grey.shade200,
-                                child: const Icon(Icons.broken_image, color: Colors.grey),
-                              ),
-                            ),
+                            child: isRemote
+                                ? Image.network(
+                                    path,
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      width: 100,
+                                      height: 100,
+                                      color: Colors.grey.shade200,
+                                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                                    ),
+                                  )
+                                : isAsset
+                                    ? Image.asset(
+                                        path,
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          width: 100,
+                                          height: 100,
+                                          color: Colors.grey.shade200,
+                                          child: const Icon(Icons.broken_image, color: Colors.grey),
+                                        ),
+                                      )
+                                    : kIsWeb
+                                        ? Image.network(
+                                            path,
+                                            width: 100,
+                                            height: 100,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              width: 100,
+                                              height: 100,
+                                              color: Colors.grey.shade200,
+                                              child: const Icon(Icons.broken_image, color: Colors.grey),
+                                            ),
+                                          )
+                                        : Image.file(
+                                            File(path),
+                                            width: 100,
+                                            height: 100,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              width: 100,
+                                              height: 100,
+                                              color: Colors.grey.shade200,
+                                              child: const Icon(Icons.broken_image, color: Colors.grey),
+                                            ),
+                                          ),
                           );
                         },
                       ),
@@ -487,20 +539,31 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      if (req.documentUrl.isNotEmpty &&
-                          (req.documentUrl.contains('/') || req.documentUrl.contains('\\')))
+                      if (req.documentUrl.isNotEmpty)
                         Positioned.fill(
-                          child: kIsWeb
+                          child: (req.documentUrl.startsWith('http://') || req.documentUrl.startsWith('https://'))
                               ? Image.network(
                                   req.documentUrl,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
                                 )
-                              : Image.file(
-                                  File(req.documentUrl),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
-                                ),
+                              : req.documentUrl.startsWith('assets/')
+                                  ? Image.asset(
+                                      req.documentUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+                                    )
+                                  : kIsWeb
+                                      ? Image.network(
+                                          req.documentUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+                                        )
+                                      : Image.file(
+                                          File(req.documentUrl),
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+                                        ),
                         )
                       else if (req.documentUrl.startsWith('assets/'))
                         Positioned.fill(
@@ -639,7 +702,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     // If Approved, create the actual login account / venue
     if (newStatus == 'Approved') {
       if (req.type == 'Owner' && req.username != null) {
-        await GlobalAuthData.registerAccount(UserAccount(
+        final newOwnerAcc = UserAccount(
           username: req.username!,
           password: req.password ?? '123456',
           role: req.type,
@@ -648,7 +711,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           phoneNumber: req.phoneNumber ?? '',
           profileImagePath: null, // Profile image is initially empty
           ktpImagePath: req.documentUrl, // Save KTP image path to ktpImagePath
-        ));
+        );
+        
+        await GlobalAuthData.registerAccount(newOwnerAcc);
+
+        // Daftarkan langsung ke Supabase Auth secara online
+        if (SupabaseService.isInitialized) {
+          try {
+            await SupabaseAuthService.registerEndUser(account: newOwnerAcc);
+            print('Sukses mendaftarkan Owner "${req.username}" ke Supabase Auth.');
+          } catch (e) {
+            print('Gagal mendaftarkan Owner ke Supabase Auth saat disetujui: $e');
+          }
+        }
       } else if (req.type == 'Venue' && req.venueData != null) {
         // Submit approved venue to global database
         final Map<String, dynamic> newVenue = Map<String, dynamic>.from(req.venueData!);
@@ -683,6 +758,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           icon: Icons.stadium,
           color: Colors.blue,
         ));
+
+        // Memicu Notifikasi Eksternal HP (Native System Push Notification)
+        LocalNotificationService.showNotification(
+          id: req.id.hashCode,
+          title: 'Venue Baru Tersedia! 🏟️',
+          body: 'Venue "${req.venueName}" sekarang sudah tersedia untuk dibooking di RENSIUS!',
+        );
       }
     } 
     // If Rejected, make sure no account exists (cleanup)
@@ -709,8 +791,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       setState(() {});
       // Clear SnackBar if already showing
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      // Simulated Notification
-      _showNotificationSimulation(req, newStatus);
+      // WhatsApp Notification Prompt
+      _showWhatsAppNotificationSnackBar(req, newStatus, reason: reason);
       
       AlertUtils.showResultDialog(
         context,
@@ -931,7 +1013,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   void _showEditAccountDialog(UserAccount acc) {
     final TextEditingController nameController = TextEditingController(text: acc.applicantName);
-    final TextEditingController passwordController = TextEditingController(text: acc.password);
+    final TextEditingController passwordController = TextEditingController();
 
     showDialog(
       context: context,
@@ -976,8 +1058,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   const SizedBox(height: 20),
                   _buildStyledTextField(
                     controller: passwordController,
-                    label: 'Password Baru',
+                    label: 'Password Baru (Kosongkan jika tidak diubah)',
                     icon: Icons.lock_outline_rounded,
+                    obscureText: true,
+                    hintText: 'Ketik password baru jika ingin mereset...',
                   ),
                   const SizedBox(height: 32),
                   Row(
@@ -997,7 +1081,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         child: ElevatedButton(
                           onPressed: () async {
                             Navigator.pop(context);
-                            await GlobalAuthData.updateAccount(acc.username, newName: nameController.text, newPassword: passwordController.text);
+                            final String? newPass = passwordController.text.trim().isEmpty ? null : passwordController.text.trim();
+                            await GlobalAuthData.updateAccount(acc.username, newName: nameController.text, newPassword: newPass);
                             setState(() {}); // Refresh list
                             if (mounted) {
                               AlertUtils.showToast(context, 'Akun berhasil diupdate');
@@ -1028,6 +1113,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    bool obscureText = false,
+    String? hintText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1039,10 +1126,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          obscureText: obscureText,
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
             filled: true,
             fillColor: Colors.grey.shade50,
+            hintText: hintText,
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -1108,33 +1198,60 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  void _showNotificationSimulation(VerificationRequest req, String status) {
+  void _showWhatsAppNotificationSnackBar(VerificationRequest req, String status, {String? reason}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: status == 'Approved' ? Colors.green.shade800 : Colors.red.shade800,
+        backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
+        duration: const Duration(seconds: 8),
         action: SnackBarAction(
-          label: 'OK',
+          label: 'KIRIM WA',
           textColor: Colors.white,
           onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            _launchWhatsApp(req, status, reason: reason);
           },
         ),
         content: Row(
           children: [
-            const Icon(Icons.notifications_active, color: Colors.white),
+            const Icon(Icons.phone_android, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                '🔄 SIMULATION: $status notification sent to ${req.phoneNumber ?? req.email}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                'Kirim notifikasi ${status == "Approved" ? "Persetujuan" : "Penolakan"} ke WhatsApp pemilik?',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _launchWhatsApp(VerificationRequest req, String status, {String? reason}) async {
+    final rawPhone = req.phoneNumber ?? '';
+    // Hapus karakter non-angka
+    final sanitizedPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (sanitizedPhone.isEmpty) {
+      AlertUtils.showToast(context, 'Nomor telepon tidak valid/kosong!', isSuccess: false);
+      return;
+    }
+
+    final String message;
+    if (status == 'Approved') {
+      message = 'Halo *${req.applicantName}*,\n\nKami dari tim *RENSIUS* ingin menginfokan bahwa verifikasi akun Pemilik Lapangan Anda telah *DISETUJUI*! 🎉\n\nSekarang Anda sudah bisa masuk ke aplikasi menggunakan username *@${req.username}* dan mulai mengelola lapangan olahraga Anda.\n\nTerima kasih atas kerja samanya! 🙏';
+    } else {
+      message = 'Halo *${req.applicantName}*,\n\nKami dari tim *RENSIUS* ingin menginfokan bahwa pengajuan verifikasi akun Anda saat ini *DITOLAK*.\n\n*Alasan:* ${reason ?? "Dokumen kurang jelas"}\n\nSilakan melakukan pendaftaran kembali di aplikasi dengan berkas/data yang benar.\n\nTerima kasih!';
+    }
+
+    final String url = 'https://wa.me/$sanitizedPhone?text=${Uri.encodeComponent(message)}';
+    
+    try {
+      final Uri uri = Uri.parse(url);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      print('Gagal membuka WhatsApp: $e');
+      AlertUtils.showToast(context, 'Gagal membuka WhatsApp!', isSuccess: false);
+    }
   }
 
   Widget _buildDetailRow(String label, String value) {

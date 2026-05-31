@@ -148,34 +148,62 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
     );
   }
 
-  bool _validateSocialUrls() {
-    final insta = _instaController.text.trim();
-    if (insta.isNotEmpty && !insta.startsWith('@') && !insta.contains('instagram.com')) {
-      AlertUtils.showToast(context, 'Please enter a valid Instagram handle or URL', isSuccess: false);
-      return false;
+  String _cleanAndFormatHandle(String input) {
+    String text = input.trim();
+    if (text.isEmpty) return "";
+    
+    // Hilangkan parameter kueri jika ada (misal: ?s=20)
+    if (text.contains('?')) {
+      text = text.split('?').first;
     }
-    return true;
+    
+    // Jika berupa URL lengkap, ambil segmen username terakhir
+    if (text.contains('/')) {
+      final parts = text.split('/');
+      text = parts.lastWhere((part) => part.isNotEmpty, orElse: () => "");
+    }
+    
+    // Bersihkan karakter '@' di depan jika ada
+    while (text.startsWith('@')) {
+      text = text.substring(1);
+    }
+    
+    return text.isNotEmpty ? '@$text' : '';
   }
 
   Future<void> _saveProfile() async {
-    if (!_validateSocialUrls()) return;
+    final cleanInsta = _cleanAndFormatHandle(_instaController.text);
+    final cleanTwitter = _cleanAndFormatHandle(_twitterController.text);
+    final cleanFb = _cleanAndFormatHandle(_fbController.text);
+
+    setState(() {
+      _instaController.text = cleanInsta;
+      _twitterController.text = cleanTwitter;
+      _fbController.text = cleanFb;
+    });
 
     await GlobalAuthData.updateAccount(
       widget.username,
       newName: _nameController.text.trim(),
       newBio: _bioController.text.trim(),
       newSports: _selectedSports,
-      newInsta: _instaController.text.trim(),
-      newTwitter: _twitterController.text.trim(),
-      newFacebook: _fbController.text.trim(),
+      newInsta: cleanInsta,
+      newTwitter: cleanTwitter,
+      newFacebook: cleanFb,
       newProfileImage: _profileImagePath,
       newGender: _gender,
       newDOB: _dob,
     );
     
     if (mounted) {
+      final updatedAcc = GlobalAuthData.getAccount(widget.username);
+      setState(() {
+        if (updatedAcc != null) {
+          _profileImagePath = updatedAcc.profileImagePath;
+        }
+        _isEditing = false;
+      });
       AlertUtils.showToast(context, 'Profil berhasil diupdate!', isSuccess: true);
-      setState(() => _isEditing = false);
     }
   }
 
@@ -278,9 +306,9 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
               decoration: BoxDecoration(
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(24),
-                image: _profileImagePath != null 
+                image: (_profileImagePath != null && _profileImagePath!.isNotEmpty)
                     ? DecorationImage(
-                        image: kIsWeb
+                        image: _profileImagePath!.startsWith('http')
                             ? NetworkImage(_profileImagePath!) as ImageProvider
                             : FileImage(File(_profileImagePath!)),
                         fit: BoxFit.cover,
@@ -288,7 +316,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
                     : null,
               ),
               alignment: Alignment.center,
-              child: _profileImagePath == null 
+              child: (_profileImagePath == null || _profileImagePath!.isEmpty)
                   ? Text(
                       _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : 'U',
                       style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white),
@@ -595,7 +623,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
           controller: controller,
           readOnly: !_isEditing,
           decoration: InputDecoration(
-            hintText: 'Link or username',
+            hintText: '@username atau link profil',
             prefixIcon: prefixIcon,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             enabledBorder: OutlineInputBorder(

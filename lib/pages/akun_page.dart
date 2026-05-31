@@ -69,9 +69,9 @@ class _AkunPageState extends State<AkunPage> {
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(16),
-                      image: profileImagePath != null 
+                      image: (profileImagePath != null && profileImagePath.isNotEmpty)
                           ? DecorationImage(
-                              image: kIsWeb
+                              image: profileImagePath.startsWith('http')
                                   ? NetworkImage(profileImagePath) as ImageProvider
                                   : FileImage(File(profileImagePath)),
                               fit: BoxFit.cover,
@@ -79,7 +79,7 @@ class _AkunPageState extends State<AkunPage> {
                           : null,
                     ),
                     alignment: Alignment.center,
-                    child: profileImagePath == null 
+                    child: (profileImagePath == null || profileImagePath.isEmpty)
                         ? Text(
                             initial,
                             style: const TextStyle(

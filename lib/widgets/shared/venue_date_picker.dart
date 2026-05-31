@@ -16,10 +16,10 @@ class VenueDatePicker extends StatefulWidget {
   @override
   State<VenueDatePicker> createState() => _VenueDatePickerState();
 
-  static List<DateTime> getWeekDates() {
-    final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday % 7));
-    return List.generate(14, (i) => startOfWeek.add(Duration(days: i)));
+  static List<DateTime> getWeekDates(DateTime selectedDate) {
+    final baseDate = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final startDate = baseDate.subtract(const Duration(days: 4));
+    return List.generate(30, (i) => startDate.add(Duration(days: i)));
   }
 
   static String getDayName(DateTime date) {
@@ -33,19 +33,41 @@ class VenueDatePicker extends StatefulWidget {
 
 class _VenueDatePickerState extends State<VenueDatePicker> {
   late ScrollController _scrollController;
+  List<DateTime>? _dates;
+
+  List<DateTime> get dates {
+    _dates ??= VenueDatePicker.getWeekDates(widget.selectedDate);
+    return _dates!;
+  }
 
   @override
   void initState() {
     super.initState();
+    _dates = VenueDatePicker.getWeekDates(widget.selectedDate);
     _scrollController = ScrollController();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected(isAnimated: false));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToSelected(isAnimated: false);
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) {
+          _scrollToSelected(isAnimated: true);
+        }
+      });
+    });
   }
 
   @override
   void didUpdateWidget(VenueDatePicker oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!VenueDatePicker.isSameDay(oldWidget.selectedDate, widget.selectedDate)) {
-      _scrollToSelected();
+      final hasNewDate = dates.any((d) => VenueDatePicker.isSameDay(d, widget.selectedDate));
+      
+      if (!hasNewDate) {
+        setState(() {
+          _dates = VenueDatePicker.getWeekDates(widget.selectedDate);
+        });
+      }
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
     }
   }
 
@@ -58,7 +80,6 @@ class _VenueDatePickerState extends State<VenueDatePicker> {
   void _scrollToSelected({bool isAnimated = true}) {
     if (!_scrollController.hasClients) return;
 
-    final dates = VenueDatePicker.getWeekDates();
     final index = dates.indexWhere((date) => VenueDatePicker.isSameDay(date, widget.selectedDate));
 
     if (index != -1) {
@@ -70,8 +91,8 @@ class _VenueDatePickerState extends State<VenueDatePicker> {
       if (isAnimated) {
         _scrollController.animateTo(
           offset.clamp(0.0, _scrollController.position.maxScrollExtent),
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
         );
       } else {
         _scrollController.jumpTo(
@@ -83,15 +104,15 @@ class _VenueDatePickerState extends State<VenueDatePicker> {
 
   @override
   Widget build(BuildContext context) {
-    final dates = VenueDatePicker.getWeekDates();
+    final datesList = dates;
     return SizedBox(
       height: 70,
       child: ListView.builder(
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
-        itemCount: dates.length,
+        itemCount: datesList.length,
         itemBuilder: (context, index) {
-          final date = dates[index];
+          final date = datesList[index];
           final isSelected = VenueDatePicker.isSameDay(date, widget.selectedDate);
           
           final now = DateTime.now();

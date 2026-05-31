@@ -8,7 +8,12 @@ import 'package:rensius/widgets/empty_state_widget.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   final String username;
-  const BookingHistoryPage({super.key, this.username = 'User'});
+  final VoidCallback? onNavigateToVenue;
+  const BookingHistoryPage({
+    super.key, 
+    this.username = 'User',
+    this.onNavigateToVenue,
+  });
 
   static List<Map<String, dynamic>> mockHistory = [];
 
@@ -257,12 +262,16 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                _statusFilter = 'Semua';
              });
            } else {
-             Navigator.push(
-               context,
-               MaterialPageRoute(
-                 builder: (context) => VenuePage(username: widget.username),
-               ),
-             );
+             if (widget.onNavigateToVenue != null) {
+               widget.onNavigateToVenue!();
+             } else {
+               Navigator.push(
+                 context,
+                 MaterialPageRoute(
+                   builder: (context) => VenuePage(username: widget.username),
+                 ),
+               );
+             }
            }
         },
         actionLabel: _searchController.text.isNotEmpty || _statusFilter != 'Semua' ? 'Reset Filter' : 'Buat Pesanan',

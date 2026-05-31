@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/verification_model.dart';
+import 'package:rensius/services/supabase_service.dart';
+import 'package:rensius/services/supabase_auth_service.dart';
 
 class UserAccount {
   final String username;
@@ -107,23 +109,63 @@ class GlobalAuthData {
     final prefs = await SharedPreferences.getInstance();
     String? accountsJson = prefs.getString(_storageKey);
 
-    // Fallback and Cleanup migration
+    // 1. Muat dari cache lokal terlebih dahulu agar cepat
     if (accountsJson == null) {
-      // For development, we'll force the new default accounts by using a new key
-      // or we can check if they exist.
       accounts = List.from(_defaultAccounts);
       await save();
     } else {
       final List<dynamic> decoded = jsonDecode(accountsJson);
       accounts = decoded.map((item) => UserAccount.fromMap(item)).toList();
       
-      // Ensure dummy accounts exist
       for (var defAcc in _defaultAccounts) {
         if (!accounts.any((a) => a.username == defAcc.username)) {
           accounts.add(defAcc);
         }
       }
       await save();
+    }
+
+    // 2. Sinkronisasikan secara online dari Supabase jika aktif
+    if (SupabaseService.isInitialized) {
+      try {
+        final response = await SupabaseService.client.from('users').select();
+        final List<UserAccount> onlineAccounts = [];
+        for (var row in response) {
+          onlineAccounts.add(UserAccount(
+            username: row['username'] ?? '',
+            password: '', // Password aman di auth.users
+            role: row['role'] ?? 'End User',
+            applicantName: row['applicant_name'] ?? '',
+            email: row['email'] ?? '',
+            phoneNumber: row['phone_number'] ?? '',
+            bio: row['bio'] ?? '',
+            sportsInterests: List<String>.from(row['sports_interests'] ?? []),
+            instagram: row['instagram'] ?? '',
+            twitter: row['twitter'] ?? '',
+            facebook: row['facebook'] ?? '',
+            profileImagePath: row['profile_image_path'],
+            ktpImagePath: row['ktp_image_path'],
+            gender: row['gender'] ?? 'Not Set',
+            dateOfBirth: row['date_of_birth'] ?? '',
+            points: row['points'] ?? 0,
+          ));
+        }
+
+        // Gabungkan data online ke lokal cache
+        for (var onlineAcc in onlineAccounts) {
+          final idx = accounts.indexWhere((a) => a.username == onlineAcc.username);
+          if (idx != -1) {
+            // Update cache dengan data online terbaru
+            accounts[idx] = onlineAcc;
+          } else {
+            // Tambahkan akun online baru yang belum ada di lokal cache
+            accounts.add(onlineAcc);
+          }
+        }
+        await save();
+      } catch (e) {
+        print('Gagal sinkronisasi online akun: $e');
+      }
     }
   }
 
@@ -138,13 +180,22 @@ class GlobalAuthData {
     if (!exists) {
       accounts.add(account);
       await save();
+      
+      // Sinkronisasikan online ke Supabase
+      if (SupabaseService.isInitialized && account.role != 'Admin') {
+        try {
+          await SupabaseAuthService.saveUserProfile(account);
+        } catch (e) {
+          print('Gagal menyimpan profil online: $e');
+        }
+      }
     }
   }
 
   static UserAccount? login(String username, String password) {
     try {
       final user = accounts.firstWhere(
-        (a) => a.username == username && a.password == password,
+        (a) => a.username == username && (a.password == password || a.password.isEmpty),
       );
       currentUser = user;
       return user;
@@ -193,6 +244,15 @@ class GlobalAuthData {
   static Future<void> deleteAccount(String username) async {
     accounts.removeWhere((a) => a.username == username);
     await save();
+
+    // Hapus online dari Supabase
+    if (SupabaseService.isInitialized) {
+      try {
+        await SupabaseService.client.from('users').delete().eq('username', username);
+      } catch (e) {
+        print('Gagal menghapus profil online: $e');
+      }
+    }
   }
 
   static Future<void> updateAccount(
@@ -215,7 +275,50 @@ class GlobalAuthData {
     final index = accounts.indexWhere((a) => a.username == username);
     if (index != -1) {
       final old = accounts[index];
-      accounts[index] = UserAccount(
+
+      // Unggah foto profil ke Supabase Storage secara dinamis jika online & berupa path lokal
+      String? finalProfileImageUrl = newProfileImage ?? old.profileImagePath;
+      if (newProfileImage != null && 
+          newProfileImage.isNotEmpty &&
+          SupabaseService.isInitialized && 
+          !newProfileImage.startsWith('http')) {
+        try {
+          final String? uploadedUrl = await SupabaseService.uploadProfileImage(newProfileImage, username);
+          if (uploadedUrl != null) {
+            finalProfileImageUrl = uploadedUrl;
+          } else {
+            // Jika gagal upload ke Supabase online, jangan simpan path lokal ke online DB.
+            // Gunakan gambar yang lama (atau null/kosong jika tidak ada).
+            finalProfileImageUrl = old.profileImagePath;
+            print('Gagal mengunggah foto profil: uploadProfileImage mengembalikan null. Silakan periksa apakah storage bucket "profiles" sudah dibuat dan diset ke Public di Supabase Console.');
+          }
+        } catch (e) {
+          print('Gagal mengunggah foto profil ke Supabase Storage: $e');
+          finalProfileImageUrl = old.profileImagePath;
+        }
+      }
+
+      // Unggah foto KTP ke Supabase Storage secara dinamis jika online & berupa path lokal
+      String? finalKtpImageUrl = newKtpImage ?? old.ktpImagePath;
+      if (newKtpImage != null && 
+          newKtpImage.isNotEmpty &&
+          SupabaseService.isInitialized && 
+          !newKtpImage.startsWith('http')) {
+        try {
+          final String? uploadedUrl = await SupabaseService.uploadKtp(newKtpImage, username);
+          if (uploadedUrl != null) {
+            finalKtpImageUrl = uploadedUrl;
+          } else {
+            finalKtpImageUrl = old.ktpImagePath;
+            print('Gagal mengunggah KTP: uploadKtp mengembalikan null. Silakan periksa apakah storage bucket "documents" sudah dibuat dan diset ke Public di Supabase Console.');
+          }
+        } catch (e) {
+          print('Gagal mengunggah KTP ke Supabase Storage: $e');
+          finalKtpImageUrl = old.ktpImagePath;
+        }
+      }
+
+      final updatedAccount = UserAccount(
         username: username,
         password: newPassword ?? old.password,
         role: old.role,
@@ -227,16 +330,27 @@ class GlobalAuthData {
         instagram: newInsta ?? old.instagram,
         twitter: newTwitter ?? old.twitter,
         facebook: newFacebook ?? old.facebook,
-        profileImagePath: newProfileImage ?? old.profileImagePath,
-        ktpImagePath: newKtpImage ?? old.ktpImagePath,
+        profileImagePath: finalProfileImageUrl,
+        ktpImagePath: finalKtpImageUrl,
         gender: newGender ?? old.gender,
         dateOfBirth: newDOB ?? old.dateOfBirth,
         points: newPoints ?? old.points,
       );
+
+      accounts[index] = updatedAccount;
       if (currentUser?.username == username) {
         currentUser = accounts[index];
       }
       await save();
+
+      // Sinkronisasikan perubahan online ke Supabase
+      if (SupabaseService.isInitialized && old.role != 'Admin') {
+        try {
+          await SupabaseAuthService.saveUserProfile(updatedAccount);
+        } catch (e) {
+          print('Gagal memperbarui profil online: $e');
+        }
+      }
     }
   }
 
@@ -244,15 +358,13 @@ class GlobalAuthData {
     bool hasChanges = false;
     for (int i = 0; i < accounts.length; i++) {
       var acc = accounts[i];
-      // Only sync if email or phone is missing
       if (acc.role.toLowerCase() == 'owner' && (acc.email.isEmpty || acc.phoneNumber.isEmpty)) {
         try {
-          // Find matching approved request for this username
           final req = requests.firstWhere(
             (r) => r.username == acc.username && r.status == 'Approved'
           );
           
-          accounts[i] = UserAccount(
+          final updatedAccount = UserAccount(
             username: acc.username,
             password: acc.password,
             role: acc.role,
@@ -270,9 +382,16 @@ class GlobalAuthData {
             dateOfBirth: acc.dateOfBirth,
             points: acc.points,
           );
+
+          accounts[i] = updatedAccount;
           hasChanges = true;
+
+          // Simpan online
+          if (SupabaseService.isInitialized) {
+            await SupabaseAuthService.saveUserProfile(updatedAccount);
+          }
         } catch (e) {
-          // No matching approved request found, skip
+          // No matching approved request found
         }
       }
     }
