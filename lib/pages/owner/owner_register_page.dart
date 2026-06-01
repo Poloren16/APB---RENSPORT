@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:rensius/theme/app_colors.dart';
 import 'package:rensius/utils/alert_utils.dart';
+import 'package:rensius/utils/crypto_utils.dart';
 import 'package:rensius/pages/owner/owner_login_page.dart';
 import 'package:rensius/data/verification_data.dart';
 import 'package:rensius/data/auth_data.dart';
@@ -152,6 +153,18 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         _showValidationError('NPWP harus tepat 15 digit angka.');
         return false;
       }
+
+      // Check NIK Duplication
+      if (GlobalVerificationData.requests.any((r) => r.nik == nik && r.status != 'Rejected')) {
+        _showValidationError('NIK ini sudah terdaftar atau sedang dalam proses verifikasi. Harap gunakan NIK lain.');
+        return false;
+      }
+
+      // Check NPWP Duplication
+      if (GlobalVerificationData.requests.any((r) => r.npwp == npwp && r.status != 'Rejected')) {
+        _showValidationError('NPWP ini sudah terdaftar atau sedang dalam proses verifikasi. Harap gunakan NPWP lain.');
+        return false;
+      }
     }
     return true;
   }
@@ -263,7 +276,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       email: _emailController.text,
       phoneNumber: '$_selectedCountryCode${_phoneController.text.trim()}',
       username: _usernameController.text,
-      password: _passwordController.text.trim(), // Save for later creation
+      password: CryptoUtils.encrypt(_passwordController.text.trim()), // Obfuscate/encrypt password securely
       nik: _nikController.text,
       npwp: _npwpController.text,
       documentUrl: _imageFile?.path ?? '',

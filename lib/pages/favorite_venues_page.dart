@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../theme/app_colors.dart';
 import '../data/venue_data.dart';
 import '../models/review_model.dart';
@@ -20,6 +21,76 @@ class FavoriteVenuesPage extends StatefulWidget {
 }
 
 class _FavoriteVenuesPageState extends State<FavoriteVenuesPage> {
+  String _formatCurrency(int amount) {
+    final formatted = amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+    return 'Rp$formatted';
+  }
+
+  IconData _getSportIcon(String sportType) {
+    final clean = sportType.toLowerCase().trim();
+    if (clean.contains('futsal') || clean.contains('sepak') || clean.contains('bola') || clean.contains('soccer') || clean.contains('mini')) {
+      return Icons.sports_soccer;
+    } else if (clean.contains('badminton') || clean.contains('bulu') || clean.contains('tangkis') || clean.contains('tennis') || clean.contains('tenis')) {
+      return Icons.sports_tennis;
+    } else if (clean.contains('basket') || clean.contains('ball')) {
+      return Icons.sports_basketball;
+    } else if (clean.contains('voli') || clean.contains('volleyball')) {
+      return Icons.sports_volleyball;
+    }
+    return Icons.sports_soccer; // default fallback
+  }
+
+  String _getPriceDisplay(Map<String, dynamic> venue) {
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == venue['name']);
+    final Map<String, dynamic> activeVenue = venueResults.isNotEmpty ? venueResults.first : venue;
+
+    final courts = activeVenue['courts'] as List<dynamic>? ?? [];
+    final prices = <int>[];
+    
+    for (final c in courts) {
+      final cMap = Map<String, dynamic>.from(c as Map);
+      
+      // 1. Ambil harga harian (priceDay)
+      final priceDay = cMap['priceDay'] as Map? ?? {};
+      for (final val in priceDay.values) {
+        final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+        if (v.isNotEmpty) {
+          final n = int.tryParse(v);
+          if (n != null && n > 0) prices.add(n);
+        }
+      }
+      
+      // 2. Ambil harga per jam (pricePerSlot) jika mode perSlot aktif
+      final priceMode = cMap['priceMode'] ?? 'perDay';
+      if (priceMode == 'perSlot') {
+        final pricePerSlot = cMap['pricePerSlot'] as Map? ?? {};
+        for (final val in pricePerSlot.values) {
+          final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+          if (v.isNotEmpty) {
+            final n = int.tryParse(v);
+            if (n != null && n > 0) prices.add(n);
+          }
+        }
+      }
+    }
+
+    if (prices.isEmpty) {
+      final priceVal = activeVenue['price'];
+      if (priceVal == null) return 'Hubungi Pengelola';
+      if (priceVal is int) return _formatCurrency(priceVal);
+      final parsed = int.tryParse(priceVal.toString().replaceAll(RegExp(r'[^0-9]'), ''));
+      return parsed != null ? _formatCurrency(parsed) : priceVal.toString();
+    }
+    
+    prices.sort();
+    final min = prices.first;
+    final max = prices.last;
+    return min == max ? '${_formatCurrency(min)}/jam' : '${_formatCurrency(min)} - ${_formatCurrency(max)}/jam';
+  }
+
   @override
   Widget build(BuildContext context) {
     final favorites = GlobalVenueData.favorites;
@@ -54,6 +125,8 @@ class _FavoriteVenuesPageState extends State<FavoriteVenuesPage> {
 
   Widget _buildFavoriteCard(Map<String, dynamic> venue) {
     final String venueName = venue['name'] ?? 'Unknown Venue';
+    final String imagePath = venue['image']?.toString() ?? '';
+    final String venueType = venue['type']?.toString() ?? 'Olahraga';
 
     return Container(
       decoration: BoxDecoration(
@@ -77,7 +150,7 @@ class _FavoriteVenuesPageState extends State<FavoriteVenuesPage> {
                 builder: (context) => BookingPage(
                   username: widget.username,
                   venueName: venueName,
-                  venueType: venue['type'] ?? 'Sports',
+                  venueType: venueType,
                   venueAddress: venue['address'] ?? venue['location'] ?? '',
                   venueHours: venue['hours'] ?? '06:00 - 22:00',
                 ),
@@ -90,33 +163,43 @@ class _FavoriteVenuesPageState extends State<FavoriteVenuesPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(15),
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image, size: 40, color: Colors.grey),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 4,
-                      left: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          venue['distance'] ?? '3 km',
-                          style: const TextStyle(color: Colors.white, fontSize: 9),
-                        ),
-                      ),
-                    ),
-                  ],
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    color: Colors.grey[200],
+                    child: Builder(builder: (context) {
+                      if (imagePath.isEmpty) {
+                        return Icon(_getSportIcon(venueType), size: 40, color: Colors.grey);
+                      }
+                      final isRemote = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+                      final isAsset = imagePath.startsWith('assets/');
+                      try {
+                        if (isRemote) {
+                          return Image.network(
+                            imagePath,
+                            width: 100, height: 100, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(_getSportIcon(venueType), size: 40, color: Colors.grey),
+                          );
+                        } else if (isAsset) {
+                          return Image.asset(
+                            imagePath,
+                            width: 100, height: 100, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(_getSportIcon(venueType), size: 40, color: Colors.grey),
+                          );
+                        } else {
+                          return Image.file(
+                            File(imagePath),
+                            width: 100, height: 100, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(_getSportIcon(venueType), size: 40, color: Colors.grey),
+                          );
+                        }
+                      } catch (e) {
+                        return Icon(_getSportIcon(venueType), size: 40, color: Colors.grey);
+                      }
+                    }),
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -168,12 +251,17 @@ class _FavoriteVenuesPageState extends State<FavoriteVenuesPage> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        venue['price'] ?? 'Hubungi Manajer',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _getPriceDisplay(venue),
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
                         ),
                       ),
                     ],

@@ -25,6 +25,8 @@ class UserAccount {
   final String gender; // 'Male', 'Female', 'Not Set'
   final String dateOfBirth; // String format 'yyyy-MM-dd'
   final int points;
+  final List<Map<String, dynamic>> cart;
+  final List<Map<String, dynamic>> favorites;
 
   UserAccount({
     required this.username,
@@ -43,6 +45,8 @@ class UserAccount {
     this.gender = 'Not Set',
     this.dateOfBirth = '',
     this.points = 0,
+    this.cart = const [],
+    this.favorites = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -63,6 +67,8 @@ class UserAccount {
       'gender': gender,
       'dateOfBirth': dateOfBirth,
       'points': points,
+      'cart': cart,
+      'favorites': favorites,
     };
   }
 
@@ -84,6 +90,10 @@ class UserAccount {
       gender: map['gender'] ?? 'Not Set',
       dateOfBirth: map['dateOfBirth'] ?? '',
       points: map['points'] ?? 0,
+      cart: List<Map<String, dynamic>>.from(
+          (map['cart'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)) ?? []),
+      favorites: List<Map<String, dynamic>>.from(
+          (map['favorites'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)) ?? []),
     );
   }
 }
@@ -148,15 +158,42 @@ class GlobalAuthData {
             gender: row['gender'] ?? 'Not Set',
             dateOfBirth: row['date_of_birth'] ?? '',
             points: row['points'] ?? 0,
+            cart: List<Map<String, dynamic>>.from(
+                (row['cart'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)) ?? []),
+            favorites: List<Map<String, dynamic>>.from(
+                (row['favorites'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)) ?? []),
           ));
         }
 
-        // Gabungkan data online ke lokal cache
+        // Gabungkan data online ke lokal cache dan hapus akun lokal yang sudah tidak ada online
+        final onlineUsernames = onlineAccounts.map((a) => a.username).toSet();
+        accounts.removeWhere((a) => a.role != 'Admin' && !onlineUsernames.contains(a.username));
+
         for (var onlineAcc in onlineAccounts) {
           final idx = accounts.indexWhere((a) => a.username == onlineAcc.username);
           if (idx != -1) {
-            // Update cache dengan data online terbaru
-            accounts[idx] = onlineAcc;
+            // Update cache dengan data online terbaru, pertahankan password lokal jika ada
+            final localPass = accounts[idx].password;
+            accounts[idx] = UserAccount(
+              username: onlineAcc.username,
+              password: (onlineAcc.password.isEmpty && localPass.isNotEmpty) ? localPass : onlineAcc.password,
+              role: onlineAcc.role,
+              applicantName: onlineAcc.applicantName,
+              email: onlineAcc.email,
+              phoneNumber: onlineAcc.phoneNumber,
+              bio: onlineAcc.bio,
+              sportsInterests: onlineAcc.sportsInterests,
+              instagram: onlineAcc.instagram,
+              twitter: onlineAcc.twitter,
+              facebook: onlineAcc.facebook,
+              profileImagePath: onlineAcc.profileImagePath,
+              ktpImagePath: onlineAcc.ktpImagePath,
+              gender: onlineAcc.gender,
+              dateOfBirth: onlineAcc.dateOfBirth,
+              points: onlineAcc.points,
+              cart: onlineAcc.cart,
+              favorites: onlineAcc.favorites,
+            );
           } else {
             // Tambahkan akun online baru yang belum ada di lokal cache
             accounts.add(onlineAcc);
@@ -180,15 +217,6 @@ class GlobalAuthData {
     if (!exists) {
       accounts.add(account);
       await save();
-      
-      // Sinkronisasikan online ke Supabase
-      if (SupabaseService.isInitialized && account.role != 'Admin') {
-        try {
-          await SupabaseAuthService.saveUserProfile(account);
-        } catch (e) {
-          print('Gagal menyimpan profil online: $e');
-        }
-      }
     }
   }
 
@@ -219,6 +247,27 @@ class GlobalAuthData {
   static UserAccount? getAccountByEmail(String email) {
     try {
       return accounts.firstWhere((a) => a.email.toLowerCase() == email.toLowerCase());
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static UserAccount? getAccountByEmailOrPhone(String input) {
+    final search = input.trim().toLowerCase();
+    if (search.isEmpty) return null;
+    
+    if (search.contains('@')) {
+      return getAccountByEmail(search);
+    }
+    
+    final sanitizedInput = search.replaceAll(RegExp(r'[^0-9]'), '');
+    if (sanitizedInput.isEmpty) return null;
+    
+    try {
+      return accounts.firstWhere((a) {
+        final accPhone = a.phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
+        return accPhone.endsWith(sanitizedInput) || sanitizedInput.endsWith(accPhone);
+      });
     } catch (e) {
       return null;
     }
@@ -335,6 +384,8 @@ class GlobalAuthData {
         gender: newGender ?? old.gender,
         dateOfBirth: newDOB ?? old.dateOfBirth,
         points: newPoints ?? old.points,
+        cart: old.cart,
+        favorites: old.favorites,
       );
 
       accounts[index] = updatedAccount;
@@ -381,15 +432,14 @@ class GlobalAuthData {
             gender: acc.gender,
             dateOfBirth: acc.dateOfBirth,
             points: acc.points,
+            cart: acc.cart,
+            favorites: acc.favorites,
           );
 
           accounts[i] = updatedAccount;
           hasChanges = true;
 
-          // Simpan online
-          if (SupabaseService.isInitialized) {
-            await SupabaseAuthService.saveUserProfile(updatedAccount);
-          }
+
         } catch (e) {
           // No matching approved request found
         }

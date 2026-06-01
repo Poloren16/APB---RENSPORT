@@ -4,9 +4,12 @@ import 'package:rensius/pages/register_page.dart';
 import 'package:rensius/pages/dashboard_page.dart';
 import 'package:rensius/pages/owner/owner_login_page.dart';
 import 'package:rensius/data/auth_data.dart';
+import 'package:rensius/data/venue_data.dart';
 import 'package:rensius/pages/forgot_password_page.dart';
 import 'package:rensius/services/supabase_service.dart';
 import 'package:rensius/services/supabase_auth_service.dart';
+import 'package:rensius/services/booking_service.dart';
+import 'package:rensius/utils/booking_utils.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -63,6 +66,10 @@ class _LoginPageState extends State<LoginPage> {
       final account = GlobalAuthData.login(username, password);
 
       if (account != null && account.role == 'End User') {
+        await GlobalVenueData.loadCart(account.username); // Load user specific cart!
+        await GlobalVenueData.loadFavorites(account.username); // Load user specific favorites!
+        await BookingService.loadBookings(account.username, 'End User');
+        await BookingUtils.loadGlobalBookingsOnline();
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
@@ -101,6 +108,7 @@ class _LoginPageState extends State<LoginPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SizedBox(height: 48),
                 // Logo or Icon Placeholder
                 const Icon(
                   Icons.sports_soccer_rounded,
@@ -165,6 +173,7 @@ class _LoginPageState extends State<LoginPage> {
                 
                 TextFormField(
                   controller: _usernameController,
+                  scrollPadding: const EdgeInsets.only(bottom: 200),
                   decoration: const InputDecoration(
                     hintText: 'Nama Pengguna',
                     prefixIcon: Icon(Icons.person_outline, color: AppColors.textSecondary),
@@ -174,6 +183,7 @@ class _LoginPageState extends State<LoginPage> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
+                  scrollPadding: const EdgeInsets.only(bottom: 200),
                   decoration: InputDecoration(
                     hintText: 'Kata Sandi',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
@@ -273,6 +283,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 120),
               ],
             ),
           ),

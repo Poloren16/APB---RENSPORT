@@ -7,8 +7,14 @@ import '../widgets/empty_state_widget.dart';
 class ChatPage extends StatefulWidget {
   final String username;
   final String role;
+  final VoidCallback? onBack;
 
-  const ChatPage({super.key, required this.username, required this.role});
+  const ChatPage({
+    super.key,
+    required this.username,
+    required this.role,
+    this.onBack,
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -41,9 +47,10 @@ class _ChatPageState extends State<ChatPage> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: widget.onBack ?? () => Navigator.pop(context),
         ),
       ),
       body: displayThreads.isEmpty

@@ -7,7 +7,13 @@ import 'add_venue_page.dart';
 
 class ManagementVenuePage extends StatefulWidget {
   final String ownerUsername;
-  const ManagementVenuePage({super.key, required this.ownerUsername});
+  final VoidCallback? onBack;
+
+  const ManagementVenuePage({
+    super.key,
+    required this.ownerUsername,
+    this.onBack,
+  });
 
   @override
   State<ManagementVenuePage> createState() => _ManagementVenuePageState();
@@ -24,36 +30,39 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
-        automaticallyImplyLeading: true, 
+        automaticallyImplyLeading: false, 
         title: const Text(
           'Manajemen Venue',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+          onPressed: widget.onBack ?? () => Navigator.pop(context),
+        ),
       ),
-      body: Center(
+      body: Align(
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
           child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildStatsRow(),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Venue Anda',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStatsRow(),
+                const SizedBox(height: 24),
+                const Text(
+                  'Venue Anda',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
-                  const SizedBox(height: 12),
-                  _buildVenueList(),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                _buildVenueList(),
+              ],
             ),
           ),
         ),
@@ -297,8 +306,10 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           ElevatedButton(
-            onPressed: () { 
-              setState(() => GlobalVenueData.venues.removeAt(index)); 
+            onPressed: () async { 
+              final venueName = GlobalVenueData.venues[index]['name'] ?? '';
+              await GlobalVenueData.deleteVenue(venueName);
+              setState(() {});
               Navigator.pop(context); 
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),

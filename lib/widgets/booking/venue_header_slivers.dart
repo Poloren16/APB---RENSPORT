@@ -32,11 +32,34 @@ class VenueHeaderSlivers extends StatefulWidget {
 
 class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
   late bool _isBookmarked;
+  PageController? _headerPageController;
+  int _currentHeaderPage = 0;
 
   @override
   void initState() {
     super.initState();
     _isBookmarked = GlobalVenueData.isFavorite(widget.venueName);
+    _headerPageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _headerPageController?.dispose();
+    super.dispose();
+  }
+
+  IconData _getSportIcon(String type) {
+    final cleanType = type.toLowerCase().trim();
+    if (cleanType.contains('futsal') || cleanType.contains('sepak') || cleanType.contains('bola') || cleanType.contains('soccer') || cleanType.contains('mini')) {
+      return Icons.sports_soccer;
+    } else if (cleanType.contains('badminton') || cleanType.contains('bulu') || cleanType.contains('tangkis') || cleanType.contains('tennis') || cleanType.contains('tenis')) {
+      return Icons.sports_tennis;
+    } else if (cleanType.contains('basket') || cleanType.contains('ball')) {
+      return Icons.sports_basketball;
+    } else if (cleanType.contains('voli') || cleanType.contains('volleyball')) {
+      return Icons.sports_volleyball;
+    }
+    return Icons.sports_soccer; // default
   }
 
   Widget _infoRow(IconData icon, String text,
@@ -172,44 +195,100 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
           ],
           flexibleSpace: FlexibleSpaceBar(
             background: Builder(builder: (context) {
-              // Coba load foto venue dari GlobalVenueData
+              _headerPageController ??= PageController();
               final venueMatch = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
-              final imgPath = venueMatch.isNotEmpty ? (venueMatch.first['image']?.toString() ?? '') : '';
+              final List<String> imageList = [];
+              if (venueMatch.isNotEmpty) {
+                final v = venueMatch.first;
+                if (v['imagePaths'] is List) {
+                  imageList.addAll(List<String>.from((v['imagePaths'] as List).map((e) => e.toString())));
+                } else if (v['images'] is List) {
+                  imageList.addAll(List<String>.from((v['images'] as List).map((e) => e.toString())));
+                }
+              }
+              // If imageList is empty but main image exists, add it
+              if (imageList.isEmpty && venueMatch.isNotEmpty) {
+                final mainImg = venueMatch.first['image']?.toString() ?? '';
+                if (mainImg.isNotEmpty) {
+                  imageList.add(mainImg);
+                }
+              }
 
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (imgPath.isNotEmpty)
-                    Image.file(
-                      File(imgPath),
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft, end: Alignment.bottomRight,
-                            colors: [Color(0xFF0E21A0), Color(0xFF1A3CC8), Color(0xFF0A4D8F)],
-                          ),
-                        ),
+              Widget buildImageWidget(String path) {
+                if (path.isEmpty) {
+                  return Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                        colors: [Color(0xFF0E21A0), Color(0xFF1A3CC8), Color(0xFF0A4D8F)],
                       ),
-                    )
-                  else
-                    Container(
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 30),
+                          Icon(_getSportIcon(widget.venueType), size: 64, color: Colors.white.withValues(alpha: 0.5)),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                if (path.startsWith('http://') || path.startsWith('https://')) {
+                  return Image.network(
+                    path,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
                       decoration: const BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topLeft, end: Alignment.bottomRight,
                           colors: [Color(0xFF0E21A0), Color(0xFF1A3CC8), Color(0xFF0A4D8F)],
                         ),
                       ),
-                    ),
-                  if (imgPath.isEmpty)
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const SizedBox(height: 30),
-                          Icon(Icons.sports_tennis, size: 64, color: Colors.white.withValues(alpha: 0.5)),
-                        ],
+                      child: Center(
+                        child: Icon(_getSportIcon(widget.venueType), size: 64, color: Colors.white.withValues(alpha: 0.5)),
                       ),
+                    ),
+                  );
+                } else {
+                  return Image.file(
+                    File(path),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          colors: [Color(0xFF0E21A0), Color(0xFF1A3CC8), Color(0xFF0A4D8F)],
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(_getSportIcon(widget.venueType), size: 64, color: Colors.white.withValues(alpha: 0.5)),
+                      ),
+                    ),
+                  );
+                }
+              }
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (imageList.isEmpty)
+                    buildImageWidget('')
+                  else
+                    PageView.builder(
+                      controller: _headerPageController,
+                      itemCount: imageList.length,
+                      physics: imageList.length <= 1
+                          ? const NeverScrollableScrollPhysics()
+                          : const BouncingScrollPhysics(),
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentHeaderPage = index;
+                        });
+                      },
+                      itemBuilder: (context, index) {
+                        return buildImageWidget(imageList[index]);
+                      },
                     ),
                   // Dark gradient overlay at bottom
                   Positioned(
@@ -224,6 +303,27 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                       ),
                     ),
                   ),
+                  // Pill page indicator
+                  if (imageList.length > 1)
+                    Positioned(
+                      bottom: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_currentHeaderPage + 1}/${imageList.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               );
             }),
@@ -241,18 +341,50 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Venue logo
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.2)),
-                      ),
-                      child: const Icon(Icons.sports_tennis,
-                          color: AppColors.primary, size: 24),
+                    // Venue logo / Avatar
+                    Builder(
+                      builder: (context) {
+                        final venueMatch = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+                        final mainImage = venueMatch.isNotEmpty ? (venueMatch.first['image']?.toString() ?? '') : '';
+
+                        Widget buildAvatarFallback() {
+                          return Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: AppColors.primary.withValues(alpha: 0.2)),
+                            ),
+                            child: Icon(_getSportIcon(widget.venueType),
+                                color: AppColors.primary, size: 24),
+                          );
+                        }
+
+                        if (mainImage.isEmpty) {
+                          return buildAvatarFallback();
+                        }
+
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: mainImage.startsWith('http')
+                                ? Image.network(
+                                    mainImage,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => buildAvatarFallback(),
+                                  )
+                                : Image.file(
+                                    File(mainImage),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => buildAvatarFallback(),
+                                  ),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -298,7 +430,7 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  const Icon(Icons.sports_tennis,
+                                  Icon(_getSportIcon(widget.venueType),
                                       size: 14, color: AppColors.textSecondary),
                                   const SizedBox(width: 4),
                                   Text(

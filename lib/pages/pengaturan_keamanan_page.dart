@@ -110,6 +110,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           title: const Text('Ubah Email', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: emailController,
+            scrollPadding: const EdgeInsets.only(bottom: 200),
             decoration: InputDecoration(
               hintText: 'Email Baru',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -146,6 +147,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           title: const Text('Ubah Nomor Telepon', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: phoneController,
+            scrollPadding: const EdgeInsets.only(bottom: 200),
             decoration: InputDecoration(
               hintText: 'Nomor Telepon Baru',
               prefixText: '+62 ',
@@ -188,6 +190,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
           title: const Text('Ubah Kata Sandi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: passwordController,
+            scrollPadding: const EdgeInsets.only(bottom: 200),
             decoration: InputDecoration(
             hintText: 'Minimal 8 karakter (1 kapital, 1 angka, 1 simbol)',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),

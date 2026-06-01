@@ -234,6 +234,46 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
     }
   }
 
+  Future<bool?> _showDiscardChangesDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 10),
+            Text('Keluar Halaman?', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Seluruh perubahan yang belum disimpan akan hilang. Apakah Anda yakin ingin keluar?',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey,
+              side: const BorderSide(color: Colors.grey),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -243,7 +283,16 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black87, size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () async {
+            if (_isEditing) {
+              final confirm = await _showDiscardChangesDialog();
+              if (confirm == true && mounted) {
+                Navigator.pop(context);
+              }
+            } else {
+              Navigator.pop(context);
+            }
+          },
         ),
         title: const Text(
           'Profil',
@@ -258,7 +307,16 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
             ),
         ],
       ),
-      body: Column(
+      body: PopScope(
+        canPop: !_isEditing,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          final confirm = await _showDiscardChangesDialog();
+          if (confirm == true && mounted) {
+            Navigator.pop(context);
+          }
+        },
+        child: Column(
         children: [
           Expanded(
             child: DefaultTabController(
@@ -291,6 +349,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
           if (_isEditing) _buildBottomSaveButton(),
         ],
       ),
+     ),
     );
   }
 
@@ -402,6 +461,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
             controller: _bioController,
             maxLines: 4,
             readOnly: !_isEditing,
+            scrollPadding: const EdgeInsets.only(bottom: 200),
             decoration: InputDecoration(
               hintText: "Anda belum menambahkan bio..",
               hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -470,6 +530,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
             ),
           ),
         ],
+        const SizedBox(height: 120),
         ],
       ),
     );
@@ -596,6 +657,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
           _buildSocialField('Twitter (X)', _twitterController, Icons.close, Colors.black),
           const SizedBox(height: 20),
           _buildSocialField('Facebook', _fbController, Icons.facebook, Colors.blue),
+          const SizedBox(height: 120),
         ],
       ),
     );
@@ -622,6 +684,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
         TextField(
           controller: controller,
           readOnly: !_isEditing,
+          scrollPadding: const EdgeInsets.only(bottom: 200),
           decoration: InputDecoration(
             hintText: '@username atau link profil',
             prefixIcon: prefixIcon,
@@ -645,6 +708,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> with SingleTicker
         TextField(
           controller: controller,
           readOnly: isReadOnly,
+          scrollPadding: const EdgeInsets.only(bottom: 200),
           decoration: InputDecoration(
             hintText: controller.text,
             hintStyle: TextStyle(color: Colors.grey.shade600),

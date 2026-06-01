@@ -9,6 +9,7 @@ import 'owner_activity_page.dart';
 import '../../widgets/empty_state_widget.dart';
 import '../../data/venue_data.dart';
 import '../../utils/booking_utils.dart';
+import 'package:rensius/services/booking_service.dart';
 
 class OwnerDashboardPage extends StatefulWidget {
   final String username;
@@ -26,20 +27,52 @@ class OwnerDashboardPage extends StatefulWidget {
 
 class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   int _selectedIndex = 0;
+  final List<int> _navigationHistory = [0];
+
+  @override
+  void initState() {
+    super.initState();
+    BookingService.loadBookings(widget.username, widget.role);
+    BookingUtils.loadGlobalBookingsOnline();
+  }
 
   void _onItemTapped(int index) {
+    if (_selectedIndex == index) return;
     setState(() {
+      _navigationHistory.add(index);
       _selectedIndex = index;
     });
+  }
+
+  void _onBackFromTab() {
+    if (_navigationHistory.length > 1) {
+      setState(() {
+        _navigationHistory.removeLast(); // Remove current tab
+        _selectedIndex = _navigationHistory.last;
+      });
+    } else {
+      setState(() {
+        _selectedIndex = 0; // Fallback to Home
+        _navigationHistory.clear();
+        _navigationHistory.add(0);
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       _buildHomeContent(),
-      ManagementVenuePage(ownerUsername: widget.username),
+      ManagementVenuePage(
+        ownerUsername: widget.username,
+        onBack: _onBackFromTab,
+      ),
       OwnerActivityPage(username: widget.username),
-      ChatPage(username: widget.username, role: widget.role),
+      ChatPage(
+        username: widget.username, 
+        role: widget.role, 
+        onBack: _onBackFromTab,
+      ),
       AkunPage(
         username: widget.username, 
         role: widget.role,
@@ -287,26 +320,45 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               ),
             ],
           ),
-          if ((booking['services'] as List).isNotEmpty) ...[
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
-            const Text('Layanan Tambahan:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87)),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: (booking['services'] as List).map((s) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.grey.shade100),
-                ),
-                child: Text(s, style: TextStyle(fontSize: 10, color: Colors.grey.shade700)),
-              )).toList(),
-            ),
-          ],
+          Builder(
+            builder: (context) {
+              List<String> servicesList = [];
+              final rawServices = booking['services'];
+              if (rawServices != null) {
+                if (rawServices is List) {
+                  servicesList = rawServices.map((e) => e.toString()).toList();
+                } else if (rawServices is String && rawServices.isNotEmpty) {
+                  servicesList = rawServices.split(',').map((e) => e.trim()).toList();
+                }
+              }
+
+              if (servicesList.isEmpty) return const SizedBox.shrink();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  const Text('Layanan Tambahan:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: servicesList.map((s) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.grey.shade100),
+                      ),
+                      child: Text(s, style: TextStyle(fontSize: 10, color: Colors.grey.shade700)),
+                    )).toList(),
+                  ),
+                ],
+              );
+            }
+          ),
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 12),

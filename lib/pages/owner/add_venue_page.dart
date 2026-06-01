@@ -7,6 +7,7 @@ import '../../data/auth_data.dart';
 import '../../data/verification_data.dart';
 import '../../models/verification_model.dart';
 import '../../utils/alert_utils.dart';
+import '../../services/supabase_service.dart';
 import 'map_picker_page.dart';
 
 class AddVenuePage extends StatefulWidget {
@@ -137,6 +138,18 @@ class _AddVenuePageState extends State<AddVenuePage> {
             map['services'] = List<Map<String, dynamic>>.from(map['services']);
           }
 
+          if (map['pricePerSlot'] == null) {
+            map['pricePerSlot'] = <String, String>{};
+          } else {
+            map['pricePerSlot'] = Map<String, String>.from(map['pricePerSlot'] as Map);
+          }
+
+          if (map['priceMode'] == null) {
+            map['priceMode'] = (map['pricePerSlot'] != null && (map['pricePerSlot'] as Map).isNotEmpty) ? 'perSlot' : 'perDay';
+          } else {
+            map['priceMode'] = map['priceMode'].toString();
+          }
+
           return map;
         })
       );
@@ -147,6 +160,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
 
   // Pastikan 'facilities' (List) ada di setiap court yang di-load dari edit
   void _normalizeCourt(Map<String, dynamic> map) {
+    map['image'] = map['image'] ?? '';
     if (map['facilities'] == null) {
       // Backward compat: lama pakai 'facility' (String)
       final oldFacility = map['facility'] as String?;
@@ -250,6 +264,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
         'type': 'Futsal',
         'courtCategory': 'Indoor',
         'floorType': 'Vinyl',
+        'image': '',
         'facilities': <String>[],  // multi-select
         'priceDay': { for (var day in _daysOfWeek) day: '' },
         'services': <Map<String, dynamic>>[],
@@ -257,6 +272,8 @@ class _AddVenuePageState extends State<AddVenuePage> {
         'availability': {
           for (var day in _daysOfWeek) day: <String>{'06:00', '07:00', '08:00'}
         },
+        'priceMode': 'perDay',
+        'pricePerSlot': <String, String>{},
         'isExpanded': true,
       });
     });
@@ -274,21 +291,24 @@ class _AddVenuePageState extends State<AddVenuePage> {
 
   void _saveVenue() async {
     if (_formKey.currentState!.validate()) {
-      // Konfirmasi sebelum kirim ke admin
+      // Konfirmasi sebelum kirim/simpan
+      final isEdit = widget.venueToEdit != null;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.send_rounded, color: AppColors.primary),
-              SizedBox(width: 10),
-              Text('Konfirmasi Submit', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              Icon(isEdit ? Icons.save_rounded : Icons.send_rounded, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Text(isEdit ? 'Konfirmasi Simpan' : 'Konfirmasi Submit', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
             ],
           ),
-          content: const Text(
-            'Data venue akan dikirimkan ke Admin untuk diverifikasi.\n\nPastikan semua informasi sudah benar sebelum melanjutkan.',
-            style: TextStyle(fontSize: 14),
+          content: Text(
+            isEdit 
+                ? 'Apakah Anda yakin ingin menyimpan seluruh perubahan data venue ini?'
+                : 'Data venue akan dikirimkan ke Admin untuk diverifikasi.\n\nPastikan semua informasi sudah benar sebelum melanjutkan.',
+            style: const TextStyle(fontSize: 14),
           ),
           actions: [
             OutlinedButton(
@@ -307,12 +327,114 @@ class _AddVenuePageState extends State<AddVenuePage> {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Ya, Kirim'),
+              child: Text(isEdit ? 'Ya, Simpan' : 'Ya, Kirim'),
             ),
           ],
         ),
       );
       if (confirmed != true) return;
+
+      // Show uploading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: AppColors.primary),
+                  SizedBox(height: 16),
+                  Text('Mengunggah gambar ke server...', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Upload main venue images
+      final List<String> uploadedImages = [];
+      String mainImageUrl = '';
+
+      for (int i = 0; i < _selectedImages.length; i++) {
+        final path = _selectedImages[i].path;
+        if (path.startsWith('http://') || path.startsWith('https://')) {
+          uploadedImages.add(path);
+          if (i == _thumbnailIndex) {
+            mainImageUrl = path;
+          }
+        } else {
+          final extension = path.split('.').last;
+          final destination = 'venue_img_${DateTime.now().millisecondsSinceEpoch}_$i.$extension';
+          final publicUrl = await SupabaseService.uploadFile(
+            bucketName: 'documents',
+            filePath: path,
+            destinationPath: destination,
+          );
+          if (publicUrl != null) {
+            uploadedImages.add(publicUrl);
+            if (i == _thumbnailIndex) {
+              mainImageUrl = publicUrl;
+            }
+          } else {
+            uploadedImages.add(path); // Fallback to local path if upload fails
+          }
+        }
+      }
+
+      // Upload individual court images
+      final List<Map<String, dynamic>> processedCourts = [];
+      for (int i = 0; i < _courts.length; i++) {
+        final c = _courts[i];
+        final courtMap = Map<String, dynamic>.from(c);
+        final courtImgPath = courtMap['image']?.toString() ?? '';
+        
+        if (courtImgPath.isNotEmpty && 
+            !courtImgPath.startsWith('http://') && 
+            !courtImgPath.startsWith('https://')) {
+          final extension = courtImgPath.split('.').last;
+          final destination = 'court_img_${DateTime.now().millisecondsSinceEpoch}_$i.$extension';
+          final publicUrl = await SupabaseService.uploadFile(
+            bucketName: 'documents',
+            filePath: courtImgPath,
+            destinationPath: destination,
+          );
+          if (publicUrl != null) {
+            courtMap['image'] = publicUrl;
+          }
+        }
+        processedCourts.add(courtMap);
+      }
+
+      if (mounted) {
+        Navigator.pop(context); // Dismiss the uploading loading dialog!
+      }
+
+      int lowestPrice = 99999999;
+      for (final c in processedCourts) {
+        // Cek priceDay
+        final priceDay = c['priceDay'] as Map? ?? {};
+        for (final val in priceDay.values) {
+          final cleanVal = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+          if (cleanVal.isNotEmpty) {
+            final p = int.tryParse(cleanVal);
+            if (p != null && p > 0 && p < lowestPrice) lowestPrice = p;
+          }
+        }
+        // Cek pricePerSlot
+        final pricePerSlot = c['pricePerSlot'] as Map? ?? {};
+        for (final val in pricePerSlot.values) {
+          final cleanVal = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+          if (cleanVal.isNotEmpty) {
+            final p = int.tryParse(cleanVal);
+            if (p != null && p > 0 && p < lowestPrice) lowestPrice = p;
+          }
+        }
+      }
+      final venuePrice = lowestPrice == 99999999 ? 'Hubungi Pengelola' : lowestPrice.toString();
 
       final newVenue = {
         'name': _nameController.text.trim(),
@@ -320,11 +442,11 @@ class _AddVenuePageState extends State<AddVenuePage> {
         'address': _jalanController.text.trim(),
         'provinsi': _selectedProvinsi ?? _provinsiController.text.trim(),
         'dll': _dllController.text.trim(),
-        'type': _courts.isNotEmpty ? _courts[0]['type'] : 'Umum',
-        'price': widget.venueToEdit?['price'] ?? 'Hubungi Pengelola',
+        'type': processedCourts.isNotEmpty ? processedCourts[0]['type'] : 'Umum',
+        'price': venuePrice,
         'status': widget.venueToEdit?['status'] ?? 'Aktif',
         'hours': '06:00 - 22:00',
-        'courts': _courts.map((c) {
+        'courts': processedCourts.map((c) {
           final dynamic availability = c['availability'];
           return {
             'name': c['name'] ?? 'Lapangan',
@@ -332,8 +454,11 @@ class _AddVenuePageState extends State<AddVenuePage> {
             'type': c['type'] ?? 'Umum',
             'courtCategory': c['courtCategory'] ?? 'Indoor',
             'floorType': c['floorType'] ?? 'Vinyl',
+            'image': c['image'] ?? '',
             'facilities': c['facilities'] is List ? List<String>.from(c['facilities']) : (c['facility'] != null ? [c['facility']] : <String>[]),
             'priceDay': c['priceDay'],
+            'priceMode': c['priceMode'] ?? 'perDay',
+            'pricePerSlot': c['pricePerSlot'] ?? <String, String>{},
             'services': c['services'],
             'availability': (availability as Map).map((day, times) {
               if (times is Set) return MapEntry(day, times.toList());
@@ -341,17 +466,16 @@ class _AddVenuePageState extends State<AddVenuePage> {
             }),
           };
         }).toList(),
-        'images': _selectedImages.map((e) => e.path).toList(),
-        'imagePaths': _selectedImages.map((e) => e.path).toList(),  // alias for admin dialog
-        'image': _selectedImages.isNotEmpty ? _selectedImages[_thumbnailIndex].path : '',
+        'images': uploadedImages,
+        'imagePaths': uploadedImages,
+        'image': mainImageUrl.isNotEmpty ? mainImageUrl : (uploadedImages.isNotEmpty ? uploadedImages.first : ''),
         'ownerUsername': (GlobalAuthData.currentUser ?? GlobalAuthData.getAccount(widget.ownerUsername ?? ''))?.username ?? widget.ownerUsername ?? '',
         'lat': double.tryParse(_venueLat ?? '') ?? 0.0,
         'lng': double.tryParse(_venueLng ?? '') ?? 0.0,
       };
 
       if (widget.venueToEdit != null && widget.index != null) {
-        GlobalVenueData.venues[widget.index!] = newVenue;
-        await GlobalVenueData.save(); // Ensure edited venue is saved to SharedPreferences
+        await GlobalVenueData.updateVenue(widget.venueToEdit!['name'] ?? '', newVenue);
 
         AlertUtils.showResultDialog(
           context,
@@ -413,6 +537,95 @@ class _AddVenuePageState extends State<AddVenuePage> {
     }
   }
 
+  Future<bool?> _showDiscardChangesDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const SizedBox(width: 10),
+            Text('Keluar Halaman?', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Seluruh perubahan yang belum disimpan akan hilang. Apakah Anda yakin ingin keluar?',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey,
+              side: const BorderSide(color: Colors.grey),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCourtPhotoSourceBottomSheet(int index) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            const Text(
+              'Tambah Foto Lapangan',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppColors.primary),
+              title: const Text('Ambil dari Kamera langsung'),
+              onTap: () async {
+                Navigator.pop(context);
+                final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+                if (image != null) {
+                  setState(() {
+                    _courts[index]['image'] = image.path;
+                  });
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Pilih dari Galeri foto'),
+              onTap: () async {
+                Navigator.pop(context);
+                final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                if (image != null) {
+                  setState(() {
+                    _courts[index]['image'] = image.path;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -422,15 +635,33 @@ class _AddVenuePageState extends State<AddVenuePage> {
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primary,
         iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+          onPressed: () async {
+            final confirm = await _showDiscardChangesDialog();
+            if (confirm == true && mounted) {
+              Navigator.pop(context);
+            }
+          },
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionTitle('Informasi Utama Venue'),
+      body: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          final confirm = await _showDiscardChangesDialog();
+          if (confirm == true && mounted) {
+            Navigator.pop(context);
+          }
+        },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionTitle('Informasi Utama Venue'),
               _buildCard([
                 _buildTextField(_nameController, 'Nama Venue', Icons.stadium),
                 const SizedBox(height: 16),
@@ -540,18 +771,31 @@ class _AddVenuePageState extends State<AddVenuePage> {
                                 children: [
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
-                                    child: Image.file(
-                                      File(file.path),
-                                      width: 120,
-                                      height: 120,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
-                                        width: 120,
-                                        height: 120,
-                                        color: Colors.grey.shade200,
-                                        child: const Icon(Icons.broken_image, color: Colors.grey),
-                                      ),
-                                    ),
+                                    child: file.path.startsWith('http://') || file.path.startsWith('https://')
+                                        ? Image.network(
+                                            file.path,
+                                            width: 120,
+                                            height: 120,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              width: 120,
+                                              height: 120,
+                                              color: Colors.grey.shade200,
+                                              child: const Icon(Icons.broken_image, color: Colors.grey),
+                                            ),
+                                          )
+                                        : Image.file(
+                                            File(file.path),
+                                            width: 120,
+                                            height: 120,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              width: 120,
+                                              height: 120,
+                                              color: Colors.grey.shade200,
+                                              child: const Icon(Icons.broken_image, color: Colors.grey),
+                                            ),
+                                          ),
                                   ),
                                   // Badge for Main/Utama Photo
                                   if (isMain)
@@ -679,10 +923,11 @@ class _AddVenuePageState extends State<AddVenuePage> {
                   child: const Text('Simpan Data Venue', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 320),
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -726,10 +971,55 @@ class _AddVenuePageState extends State<AddVenuePage> {
                   const SizedBox(height: 12),
                   _buildLabelOnlyTextField('Nama Lapangan', (val) => setState(() => _courts[index]['name'] = val), initial: court['name']),
                   const SizedBox(height: 16),
+                  // Foto Lapangan (Opsional)
+                  const Text('Foto Lapangan (Opsional)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showCourtPhotoSourceBottomSheet(index),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: court['image'] != null && court['image'].toString().isNotEmpty
+                              ? (court['image'].toString().startsWith('http://') || court['image'].toString().startsWith('https://')
+                                  ? Image.network(court['image'].toString(), width: 80, height: 80, fit: BoxFit.cover)
+                                  : Image.file(File(court['image'].toString()), width: 80, height: 80, fit: BoxFit.cover))
+                              : Container(
+                                  width: 80,
+                                  height: 80,
+                                  color: Colors.grey[100],
+                                  child: const Icon(Icons.add_a_photo, color: Colors.grey, size: 28),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _showCourtPhotoSourceBottomSheet(index),
+                        icon: const Icon(Icons.photo_library, size: 16, color: Colors.white),
+                        label: const Text('Pilih Foto', style: TextStyle(fontSize: 12, color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                      if (court['image'] != null && court['image'].toString().isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _courts[index]['image'] = '';
+                            });
+                          },
+                          child: const Text('Hapus', style: TextStyle(color: Colors.red, fontSize: 12)),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: court['type'],
                     decoration: const InputDecoration(labelText: 'Tipe Olahraga', border: OutlineInputBorder(), floatingLabelBehavior: FloatingLabelBehavior.always),
-                    items: ['Futsal', 'Tenis', 'Badminton', 'Basket', 'Voli'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                    items: ['Futsal', 'Mini Soccer', 'Sepak Bola', 'Badminton', 'Tennis', 'Basket', 'Voli'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                     onChanged: (val) => setState(() => _courts[index]['type'] = val),
                   ),
                   const SizedBox(height: 16),
@@ -777,6 +1067,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                           );
                     }
                   ),
+                  const SizedBox(height: 16),
                   // Ukuran lapangan: 2 kolom P dan L
                   Row(
                     children: [
@@ -785,6 +1076,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                           key: ValueKey('sizeP_$index'),
                           initialValue: (court['size'] ?? '').toString().split('X').firstOrNull?.replaceAll(RegExp(r'[^0-9]'), '').trim(),
                           keyboardType: TextInputType.number,
+                          scrollPadding: const EdgeInsets.only(bottom: 200),
                           decoration: const InputDecoration(
                             labelText: 'Panjang (m)',
                             prefixText: 'P  ',
@@ -806,6 +1098,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                               ? (court['size'] ?? '').toString().split('X')[1].replaceAll(RegExp(r'[^0-9]'), '').trim()
                               : '',
                           keyboardType: TextInputType.number,
+                          scrollPadding: const EdgeInsets.only(bottom: 200),
                           decoration: const InputDecoration(
                             labelText: 'Lebar (m)',
                             prefixText: 'L  ',
@@ -904,6 +1197,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                         initialValue: priceDay[activeDay] ?? '',
                         onChanged: (val) => setState(() => priceDay[activeDay] = val),
                         keyboardType: TextInputType.number,
+                        scrollPadding: const EdgeInsets.only(bottom: 200),
                         decoration: InputDecoration(
                           labelText: 'Harga - $activeDay (Rp/Jam, berlaku semua jam)',
                           prefixText: 'Rp ',
@@ -963,7 +1257,9 @@ class _AddVenuePageState extends State<AddVenuePage> {
                         final dynamic dayData = availabilityData[activeDay];
                         final bool isSelected = dayData is Set ? dayData.contains(time) : (dayData as List).contains(time);
                         // pricePerSlot map: key = 'day_time'
-                        final Map<String, String> pricePerSlot = (court['pricePerSlot'] as Map<String, String>?) ?? {};
+                        final Map<String, String> pricePerSlot = court['pricePerSlot'] != null 
+                            ? Map<String, String>.from(court['pricePerSlot'] as Map)
+                            : <String, String>{};
                         final slotKey = '${activeDay}_$time';
 
                         return Column(
@@ -992,8 +1288,10 @@ class _AddVenuePageState extends State<AddVenuePage> {
                               SizedBox(
                                 width: 80,
                                 child: TextFormField(
+                                  key: ValueKey('priceSlot_${index}_${slotKey}'),
                                   initialValue: pricePerSlot[slotKey] ?? '',
                                   keyboardType: TextInputType.number,
+                                  scrollPadding: const EdgeInsets.only(bottom: 200),
                                   style: const TextStyle(fontSize: 10),
                                   decoration: InputDecoration(
                                     hintText: 'Rp',
@@ -1005,7 +1303,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                                     if (_courts[index]['pricePerSlot'] == null) {
                                       _courts[index]['pricePerSlot'] = <String, String>{};
                                     }
-                                    (_courts[index]['pricePerSlot'] as Map<String, String>)[slotKey] = val;
+                                    (_courts[index]['pricePerSlot'] as Map)[slotKey] = val;
                                   },
                                 ),
                               ),
@@ -1089,6 +1387,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
       initialValue: initial,
       onChanged: onChanged,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      scrollPadding: const EdgeInsets.only(bottom: 200),
       decoration: InputDecoration(
         labelText: label,
         prefixText: prefix,
@@ -1178,6 +1477,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
   Widget _buildTextField(TextEditingController controller, String label, IconData icon) {
     return TextFormField(
       controller: controller,
+      scrollPadding: const EdgeInsets.only(bottom: 200),
       decoration: InputDecoration(
         labelText: label, 
         prefixIcon: Icon(icon, color: AppColors.textSecondary),

@@ -16,7 +16,8 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   bool _isPasswordVisible = false;
-  // Phone prefix is now fixed to +62
+  String _selectedCountryCode = '+62';
+  final List<String> _countryCodes = ['+62', '+1', '+60', '+65', '+44', '+81'];
   
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
@@ -97,7 +98,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     // 8. Phone Number Availability
-    final String fullPhone = '+62$phone';
+    final String fullPhone = '$_selectedCountryCode$phone';
     if (GlobalAuthData.phoneExists(fullPhone) || 
         GlobalVerificationData.requests.any((r) => r.phoneNumber?.replaceAll(RegExp(r'[^0-9]'), '') == fullPhone.replaceAll(RegExp(r'[^0-9]'), '') && r.status != 'Rejected')) {
       _showError('Nomor telepon ini sudah terdaftar. Silakan pilih nomor lain.');
@@ -117,7 +118,7 @@ class _RegisterPageState extends State<RegisterPage> {
       role: 'End User',
       applicantName: name,
       email: email,
-      phoneNumber: '+62$phone',
+      phoneNumber: '$_selectedCountryCode$phone',
     );
 
     setState(() => _isRegistering = true);
@@ -214,6 +215,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 _buildLabel('Nama Lengkap'),
                 TextFormField(
                   controller: _nameController,
+                  scrollPadding: const EdgeInsets.only(bottom: 200),
                   decoration: const InputDecoration(
                     hintText: 'Masukkan nama sesuai KTP',
                     prefixIcon: Icon(Icons.person_outline, color: AppColors.textSecondary),
@@ -224,6 +226,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 _buildLabel('Email'),
                 TextFormField(
                   controller: _emailController,
+                  scrollPadding: const EdgeInsets.only(bottom: 200),
                   decoration: const InputDecoration(
                     hintText: 'name@email.com',
                     prefixIcon: Icon(Icons.email_outlined, color: AppColors.textSecondary),
@@ -239,6 +242,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 _buildLabel('Nama Pengguna'),
                 TextFormField(
                   controller: _usernameController,
+                  scrollPadding: const EdgeInsets.only(bottom: 200),
                   decoration: const InputDecoration(
                     hintText: 'Pilih nama pengguna yang unik',
                     prefixIcon: Icon(Icons.badge_outlined, color: AppColors.textSecondary),
@@ -250,6 +254,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
+                  scrollPadding: const EdgeInsets.only(bottom: 200),
                   decoration: InputDecoration(
                     hintText: 'Min. 8 karakter (Kapital, Angka, Simbol)',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
@@ -272,6 +277,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: !_isPasswordVisible,
+                  scrollPadding: const EdgeInsets.only(bottom: 200),
                   decoration: const InputDecoration(
                     hintText: 'Ulangi kata sandi Anda',
                     prefixIcon: Icon(Icons.lock_outline, color: AppColors.textSecondary),
@@ -324,6 +330,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 120),
               ],
             ),
           ),
@@ -350,16 +357,28 @@ class _RegisterPageState extends State<RegisterPage> {
     return TextFormField(
       controller: _phoneController,
       keyboardType: TextInputType.phone,
+      scrollPadding: const EdgeInsets.only(bottom: 200),
       decoration: InputDecoration(
         hintText: '8123456789',
         prefixIcon: Container(
-          width: 50,
-          alignment: Alignment.center,
           margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
             border: Border(right: BorderSide(color: Colors.grey.shade300)),
           ),
-          child: const Text('+62', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedCountryCode,
+              items: _countryCodes.map((code) => DropdownMenuItem(
+                value: code,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 12.0),
+                  child: Text(code, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                ),
+              )).toList(),
+              onChanged: (val) => setState(() => _selectedCountryCode = val!),
+            ),
+          ),
         ),
       ),
     );

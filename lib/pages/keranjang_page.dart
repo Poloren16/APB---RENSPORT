@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../theme/app_colors.dart';
 import '../widgets/empty_state_widget.dart';
 import '../data/venue_data.dart';
@@ -117,6 +118,47 @@ class _KeranjangPageState extends State<KeranjangPage> {
         ? Map<String, int>.from(item['services']) 
         : null;
 
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == item['venueName']);
+    final venue = venueResults.isNotEmpty ? venueResults.first : null;
+    final String imagePath = venue != null ? (venue['image']?.toString() ?? '') : '';
+
+    final int totalPrice = item['price'] as int? ?? 0;
+    
+    // Hitung rincian harga layanan tambahan
+    int totalServicesPrice = 0;
+    if (services != null && services.isNotEmpty && venue != null) {
+      final courtsList = venue['courts'] as List<dynamic>? ?? [];
+      final seen = <String>{};
+      final allServicesList = <Map<String, dynamic>>[];
+      for (final c in courtsList) {
+        final courtServices = c['services'] as List<dynamic>? ?? [];
+        for (final s in courtServices) {
+          final sMap = Map<String, dynamic>.from(s as Map);
+          final name = sMap['name']?.toString() ?? '';
+          final sId = sMap['id']?.toString() ?? name;
+          sMap['id'] = sId;
+          if (name.isNotEmpty && !seen.contains(name)) {
+            seen.add(name);
+            allServicesList.add(sMap);
+          }
+        }
+      }
+
+      services.forEach((key, qty) {
+        final match = allServicesList.where((s) => s['id'] == key || s['name'] == key);
+        if (match.isNotEmpty) {
+          final s = match.first;
+          final sPriceRaw = s['price'];
+          final sPrice = sPriceRaw is int 
+              ? sPriceRaw 
+              : int.tryParse(sPriceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
+          totalServicesPrice += sPrice * qty;
+        }
+      });
+    }
+
+    final int courtPrice = totalPrice - totalServicesPrice;
+
     String timeDisplay = item['timeSlot']?.toString() ?? '';
     if (timeDisplay.contains('Slot: ')) {
       timeDisplay = timeDisplay.split('Slot: ').last;
@@ -143,150 +185,218 @@ class _KeranjangPageState extends State<KeranjangPage> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Checkbox Area
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    if (isSelected) {
-                      _selectedItems.remove(index);
-                    } else {
-                      _selectedItems.add(index);
-                    }
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.03) : Colors.transparent,
-                  child: Checkbox(
-                    value: isSelected,
-                    activeColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                    side: BorderSide(color: Colors.grey.shade400, width: 1.5),
-                    onChanged: (val) {
+        child: Stack(
+          children: [
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Checkbox Area
+                  InkWell(
+                    onTap: () {
                       setState(() {
-                        if (val == true) {
-                          _selectedItems.add(index);
-                        } else {
+                        if (isSelected) {
                           _selectedItems.remove(index);
+                        } else {
+                          _selectedItems.add(index);
                         }
                       });
                     },
-                  ),
-                ),
-              ),
-              
-              // Content Area
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: 70,
-                          height: 70,
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.image, color: Colors.grey, size: 30),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['venueName'] ?? 'Nama Venue',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${item['courtName'] ?? 'Lapangan'}\n${item['date'] ?? '-'}',
-                              style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.3),
-                            ),
-                            const SizedBox(height: 8),
-                            if (timeDisplay.isNotEmpty)
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: timeDisplay.split(', ').map((t) => Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    t, 
-                                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 11),
-                                  ),
-                                )).toList(),
-                              ),
-                            if (services != null && services.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: services.entries.map((entry) {
-                                    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == item['venueName']);
-                                    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-                                    final servicesList = venue['services'] as List<dynamic>? ?? [];
-                                    final serviceResults = servicesList.where((s) => s['id'] == entry.key);
-                                    String sName = serviceResults.isNotEmpty ? serviceResults.first['name'] : entry.key;
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 2),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.add_circle_outline, size: 10, color: Colors.grey),
-                                          const SizedBox(width: 4),
-                                          Text('$sName (x${entry.value})', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 12),
-                            Text(
-                              _formatCurrency(item['price'] as int? ?? 0),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.orange),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.05),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
-                        ),
-                        onPressed: () {
-                          // Konfirmasi hapus bisa ditambahkan di sini
+                    child: Container(
+                      padding: const EdgeInsets.only(left: 12, right: 4),
+                      color: isSelected ? AppColors.primary.withValues(alpha: 0.03) : Colors.transparent,
+                      child: Checkbox(
+                        value: isSelected,
+                        activeColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        side: BorderSide(color: Colors.grey.shade400, width: 1.5),
+                        onChanged: (val) {
                           setState(() {
-                            GlobalVenueData.cart.removeAt(index);
-                            _selectedItems.remove(index);
+                            if (val == true) {
+                              _selectedItems.add(index);
+                            } else {
+                              _selectedItems.remove(index);
+                            }
                           });
                         },
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  
+                  // Content Area
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12, bottom: 12, right: 36, left: 0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              color: Colors.grey[200],
+                              child: Builder(builder: (context) {
+                                if (imagePath.isEmpty) {
+                                  return const Icon(Icons.image, color: Colors.grey, size: 30);
+                                }
+                                final isRemote = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+                                final isAsset = imagePath.startsWith('assets/');
+                                try {
+                                  if (isRemote) {
+                                    return Image.network(
+                                      imagePath,
+                                      width: 80, height: 80, fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.grey, size: 30),
+                                    );
+                                  } else if (isAsset) {
+                                    return Image.asset(
+                                      imagePath,
+                                      width: 80, height: 80, fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.grey, size: 30),
+                                    );
+                                  } else {
+                                    return Image.file(
+                                      File(imagePath),
+                                      width: 80, height: 80, fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.image, color: Colors.grey, size: 30),
+                                    );
+                                  }
+                                } catch (e) {
+                                  return const Icon(Icons.image, color: Colors.grey, size: 30);
+                                }
+                              }),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  item['venueName'] ?? 'Nama Venue',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${item['courtName'] ?? 'Lapangan'}\n${item['date'] ?? '-'}',
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.3),
+                                ),
+                                const SizedBox(height: 8),
+                                if (timeDisplay.isNotEmpty)
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: timeDisplay.split(', ').map((t) {
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          t, 
+                                          style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 11),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                if (services != null && services.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[50],
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: services.entries.map((entry) {
+                                        final venueResults = GlobalVenueData.venues.where((v) => v['name'] == item['venueName']);
+                                        final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+                                        final courtsList = venue['courts'] as List<dynamic>? ?? [];
+                                        final seen = <String>{};
+                                        final allServicesList = <Map<String, dynamic>>[];
+                                        for (final c in courtsList) {
+                                          final courtServices = c['services'] as List<dynamic>? ?? [];
+                                          for (final s in courtServices) {
+                                            final sMap = Map<String, dynamic>.from(s as Map);
+                                            final name = sMap['name']?.toString() ?? '';
+                                            final sId = sMap['id']?.toString() ?? name;
+                                            sMap['id'] = sId;
+                                            if (name.isNotEmpty && !seen.contains(name)) {
+                                              seen.add(name);
+                                              allServicesList.add(sMap);
+                                            }
+                                          }
+                                        }
+                                        final serviceResults = allServicesList.where((s) => s['id'] == entry.key || s['name'] == entry.key);
+                                        String sName = serviceResults.isNotEmpty ? serviceResults.first['name']?.toString() ?? entry.key : entry.key;
+
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 2),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.add_circle_outline, size: 10, color: Colors.grey),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '$sName (x${entry.value})', 
+                                                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 14),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'Total:', 
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)
+                                    ),
+                                    Text(
+                                      _formatCurrency(totalPrice),
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.orange),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+                ),
+                onPressed: () {
+                  setState(() {
+                    GlobalVenueData.cart.removeAt(index);
+                    _selectedItems.remove(index);
+                    GlobalVenueData.saveCart(); // Simpan perubahan keranjang lokal
+                  });
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

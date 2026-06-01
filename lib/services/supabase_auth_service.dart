@@ -103,11 +103,30 @@ class SupabaseAuthService {
       'gender': account.gender,
       'date_of_birth': account.dateOfBirth.isNotEmpty ? account.dateOfBirth : null,
       'points': account.points,
+      'cart': account.cart,
+      'favorites': account.favorites,
       'updated_at': DateTime.now().toIso8601String(),
     };
 
     // Lakukan upsert (insert atau update jika primary key 'id' sudah ada)
-    await _client.from('users').upsert(data);
+    try {
+      await _client.from('users').upsert(data);
+    } on PostgrestException catch (e) {
+      if (e.message.contains('column "cart"') || e.message.contains('column "favorites"') || e.code == 'PGRST204' || e.message.contains('does not exist')) {
+        print('==================================================================');
+        print('PERINGATAN: Kolom "cart" atau "favorites" belum dibuat di tabel "users" Supabase.');
+        print('Silakan jalankan SQL migration berikut di Supabase SQL Editor Anda:');
+        print('ALTER TABLE public.users ADD COLUMN IF NOT EXISTS cart jsonb DEFAULT \'[]\'::jsonb NOT NULL;');
+        print('ALTER TABLE public.users ADD COLUMN IF NOT EXISTS favorites jsonb DEFAULT \'[]\'::jsonb NOT NULL;');
+        print('==================================================================');
+        // Hapus field cart dan favorites dari map payload, lalu coba upsert kembali tanpa field-field tersebut agar aplikasi tidak crash
+        data.remove('cart');
+        data.remove('favorites');
+        await _client.from('users').upsert(data);
+      } else {
+        rethrow;
+      }
+    }
   }
 
   /// Mendapatkan data profil pengguna dari tabel PostgreSQL 'users'

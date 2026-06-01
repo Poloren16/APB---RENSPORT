@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import '../../theme/app_colors.dart';
 import '../../data/venue_data.dart';
+import '../../data/auth_data.dart';
 import '../../pages/venue_page.dart';
 import '../../pages/booking_page.dart';
 
@@ -49,11 +50,20 @@ class _VenueContactSectionState extends State<VenueContactSection> {
     }
   }
 
+  String _formatWhatsAppNumber(String phone) {
+    var clean = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (clean.startsWith('0')) {
+      clean = '62${clean.substring(1)}';
+    }
+    return clean;
+  }
+
   Widget _contactButton({
     required IconData icon,
     required Color iconColor,
     required String label,
     required VoidCallback onTap,
+    Widget? customIcon,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -72,9 +82,12 @@ class _VenueContactSectionState extends State<VenueContactSection> {
           ],
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: iconColor, size: 20),
+            if (customIcon != null)
+              customIcon
+            else
+              Icon(icon, color: iconColor, size: 20),
             const SizedBox(width: 6),
             Text(
               label,
@@ -244,6 +257,11 @@ class _VenueContactSectionState extends State<VenueContactSection> {
 
   @override
   Widget build(BuildContext context) {
+    final venueMatch = GlobalVenueData.venues.where((v) => v['name'] == widget.currentVenueName);
+    final String ownerUsername = venueMatch.isNotEmpty ? (venueMatch.first['ownerUsername'] ?? venueMatch.first['owner_username'] ?? '') : '';
+    final owner = GlobalAuthData.getAccount(ownerUsername.toString());
+    final hasInstagram = owner != null && owner.instagram.trim().isNotEmpty;
+
     // Get recommendations matching the current venue's sport type
     List<Map<String, dynamic>> allMatches = GlobalVenueData.venues
         .where((v) => 
@@ -284,20 +302,44 @@ class _VenueContactSectionState extends State<VenueContactSection> {
                 ],
               ),
               const SizedBox(height: 14),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
+              Row(
                 children: [
-                  _contactButton(
-                      icon: Icons.chat,
-                      iconColor: const Color(0xFF25D366),
-                      label: 'WhatsApp',
-                      onTap: () => _launchURL('https://wa.me/6281279098707')),
-                  _contactButton(
-                      icon: Icons.camera_alt,
-                      iconColor: const Color(0xFFE1306C),
-                      label: 'Instagram',
-                      onTap: () => _launchURL('https://www.instagram.com/polorenn16/')),
+                  Expanded(
+                    child: _contactButton(
+                        icon: Icons.chat,
+                        iconColor: const Color(0xFF25D366),
+                        label: 'WhatsApp',
+                        customIcon: Image.asset(
+                          'assets/images/whatsapp.png',
+                          width: 20,
+                          height: 20,
+                          fit: BoxFit.contain,
+                        ),
+                        onTap: () {
+                          final phone = owner?.phoneNumber ?? '';
+                          final formattedPhone = _formatWhatsAppNumber(phone.isNotEmpty ? phone : '081279098707');
+                          _launchURL('https://wa.me/$formattedPhone');
+                        }),
+                  ),
+                  if (hasInstagram) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _contactButton(
+                          icon: Icons.camera_alt,
+                          iconColor: const Color(0xFFE1306C),
+                          label: 'Instagram',
+                          onTap: () {
+                            var insta = owner.instagram.trim();
+                            if (!insta.startsWith('http://') && !insta.startsWith('https://')) {
+                              if (insta.startsWith('@')) {
+                                insta = insta.substring(1);
+                              }
+                              insta = 'https://instagram.com/$insta';
+                            }
+                            _launchURL(insta);
+                          }),
+                    ),
+                  ],
                 ],
               ),
             ],

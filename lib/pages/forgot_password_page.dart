@@ -12,27 +12,36 @@ class ForgotPasswordPage extends StatefulWidget {
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _inputController = TextEditingController();
 
   void _handleResetRequest() {
-    String email = _emailController.text.trim();
+    String input = _inputController.text.trim();
 
-    if (email.isEmpty) {
-      AlertUtils.showToast(context, 'Harap masukkan email Anda', isSuccess: false);
+    if (input.isEmpty) {
+      AlertUtils.showToast(context, 'Harap masukkan email atau nomor telepon Anda', isSuccess: false);
       return;
     }
 
-    // Email format validation
-    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-    if (!emailRegex.hasMatch(email)) {
-      AlertUtils.showToast(context, 'Format email tidak valid', isSuccess: false);
-      return;
+    // If it looks like an email, validate email format
+    if (input.contains('@')) {
+      final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+      if (!emailRegex.hasMatch(input)) {
+        AlertUtils.showToast(context, 'Format email tidak valid', isSuccess: false);
+        return;
+      }
+    } else {
+      // Validate phone number format (numbers, spaces, dashes, optionally start with +)
+      final phoneRegex = RegExp(r'^\+?[0-9\s\-]{7,15}$');
+      if (!phoneRegex.hasMatch(input)) {
+        AlertUtils.showToast(context, 'Format nomor telepon tidak valid', isSuccess: false);
+        return;
+      }
     }
 
-    final account = GlobalAuthData.getAccountByEmail(email);
+    final account = GlobalAuthData.getAccountByEmailOrPhone(input);
 
     if (account != null) {
-      // In a real app, we would send an email here.
+      // In a real app, we would send an OTP or email.
       // For this demo, we'll navigate directly to password reset.
       Navigator.push(
         context,
@@ -44,15 +53,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       AlertUtils.showResultDialog(
         context,
         isSuccess: false,
-        title: 'Email Tidak Terdaftar',
-        message: 'Maaf, akun dengan email tersebut tidak ditemukan.',
+        title: 'Akun Tidak Ditemukan',
+        message: 'Maaf, akun dengan email atau nomor telepon tersebut tidak ditemukan.',
       );
     }
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _inputController.dispose();
     super.dispose();
   }
 
@@ -100,7 +109,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Jangan khawatir! Masukkan alamat email yang terdaftar '
+                'Jangan khawatir! Masukkan alamat email atau nomor telepon yang terdaftar '
                 'dan kami akan membantu Anda memulihkan akun.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -111,7 +120,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ),
               const SizedBox(height: 48),
               const Text(
-                'Alamat Email',
+                'Email atau Nomor Telepon',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -120,11 +129,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ),
               const SizedBox(height: 8),
               TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
+                controller: _inputController,
+                keyboardType: TextInputType.text,
+                scrollPadding: const EdgeInsets.only(bottom: 200),
                 decoration: const InputDecoration(
-                  hintText: 'nama@email.com',
-                  prefixIcon: Icon(Icons.email_outlined, color: AppColors.textSecondary),
+                  hintText: 'nama@email.com atau 08123xxx',
+                  prefixIcon: Icon(Icons.contact_mail_outlined, color: AppColors.textSecondary),
                 ),
               ),
               const SizedBox(height: 40),
@@ -164,6 +174,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   ),
                 ],
               ),
+              const SizedBox(height: 120),
             ],
           ),
         ),

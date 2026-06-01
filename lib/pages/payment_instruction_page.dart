@@ -10,6 +10,7 @@ import '../data/notification_data.dart';
 import '../data/auth_data.dart';
 import '../services/midtrans_service.dart';
 import '../services/notification_service.dart';
+import '../services/booking_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PaymentInstructionPage extends StatefulWidget {
@@ -27,6 +28,9 @@ class PaymentInstructionPage extends StatefulWidget {
   final int usedPoints;
   final String? redirectUrl;
 
+  final List<Map<String, dynamic>> items;
+  final Map<String, int> selectedServices;
+
   const PaymentInstructionPage({
     super.key,
     required this.paymentMethodId,
@@ -39,13 +43,12 @@ class PaymentInstructionPage extends StatefulWidget {
     required this.timeRange,
     required this.individualSlots,
     this.selectedServices = const {},
+    this.items = const [],
     required this.username,
     this.role = 'End User',
     this.usedPoints = 0,
     this.redirectUrl,
   });
-
-  final Map<String, int> selectedServices;
 
   @override
   State<PaymentInstructionPage> createState() => _PaymentInstructionPageState();
@@ -65,6 +68,47 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
     return 'IDR ${price.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},')}';
   }
 
+  DateTime _getBookingStartDateTime() {
+    try {
+      final cleanDate = widget.date.contains(',') ? widget.date.split(',')[1].trim() : widget.date.trim();
+      final parts = cleanDate.split(' ');
+      if (parts.length >= 3) {
+        final day = int.parse(parts[0]);
+        final monthStr = parts[1].toLowerCase();
+        final year = int.parse(parts[2]);
+        
+        int month = 1;
+        switch (monthStr) {
+          case 'januari': month = 1; break;
+          case 'februari': month = 2; break;
+          case 'maret': month = 3; break;
+          case 'april': month = 4; break;
+          case 'mei': month = 5; break;
+          case 'juni': month = 6; break;
+          case 'juli': month = 7; break;
+          case 'agustus': month = 8; break;
+          case 'september': month = 9; break;
+          case 'oktober': month = 10; break;
+          case 'november': month = 11; break;
+          case 'desember': month = 12; break;
+        }
+
+        final startTimeStr = widget.timeRange.contains(' - ') 
+            ? widget.timeRange.split(' - ')[0] 
+            : widget.timeRange.split(' ')[0];
+        
+        final timeParts = startTimeStr.split(':');
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+
+        return DateTime(year, month, day, hour, minute);
+      }
+    } catch (e) {
+      // Fallback to now
+    }
+    return DateTime.now();
+  }
+
   void _checkPaymentStatus() async {
     setState(() => _isCheckingStatus = true);
     
@@ -75,25 +119,99 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
       setState(() => _isCheckingStatus = false);
 
       if (status == 'settlement' || status == 'capture') {
-        final newBooking = {
-          'orderId': widget.orderId,
-          'venueName': widget.venueName,
-          'courtName': widget.courtName,
-          'date': widget.date,
-          'time': widget.timeRange,
-          'price': widget.amount,
-          'paymentMethod': widget.paymentMethodName,
-          'status': 'Menunggu Jadwal',
-          'services': widget.selectedServices.isEmpty ? null : widget.selectedServices.entries.map((e) {
-            final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
-            final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-            final serviceList = (venue['services'] as List<dynamic>? ?? []);
-            final serviceResults = serviceList.where((s) => s['id'] == e.key);
-            if (serviceResults.isEmpty) return 'Unknown Service';
-            final service = serviceResults.first;
-            return '${service['name']} (x${e.value})';
-          }).join(', '),
-        };
+        final List<Map<String, dynamic>> bookingsToRegister = [];
+
+        if (widget.items.isNotEmpty) {
+          // Multi-item cart checkout: split each cart item into its own individual booking row
+          for (int i = 0; i < widget.items.length; i++) {
+            final item = widget.items[i];
+            final itemServices = item['services'] as Map<String, dynamic>? ?? {};
+            
+            final formattedServicesStr = itemServices.isEmpty 
+                ? null 
+                : itemServices.entries.map((e) {
+                    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == (item['venueName'] ?? widget.venueName));
+                    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+                    final courts = venue['courts'] as List<dynamic>? ?? [];
+                    final seenSvc = <String>{};
+                    final sList = <Map<String, dynamic>>[];
+                    for (final c in courts) {
+                      final courtServices = c['services'] as List<dynamic>? ?? [];
+                      for (final s in courtServices) {
+                        final sMap = Map<String, dynamic>.from(s as Map);
+                        final name = sMap['name']?.toString() ?? '';
+                        final sId = sMap['id']?.toString() ?? name;
+                        sMap['id'] = sId;
+                        if (name.isNotEmpty && !seenSvc.contains(name)) {
+                          seenSvc.add(name);
+                          sList.add(sMap);
+                        }
+                      }
+                    }
+                    final serviceResults = sList.where((s) => s['id'] == e.key || s['name'] == e.key);
+                    if (serviceResults.isEmpty) return 'Unknown Service';
+                    final service = serviceResults.first;
+                    return '${service['name']} (x${e.value})';
+                  }).join(', ');
+
+            bookingsToRegister.add({
+              'orderId': '${widget.orderId}-${i + 1}', // Unique order ID with index suffix
+              'username': widget.username,
+              'venueName': item['venueName'] ?? widget.venueName,
+              'courtName': item['courtName'] ?? widget.courtName,
+              'date': item['date'] ?? widget.date,
+              'time': item['timeSlot'] ?? widget.timeRange,
+              'price': item['price'] as int? ?? 0,
+              'paymentMethod': widget.paymentMethodName,
+              'status': 'Menunggu Jadwal',
+              'services': formattedServicesStr,
+            });
+          }
+        } else {
+          // Direct booking or single checkout: single booking row
+          final newBooking = {
+            'orderId': widget.orderId,
+            'username': widget.username,
+            'venueName': widget.venueName,
+            'courtName': widget.courtName,
+            'date': widget.date,
+            'time': widget.timeRange,
+            'price': widget.amount,
+            'paymentMethod': widget.paymentMethodName,
+            'status': 'Menunggu Jadwal',
+            'services': widget.selectedServices.isEmpty ? null : widget.selectedServices.entries.map((e) {
+              final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+              final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+              final courts = venue['courts'] as List<dynamic>? ?? [];
+              final seenSvc = <String>{};
+              final sList = <Map<String, dynamic>>[];
+              for (final c in courts) {
+                final courtServices = c['services'] as List<dynamic>? ?? [];
+                for (final s in courtServices) {
+                  final sMap = Map<String, dynamic>.from(s as Map);
+                  final name = sMap['name']?.toString() ?? '';
+                  final sId = sMap['id']?.toString() ?? name;
+                  sMap['id'] = sId;
+                  if (name.isNotEmpty && !seenSvc.contains(name)) {
+                    seenSvc.add(name);
+                    sList.add(sMap);
+                  }
+                }
+              }
+              final serviceResults = sList.where((s) => s['id'] == e.key || s['name'] == e.key);
+              if (serviceResults.isEmpty) return 'Unknown Service';
+              final service = serviceResults.first;
+              return '${service['name']} (x${e.value})';
+            }).join(', '),
+          };
+          bookingsToRegister.add(newBooking);
+        }
+
+        // Simpan seluruh booking baru secara online ke Supabase dan insert ke riwayat lokal
+        for (var b in bookingsToRegister) {
+          await BookingService.createBooking(b);
+          BookingHistoryPage.mockHistory.insert(0, b);
+        }
 
         // Perform atomic slot reservation
         for (var slot in widget.individualSlots) {
@@ -109,13 +227,11 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         final pointsEarned = (widget.amount / 100).floor();
         final account = GlobalAuthData.getAccount(widget.username);
         if (account != null) {
-          GlobalAuthData.updateAccount(
+          await GlobalAuthData.updateAccount(
             widget.username,
             newPoints: account.points + pointsEarned - widget.usedPoints,
           );
         }
-
-        BookingHistoryPage.mockHistory.insert(0, newBooking);
 
         // Notify End User
         final String startTimeStr = widget.timeRange.contains(' - ') 
@@ -135,14 +251,16 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
           )
         );
 
-        // Notify End User - 1 Hour Reminder
+        final bookingStart = _getBookingStartDateTime();
+
+        // Notify End User - Less than 1 Hour Reminder
         GlobalNotificationData.addNotification(
           AppNotification(
             id: '${DateTime.now().millisecondsSinceEpoch}_rem1h',
             username: widget.username,
-            title: 'Pengingat: 1 Jam Lagi',
-            message: 'Sesi Anda di ${widget.venueName} akan dimulai dalam 1 jam (Pukul $startTimeStr).',
-            timestamp: DateTime.now(),
+            title: 'Pengingat: Kurang dari 1 Jam Lagi',
+            message: 'Sesi Anda di ${widget.venueName} akan dimulai sebentar lagi (Pukul $startTimeStr).',
+            timestamp: bookingStart.subtract(const Duration(hours: 1)),
             icon: Icons.access_time_filled_rounded,
             color: Colors.orange,
           )
@@ -155,7 +273,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
             username: widget.username,
             title: 'Pengingat: 15 Menit Lagi',
             message: 'Siap-siap! Sesi Anda di ${widget.venueName} akan dimulai dalam 15 menit.',
-            timestamp: DateTime.now(),
+            timestamp: bookingStart.subtract(const Duration(minutes: 15)),
             icon: Icons.notifications_active_rounded,
             color: AppColors.primary,
           )
@@ -483,7 +601,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
           ),
           const SizedBox(height: 16),
           _buildStepRow('1', 'Klik tombol "Buka Portal Pembayaran" di atas.'),
-          _buildStepRow('2', 'Pilih metode pembayaran (QRIS, VA, atau kartu kredit) di portal Midtrans Snap.'),
+          _buildStepRow('2', 'Pilih metode pembayaran (E-wallet, VA, atau kartu kredit) di portal Midtrans Snap.'),
           _buildStepRow('3', 'Selesaikan transaksi di layar simulator pembayaran.'),
           _buildStepRow('4', 'Kembali ke aplikasi Rensius ini, lalu klik tombol "Cek Status Pembayaran" di bawah.'),
         ],

@@ -44,15 +44,18 @@ class GlobalVerificationData {
             venueAddress: row['venue_address'],
             venueProvinsi: row['venue_provinsi'],
             venueKota: row['venue_kota'],
-            venueLat: row['venue_lat'],
-            venueLng: row['venue_lng'],
+            venueLat: row['venue_lat']?.toString(),
+            venueLng: row['venue_lng']?.toString(),
             venueData: row['venue_data'] != null ? Map<String, dynamic>.from(row['venue_data']) : null,
             rejectionReason: row['rejection_reason'],
             password: row['password'],
           ));
         }
 
-        // Gabungkan data online ke local cache
+        // Gabungkan data online ke local cache dan hapus permintaan lokal yang sudah tidak ada online
+        final onlineReqIds = onlineRequests.map((r) => r.id).toSet();
+        requests.removeWhere((r) => !onlineReqIds.contains(r.id));
+
         for (var onlineReq in onlineRequests) {
           final idx = requests.indexWhere((r) => r.id == onlineReq.id);
           if (idx != -1) {

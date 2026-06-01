@@ -102,6 +102,7 @@ class _BookingPageState extends State<BookingPage>
         'booked': false,
       });
     }
+    _syncSelectedSlotsFromCart();
   }
 
   void _addFallbackSlots() {
@@ -117,6 +118,48 @@ class _BookingPageState extends State<BookingPage>
         'booked': false,
       });
     }
+    _syncSelectedSlotsFromCart();
+  }
+
+  void _syncSelectedSlotsFromCart() {
+    final dateStr = BookingUtils.formatDate(_selectedDate);
+    final matchingCartItems = GlobalVenueData.cart.where((item) =>
+        item['venueName'] == widget.venueName && item['date'] == dateStr).toList();
+
+    _selectedServices.clear();
+    for (final item in matchingCartItems) {
+      if (item['services'] != null) {
+        final Map<dynamic, dynamic> cartServices = item['services'] as Map;
+        cartServices.forEach((key, value) {
+          _selectedServices[key.toString()] = int.tryParse(value.toString()) ?? 0;
+        });
+      }
+    }
+
+    for (final item in matchingCartItems) {
+      final String courtsStr = item['courtName']?.toString() ?? '';
+      final String timeSlotStr = item['timeSlot']?.toString() ?? '';
+
+      final List<String> cartCourts = courtsStr.split(', ').map((e) => e.trim()).toList();
+      final List<String> cartTimes = timeSlotStr.contains('Slot:') 
+          ? timeSlotStr.split('Slot:')[1].split(', ').map((e) => e.trim()).toList()
+          : timeSlotStr.split(', ').map((e) => e.trim()).toList();
+
+      for (int courtIdx = 0; courtIdx < _courts.length; courtIdx++) {
+        final courtName = _courts[courtIdx]['name']?.toString() ?? '';
+        if (cartCourts.contains(courtName) || courtsStr == 'Beberapa Lapangan') {
+          for (int slotIdx = 0; slotIdx < _timeSlots.length; slotIdx++) {
+            final slotTime = _timeSlots[slotIdx]['time']?.toString() ?? '';
+            final cleanSlotTime = slotTime.trim();
+            bool timeMatched = cartTimes.any((t) => t.contains(cleanSlotTime) || cleanSlotTime.contains(t));
+            if (timeMatched) {
+              final slotKey = '${slotIdx}_$courtIdx';
+              _selectedSlots.add(slotKey);
+            }
+          }
+        }
+      }
+    }
   }
 
   @override
@@ -130,13 +173,13 @@ class _BookingPageState extends State<BookingPage>
       final courts = venue['courts'] as List<dynamic>?;
       if (courts != null && courts.isNotEmpty) {
         for (var c in courts) {
-          _courts.add({
-            'name': c['name'] ?? 'Lapangan',
-            'type': c['type'] ?? widget.venueType,
-            'size': c['size'] ?? '-',
-            'courtCategory': c['courtCategory'] ?? '-',
-            'floorType': c['floorType'] ?? '-',
-          });
+          final map = Map<String, dynamic>.from(c as Map);
+          map['name'] = map['name'] ?? 'Lapangan';
+          map['type'] = map['type'] ?? widget.venueType;
+          map['size'] = map['size'] ?? '-';
+          map['courtCategory'] = map['courtCategory'] ?? '-';
+          map['floorType'] = map['floorType'] ?? '-';
+          _courts.add(map);
         }
       }
     }
@@ -202,12 +245,40 @@ class _BookingPageState extends State<BookingPage>
     return result;
   }
 
+  int _getSlotPriceForTotal(Map<String, dynamic> court, DateTime date, String timeRange) {
+    final dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    final dayName = dayNames[date.weekday - 1];
+    final startStr = timeRange.split(' - ')[0];
+
+    final priceMode = court['priceMode'] ?? 'perDay';
+    final priceDay = court['priceDay'] as Map? ?? {};
+    final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
+
+    if (priceMode == 'perSlot') {
+      final key = '${dayName}_$startStr';
+      final slotPriceStr = pricePerSlot[key]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+      final slotPrice = int.tryParse(slotPriceStr);
+      if (slotPrice != null && slotPrice > 0) {
+        return slotPrice;
+      }
+    }
+
+    // Fallback to priceDay
+    final dayPriceStr = priceDay[dayName]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    final dayPrice = int.tryParse(dayPriceStr) ?? 100000;
+    return dayPrice;
+  }
+
   int get _totalPrice {
     int total = _selectedSlots.fold(0, (sum, key) {
       final parts = key.split('_');
       final slotIndex = int.tryParse(parts[0]) ?? 0;
-      if (slotIndex < _timeSlots.length) {
-        return sum + (_timeSlots[slotIndex]['price'] as int? ?? 0);
+      final courtIndex = int.tryParse(parts[1]) ?? 0;
+      if (slotIndex < _timeSlots.length && courtIndex < _courts.length) {
+        final court = _courts[courtIndex];
+        final timeRange = _timeSlots[slotIndex]['time'] as String;
+        final price = _getSlotPriceForTotal(court, _selectedDate, timeRange);
+        return sum + price;
       }
       return sum;
     });
@@ -488,6 +559,35 @@ class _BookingPageState extends State<BookingPage>
                 ),
               ],
             ),
+            if (_selectedServices.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.shopping_bag_outlined,
+                      size: 16, color: AppColors.textSecondary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: _selectedServices.entries.map((entry) {
+                        final serviceName = () {
+                          final sRes = _allServices.where((s) => (s['id']?.toString() ?? s['name']?.toString()) == entry.key);
+                          if (sRes.isNotEmpty) {
+                            return sRes.first['name']?.toString() ?? entry.key;
+                          }
+                          return entry.key;
+                        }();
+                        return Text(
+                          '$serviceName (x${entry.value})',
+                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
@@ -703,6 +803,7 @@ class _BookingPageState extends State<BookingPage>
                       courts: _courts,
                       timeSlots: _timeSlots,
                       selectedSlots: _selectedSlots,
+                      selectedDate: _selectedDate,
                       onSlotSelected: (slotKey) {
                         setState(() {
                           if (_selectedSlots.contains(slotKey)) {
@@ -725,6 +826,7 @@ class _BookingPageState extends State<BookingPage>
                               dimensions: court['size']?.toString() ?? '-',
                               courtCategory: court['courtCategory']?.toString() ?? '-',
                               floorType: court['floorType']?.toString() ?? '-',
+                              initialSelectedDate: _selectedDate,
                             ),
                           ),
                         );

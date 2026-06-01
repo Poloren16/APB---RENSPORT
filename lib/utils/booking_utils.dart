@@ -1,4 +1,5 @@
 import '../pages/booking_history.dart';
+import 'package:rensius/services/supabase_service.dart';
 
 class BookingUtils {
   static const List<String> dayNames = [
@@ -14,6 +15,35 @@ class BookingUtils {
   /// Key format: "venueName|courtName|dateString|timeStart"
   /// e.g., "BEC Tennis|Court A|Senin, 13 April 2026|08:00"
   static final Set<String> _reservedSlots = {};
+
+  /// Cache list of all global bookings from Supabase
+  static List<Map<String, dynamic>> globalBookings = [];
+
+  /// Loads all global bookings from Supabase to prevent slot clashes
+  static Future<void> loadGlobalBookingsOnline() async {
+    if (!SupabaseService.isInitialized) return;
+    try {
+      final response = await SupabaseService.client.from('bookings').select();
+      globalBookings.clear();
+      for (var row in response) {
+        globalBookings.add({
+          'orderId': row['order_id'] ?? '',
+          'username': row['username'] ?? '',
+          'venueName': row['venue_name'] ?? '',
+          'courtName': row['court_name'] ?? '',
+          'date': row['date'] ?? '',
+          'time': row['time'] ?? '',
+          'price': row['price'] ?? 0,
+          'paymentMethod': row['payment_method'] ?? '',
+          'status': row['status'] ?? 'Menunggu Jadwal',
+          'services': row['services'],
+          'createdAt': row['created_at'],
+        });
+      }
+    } catch (e) {
+      print('Gagal memuat global bookings online: $e');
+    }
+  }
 
   /// Standardizes date to "Hari, Tanggal Bulan Tahun" (e.g., "Senin, 13 April 2026")
   static String formatDate(DateTime date) {
@@ -55,14 +85,36 @@ class BookingUtils {
       if (hour <= now.hour) return true; // Mark as "booked" (disabled) if time has passed
     }
 
-    // 4. Fallback to matching against history items
-    return BookingHistoryPage.mockHistory.any((booking) {
-      if (booking == null) return false;
-      
+    // 4. Check against global bookings online
+    final matchedGlobal = globalBookings.any((booking) {
       final bVenue = (booking['venueName'] ?? '').toString();
       final bCourt = (booking['courtName'] ?? '').toString();
       final bDate = (booking['date'] ?? '').toString();
       final bTime = (booking['time'] ?? '').toString();
+      final bStatus = (booking['status'] ?? '').toString().toLowerCase();
+
+      // Don't block slots if the booking has been cancelled, expired, or refunded
+      if (bStatus == 'dibatalkan' || bStatus == 'expired' || bStatus == 'refunded') return false;
+
+      bool venueMatch = bVenue == venueName;
+      bool courtMatch = bCourt.contains(courtName);
+      bool dateMatch = bDate == dateStr;
+      bool timeMatch = bTime.contains(startTime);
+
+      return venueMatch && courtMatch && dateMatch && timeMatch;
+    });
+
+    if (matchedGlobal) return true;
+
+    // 5. Fallback to matching against user's history items in memory
+    return BookingHistoryPage.mockHistory.any((booking) {
+      final bVenue = (booking['venueName'] ?? '').toString();
+      final bCourt = (booking['courtName'] ?? '').toString();
+      final bDate = (booking['date'] ?? '').toString();
+      final bTime = (booking['time'] ?? '').toString();
+      final bStatus = (booking['status'] ?? '').toString().toLowerCase();
+
+      if (bStatus == 'dibatalkan' || bStatus == 'expired' || bStatus == 'refunded') return false;
 
       bool venueMatch = bVenue == venueName;
       bool courtMatch = bCourt.contains(courtName);

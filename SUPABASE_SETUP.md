@@ -79,7 +79,9 @@ CREATE TABLE public.users (
   ktp_image_path text,
   gender text,
   date_of_birth text,
-  points integer NOT NULL DEFAULT 0
+  points integer NOT NULL DEFAULT 0,
+  cart jsonb DEFAULT '[]'::jsonb NOT NULL,
+  favorites jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 -- =======================================================
@@ -102,6 +104,24 @@ CREATE TABLE public.venues (
   owner_username text NOT NULL,
   lat double precision DEFAULT 0.0 NOT NULL,
   lng double precision DEFAULT 0.0 NOT NULL
+);
+
+-- =======================================================
+-- 4. TABEL BOOKINGS (Riwayat Penyewaan & Slot Online)
+-- =======================================================
+CREATE TABLE public.bookings (
+  id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id text NOT NULL UNIQUE,
+  username text NOT NULL,
+  venue_name text NOT NULL,
+  court_name text NOT NULL,
+  date text NOT NULL,
+  time text NOT NULL,
+  price integer NOT NULL,
+  payment_method text NOT NULL,
+  status text NOT NULL,
+  services text,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 ```
 

@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class MidtransService {
   static String get _serverKey {
-    return dotenv.env['MIDTRANS_SERVER_KEY'] ?? '';
+    return (dotenv.env['MIDTRANS_SERVER_KEY'] ?? '').trim();
   }
 
   static String get _authHeader {
@@ -23,6 +23,7 @@ class MidtransService {
     required String phone,
     String? courtName,
     String? venueName,
+    List<String>? enabledPayments,
   }) async {
     if (_serverKey.isEmpty) {
       throw Exception('MIDTRANS_SERVER_KEY belum diatur di file .env');
@@ -35,6 +36,8 @@ class MidtransService {
         'order_id': orderId,
         'gross_amount': grossAmount,
       },
+      if (enabledPayments != null && enabledPayments.isNotEmpty)
+        'enabled_payments': enabledPayments,
       'credit_card': {
         'secure': true,
       },

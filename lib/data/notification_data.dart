@@ -31,12 +31,21 @@ class GlobalNotificationData {
 
   static List<AppNotification> getNotificationsForUser(String username, String role) {
     String queryUser = (role == 'Admin' || role == 'Owner') ? 'admin' : username;
-    return notifications.where((n) => n.username == queryUser || n.username == 'all').toList();
+    final now = DateTime.now();
+    return notifications.where((n) => 
+      (n.username == queryUser || n.username == 'all') && 
+      !n.timestamp.isAfter(now)
+    ).toList();
   }
 
   static int getUnreadCount(String username, String role) {
     String queryUser = (role == 'Admin' || role == 'Owner') ? 'admin' : username;
-    return notifications.where((n) => (n.username == queryUser || n.username == 'all') && !n.isRead).length;
+    final now = DateTime.now();
+    return notifications.where((n) => 
+      (n.username == queryUser || n.username == 'all') && 
+      !n.isRead && 
+      !n.timestamp.isAfter(now)
+    ).length;
   }
 
   static void markAllAsRead(String username, String role) {

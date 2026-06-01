@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../theme/app_colors.dart';
 import './payment_instruction_page.dart';
 import '../data/venue_data.dart';
@@ -48,39 +49,90 @@ class _PaymentPageState extends State<PaymentPage> {
   @override
   void initState() {
     super.initState();
-    _localSelectedServices = Map<String, int>.from(widget.selectedServices);
+    if (widget.items.length == 1) {
+      final itemSvc = widget.items.first['services'];
+      _localSelectedServices = itemSvc != null ? Map<String, int>.from(itemSvc) : {};
+    } else {
+      _localSelectedServices = Map<String, int>.from(widget.selectedServices);
+    }
     _availablePoints = GlobalAuthData.getAccount(widget.username)?.points ?? 0;
   }
 
   int get _totalPrice {
     int basePrice = 0;
+
     if (widget.items.isNotEmpty) {
-      basePrice = widget.items.fold(0, (sum, item) => sum + (item['price'] as int));
+      if (widget.items.length == 1) {
+        // Single cart item checkout: recalculate slot base price to avoid double counting services,
+        // and allow dynamically updating services.
+        final item = widget.items.first;
+        final vName = item['venueName']?.toString() ?? widget.venueName;
+        final cName = item['courtName']?.toString() ?? widget.courtName;
+        final dStr = item['date']?.toString() ?? widget.date;
+        final tSlot = item['timeSlot']?.toString() ?? widget.timeRange;
+        final hours = _parseStartHours(tSlot);
+        if (hours.isNotEmpty) {
+          basePrice = hours.fold(0, (sum, h) => sum + _getSlotPrice(vName, cName, dStr, h));
+        } else {
+          basePrice = item['price'] as int? ?? 0;
+        }
+      } else {
+        // Multiple cart items checkout: static sum of cart prices
+        basePrice = widget.items.fold(0, (sum, item) => sum + (item['price'] as int));
+      }
     } else {
-      basePrice = widget.price;
+      // Direct booking: widget.price include initial services (dari court_detail_page._totalPrice)
+      // Recalculate court-only price dari slot data agar perubahan services akurat
+      final hours = _parseStartHours(widget.timeRange);
+      if (hours.isNotEmpty) {
+        basePrice = hours.fold(0, (sum, h) => sum + _getSlotPrice(widget.venueName, widget.courtName, widget.date, h));
+      } else {
+        // Fallback: tidak bisa recalculate, pakai widget.price langsung
+        basePrice = widget.price;
+      }
     }
 
-    int serviceTotal = 0;
-    // Gunakan venue name dari field atau item pertama jika dari keranjang
-    String activeVenue = widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName;
-    
-    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == activeVenue);
-    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-    final services = venue['services'] as List<dynamic>? ?? [];
-    
-    _localSelectedServices.forEach((id, qty) {
-      final serviceResults = services.where((s) => s['id'] == id);
-      if (serviceResults.isNotEmpty) {
-        final service = serviceResults.first;
-        serviceTotal += (service['price'] as int) * qty;
-      }
-    });
-    
-    int subTotal = basePrice + serviceTotal;
+    final activeVenueName = widget.items.isNotEmpty ? (widget.items.first['venueName']?.toString() ?? widget.venueName) : widget.venueName;
+    final activeCourtName = widget.items.isNotEmpty ? (widget.items.first['courtName']?.toString() ?? widget.courtName) : widget.courtName;
+    final serviceTotal = _calcServiceCost(_localSelectedServices, activeVenueName, activeCourtName);
+
+    final subTotal = basePrice + serviceTotal;
     if (_usePoints) {
       return (subTotal - _availablePoints).clamp(0, double.infinity).toInt();
     }
     return subTotal;
+  }
+
+  /// Hitung total biaya services dari court-level data (bukan venue-level)
+  int _calcServiceCost(Map<String, int> services, String venueName, String courtName) {
+    if (services.isEmpty) return 0;
+    final vRes = GlobalVenueData.venues.where((v) => v['name'] == venueName);
+    if (vRes.isEmpty) return 0;
+    final courtsList = vRes.first['courts'] as List<dynamic>? ?? [];
+    final seenSvc = <String>{};
+    final svcList = <Map<String, dynamic>>[];
+    // Utamakan court spesifik, fallback ke semua courts
+    final targetCourts = courtName.isNotEmpty ? courtsList.where((c) => c['name'] == courtName).toList() : [];
+    final sourceCourts = targetCourts.isNotEmpty ? targetCourts : courtsList;
+    for (final c in sourceCourts) {
+      final cs = c['services'] as List<dynamic>? ?? [];
+      for (final s in cs) {
+        final sm = Map<String, dynamic>.from(s as Map);
+        final sn = sm['name']?.toString() ?? '';
+        sm['id'] = sm['id']?.toString() ?? sn;
+        if (sn.isNotEmpty && !seenSvc.contains(sn)) { seenSvc.add(sn); svcList.add(sm); }
+      }
+    }
+    int total = 0;
+    services.forEach((id, qty) {
+      final match = svcList.where((s) => s['id'] == id || s['name'] == id);
+      if (match.isNotEmpty) {
+        final pr = match.first['price'];
+        final sPrice = pr is int ? pr : int.tryParse(pr?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
+        total += sPrice * qty;
+      }
+    });
+    return total;
   }
 
   String _formatCurrency(int amount) {
@@ -91,12 +143,96 @@ class _PaymentPageState extends State<PaymentPage> {
     return 'Rp$formatted';
   }
 
+  /// Parse start-time list dari string timeSlot (e.g. "2 Slot: 06:00, 07:00" atau "2 Slot Waktu (06:00, 07:00)")
+  /// Hanya mengambil jam awal (start-time) dari setiap rentang untuk menghindari perhitungan ganda (double-counting).
+  List<int> _parseStartHours(String timeSlot) {
+    String cleaned = timeSlot;
+    if (cleaned.contains('(')) {
+      cleaned = cleaned.split('(').last.replaceAll(')', '');
+    } else if (cleaned.contains('Slot: ')) {
+      cleaned = cleaned.split('Slot: ').last;
+    }
+    
+    final slots = cleaned.split(',');
+    final hours = <int>[];
+    for (final s in slots) {
+      final part = s.split('-')[0].trim(); // Ambil hanya jam mulai, e.g. "08:00" dari "08:00 - 09:00"
+      final regex = RegExp(r'\b(\d{2}):\d{2}\b');
+      final match = regex.firstMatch(part);
+      if (match != null) {
+        final hStr = match.group(1);
+        if (hStr != null) {
+          final h = int.tryParse(hStr);
+          if (h != null) hours.add(h);
+        }
+      }
+    }
+    hours.sort();
+    return hours;
+  }
+
+  /// Kelompokkan jam-jam yang berurutan menjadi rentang, e.g.:
+  /// [6,7,8] -> "(06:00-09:00)"
+  /// [6,8]   -> "(06:00-07:00), (08:00-09:00)"
+  String _groupHoursToRanges(List<int> hours) {
+    if (hours.isEmpty) return '-';
+    final groups = <String>[];
+    int start = hours[0];
+    int prev = hours[0];
+    for (int i = 1; i < hours.length; i++) {
+      if (hours[i] == prev + 1) {
+        prev = hours[i];
+      } else {
+        groups.add('(${start.toString().padLeft(2,'0')}:00-${(prev+1).toString().padLeft(2,'0')}:00)');
+        start = hours[i];
+        prev = hours[i];
+      }
+    }
+    groups.add('(${start.toString().padLeft(2,'0')}:00-${(prev+1).toString().padLeft(2,'0')}:00)');
+    return groups.join(', ');
+  }
+
+  /// Ambil harga 1 slot dari venue data berdasarkan venueName, courtName, dateStr, startHour
+  int _getSlotPrice(String venueName, String courtName, String dateStr, int startHour) {
+    final venueRes = GlobalVenueData.venues.where((v) => v['name'] == venueName);
+    if (venueRes.isEmpty) return 0;
+    final venue = venueRes.first;
+    final courts = venue['courts'] as List<dynamic>? ?? [];
+    final courtRes = courts.where((c) => c['name'] == courtName);
+    if (courtRes.isEmpty) return 0;
+    final court = Map<String, dynamic>.from(courtRes.first as Map);
+
+    // Dapatkan nama hari dari dateStr "Senin, 2 Juni 2026"
+    String dayName = '';
+    final parts = dateStr.split(',');
+    if (parts.isNotEmpty) dayName = parts.first.trim();
+
+    final priceMode = court['priceMode'] ?? 'perDay';
+    if (priceMode == 'perSlot') {
+      final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
+      final key = '${dayName}_${startHour.toString().padLeft(2,'0')}:00';
+      final val = pricePerSlot[key]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+      final p = int.tryParse(val);
+      if (p != null && p > 0) return p;
+    }
+    // Fallback: priceDay
+    final priceDay = court['priceDay'] as Map? ?? {};
+    final dayVal = priceDay[dayName]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    return int.tryParse(dayVal) ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: _buildAppBar(),
-      body: Column(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        _showBackConfirmation();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: _buildAppBar(),
+        body: Column(
         children: [
           Expanded(
             child: SingleChildScrollView(
@@ -115,9 +251,7 @@ class _PaymentPageState extends State<PaymentPage> {
                       date: widget.items.isNotEmpty ? widget.items.first['date'] : widget.date,
                       timeRange: widget.items.isNotEmpty ? widget.items.first['timeSlot'] : widget.timeRange,
                       price: widget.items.isNotEmpty ? widget.items.first['price'] : widget.price,
-                      services: widget.items.isNotEmpty 
-                          ? (widget.items.first['services'] != null ? Map<String, int>.from(widget.items.first['services']) : null)
-                          : _localSelectedServices,
+                      services: _localSelectedServices,
                     ),
                     const SizedBox(height: 12),
                     _buildAddServiceButton(),
@@ -160,6 +294,7 @@ class _PaymentPageState extends State<PaymentPage> {
           _buildBottomBar(),
         ],
       ),
+    ),
     );
   }
 
@@ -170,7 +305,7 @@ class _PaymentPageState extends State<PaymentPage> {
       centerTitle: true,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.textPrimary, size: 20),
-        onPressed: () => Navigator.pop(context),
+        onPressed: _showBackConfirmation,
       ),
       title: const Text(
         'Pembayaran',
@@ -180,6 +315,89 @@ class _PaymentPageState extends State<PaymentPage> {
         preferredSize: const Size.fromHeight(1),
         child: Container(color: Colors.grey.withValues(alpha: 0.1), height: 1),
       ),
+    );
+  }
+
+  void _showBackConfirmation() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final curve = Curves.elasticOut.transform(anim1.value);
+        return Transform.scale(
+          scale: curve,
+          child: Opacity(
+            opacity: anim1.value,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              contentPadding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 48),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Batalkan Pembayaran?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Semua perubahan pada layanan tambahan akan hilang jika kamu keluar dari halaman ini.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text(
+                            'Tetap di Sini',
+                            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx); // Tutup dialog
+                            Navigator.pop(context); // Keluar dari payment page
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: const Text(
+                            'Ya, Keluar',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -194,6 +412,10 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   Widget _buildVenueCard(String name) {
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == name);
+    final venue = venueResults.isNotEmpty ? venueResults.first : null;
+    final String imagePath = venue != null ? (venue['image']?.toString() ?? '') : '';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -205,10 +427,45 @@ class _PaymentPageState extends State<PaymentPage> {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.stadium_rounded, color: AppColors.primary, size: 24),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+              ),
+              child: Builder(builder: (context) {
+                if (imagePath.isEmpty) {
+                  return const Icon(Icons.stadium_rounded, color: AppColors.primary, size: 24);
+                }
+                final isRemote = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+                final isAsset = imagePath.startsWith('assets/');
+                try {
+                  if (isRemote) {
+                    return Image.network(
+                      imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.stadium_rounded, color: AppColors.primary, size: 24),
+                    );
+                  } else if (isAsset) {
+                    return Image.asset(
+                      imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.stadium_rounded, color: AppColors.primary, size: 24),
+                    );
+                  } else {
+                    return Image.file(
+                      File(imagePath),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.stadium_rounded, color: AppColors.primary, size: 24),
+                    );
+                  }
+                } catch (e) {
+                  return const Icon(Icons.stadium_rounded, color: AppColors.primary, size: 24);
+                }
+              }),
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -261,7 +518,10 @@ class _PaymentPageState extends State<PaymentPage> {
               children: [
                 _buildInfoRow(icon: Icons.calendar_today_rounded, label: date),
                 const SizedBox(height: 10),
-                _buildInfoRow(icon: Icons.access_time_filled_rounded, label: timeRange),
+                _buildInfoRow(
+                  icon: Icons.access_time_filled_rounded,
+                  label: _groupHoursToRanges(_parseStartHours(timeRange)),
+                ),
                 
                 if (services != null && services.isNotEmpty) ...[
                   const Padding(
@@ -273,17 +533,40 @@ class _PaymentPageState extends State<PaymentPage> {
                   ...services.entries.map((entry) {
                     final venueResults = GlobalVenueData.venues.where((v) => v['name'] == venueName);
                     final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-                    final sList = venue['services'] as List<dynamic>? ?? [];
-                    final sRes = sList.where((s) => s['id'] == entry.key);
+                    final courts = venue['courts'] as List<dynamic>? ?? [];
+                    
+                    // Kumpulkan semua layanan tambahan dari semua lapangan di venue ini
+                    final seen = <String>{};
+                    final sList = <Map<String, dynamic>>[];
+                    for (final c in courts) {
+                      final courtServices = c['services'] as List<dynamic>? ?? [];
+                      for (final s in courtServices) {
+                        final sMap = Map<String, dynamic>.from(s as Map);
+                        final name = sMap['name']?.toString() ?? '';
+                        final sId = sMap['id']?.toString() ?? name;
+                        sMap['id'] = sId;
+                        if (name.isNotEmpty && !seen.contains(name)) {
+                          seen.add(name);
+                          sList.add(sMap);
+                        }
+                      }
+                    }
+
+                    final sRes = sList.where((s) => s['id'] == entry.key || s['name'] == entry.key);
                     if (sRes.isEmpty) return const SizedBox.shrink();
                     final s = sRes.first;
+                    final sPriceRaw = s['price'];
+                    final sPrice = sPriceRaw is int 
+                        ? sPriceRaw 
+                        : int.tryParse(sPriceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('${s['name']} (x${entry.value})', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
-                          Text(_formatCurrency(s['price'] * entry.value), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                          Text(_formatCurrency(sPrice * entry.value), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
                         ],
                       ),
                     );
@@ -336,16 +619,8 @@ class _PaymentPageState extends State<PaymentPage> {
       ),
       child: Column(
         children: [
-          if (widget.items.isEmpty)
-            _buildTransactionRow('Biaya Lapangan', widget.price)
-          else ...[
-            ...widget.items.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _buildTransactionRow(item['courtName'], item['price']),
-            )).toList(),
-          ],
-          
-          _buildServiceTransactionRows(),
+          if (widget.items.isEmpty) ..._buildSingleItemTransactionRows()
+          else ...widget.items.expand((item) => _buildCartItemTransactionRows(item)).toList(),
           
           const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1)),
           if (_usePoints && _availablePoints > 0)
@@ -368,59 +643,230 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  Widget _buildTransactionRow(String label, int amount, {bool isFree = false, bool isBold = false}) {
+  Widget _buildTransactionRow(String label, int amount, {bool isFree = false, bool isBold = false, bool isSlot = false, bool isSubtotal = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label, 
-          style: TextStyle(
-            fontSize: isBold ? 15 : 13, 
-            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-            color: isBold ? AppColors.textPrimary : AppColors.textSecondary,
+        Expanded(
+          child: Text(
+            label, 
+            style: TextStyle(
+              fontSize: isBold ? 15 : isSubtotal ? 13 : 12, 
+              fontWeight: isBold ? FontWeight.bold : isSubtotal ? FontWeight.w600 : FontWeight.w400,
+              color: isBold ? AppColors.textPrimary : isSubtotal ? AppColors.textPrimary : AppColors.textSecondary,
+              fontStyle: isSlot ? FontStyle.normal : FontStyle.normal,
+            ),
           ),
         ),
         Text(
           isFree ? 'Gratis' : _formatCurrency(amount),
           style: TextStyle(
-            fontSize: isBold ? 17 : 13, 
-            fontWeight: isBold ? FontWeight.bold : FontWeight.bold,
-            color: isBold ? AppColors.primary : AppColors.textPrimary,
+            fontSize: isBold ? 17 : isSubtotal ? 13 : 12, 
+            fontWeight: isBold ? FontWeight.bold : isSubtotal ? FontWeight.bold : FontWeight.w500,
+            color: isBold ? AppColors.primary : isSubtotal ? AppColors.textPrimary : AppColors.textSecondary,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildServiceTransactionRows() {
-    if (_localSelectedServices.isEmpty) return const SizedBox.shrink();
-    
-    String activeVenue = widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName;
-    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == activeVenue);
-    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-    final services = venue['services'] as List<dynamic>? ?? [];
-    
-    return Column(
-      children: _localSelectedServices.entries.map((entry) {
-        final sRes = services.where((s) => s['id'] == entry.key);
-        if (sRes.isEmpty) return const SizedBox.shrink();
-        final s = sRes.first;
-        return Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: _buildTransactionRow('${s['name']} (x${entry.value})', s['price'] * entry.value),
-        );
-      }).toList(),
-    );
+  /// Bangun baris rincian per-slot + layanan untuk booking langsung (non-keranjang)
+  List<Widget> _buildSingleItemTransactionRows() {
+    final rows = <Widget>[];
+
+    // Tentukan courtName yang aktif
+    final activeCourtName = widget.items.isNotEmpty
+        ? (widget.items.first['courtName']?.toString() ?? widget.courtName)
+        : widget.courtName;
+    final activeVenueName = widget.items.isNotEmpty
+        ? (widget.items.first['venueName']?.toString() ?? widget.venueName)
+        : widget.venueName;
+    final activeDate = widget.items.isNotEmpty
+        ? (widget.items.first['date']?.toString() ?? widget.date)
+        : widget.date;
+    final activeTimeRange = widget.items.isNotEmpty
+        ? (widget.items.first['timeSlot']?.toString() ?? widget.timeRange)
+        : widget.timeRange;
+
+    // Header nama lapangan
+    rows.add(Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        activeCourtName,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+      ),
+    ));
+
+    final hours = _parseStartHours(activeTimeRange);
+    int courtSubTotal = 0;
+
+    if (hours.isEmpty) {
+      // Fallback: tampilkan total langsung
+      rows.add(Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: _buildTransactionRow('Biaya Lapangan', widget.price),
+      ));
+    } else {
+      // Tampilkan per-slot
+      for (final h in hours) {
+        final slotLabel = '${h.toString().padLeft(2,'0')}:00 - ${(h+1).toString().padLeft(2,'0')}:00';
+        final slotPrice = _getSlotPrice(activeVenueName, activeCourtName, activeDate, h);
+        courtSubTotal += slotPrice;
+        rows.add(Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: _buildTransactionRow(slotLabel, slotPrice, isSlot: true),
+        ));
+      }
+      if (hours.length > 1) {
+        rows.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _buildTransactionRow('Subtotal Lapangan', courtSubTotal, isSubtotal: true),
+        ));
+      }
+    }
+
+    // Layanan tambahan dari _localSelectedServices (direct booking)
+    if (_localSelectedServices.isNotEmpty) {
+      final vRes = GlobalVenueData.venues.where((v) => v['name'] == activeVenueName);
+      final venue = vRes.isNotEmpty ? vRes.first : <String, dynamic>{};
+      final courtsList = venue['courts'] as List<dynamic>? ?? [];
+      final seenSvc = <String>{};
+      final svcList = <Map<String, dynamic>>[];
+      for (final c in courtsList) {
+        final cs = c['services'] as List<dynamic>? ?? [];
+        for (final s in cs) {
+          final sm = Map<String, dynamic>.from(s as Map);
+          final sn = sm['name']?.toString() ?? '';
+          sm['id'] = sm['id']?.toString() ?? sn;
+          if (sn.isNotEmpty && !seenSvc.contains(sn)) { seenSvc.add(sn); svcList.add(sm); }
+        }
+      }
+      _localSelectedServices.forEach((key, qty) {
+        final match = svcList.where((s) => s['id'] == key || s['name'] == key);
+        if (match.isNotEmpty) {
+          final s = match.first;
+          final pr = s['price'];
+          final sPrice = pr is int ? pr : int.tryParse(pr?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
+          rows.add(Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildTransactionRow('+ ${s['name']} (x$qty)', sPrice * qty),
+          ));
+        }
+      });
+    }
+
+    rows.add(const SizedBox(height: 6));
+    return rows;
   }
+
+  /// Bangun baris rincian per-slot + layanan untuk item dari keranjang
+  List<Widget> _buildCartItemTransactionRows(Map<String, dynamic> item) {
+    final rows = <Widget>[];
+    final venueName = item['venueName']?.toString() ?? '';
+    final courtName = item['courtName']?.toString() ?? '';
+    final dateStr = item['date']?.toString() ?? '';
+    final timeSlot = item['timeSlot']?.toString() ?? '';
+    final Map<String, int>? itemServices = (widget.items.length == 1)
+        ? _localSelectedServices
+        : (item['services'] != null ? Map<String, int>.from(item['services']) : null);
+
+    // Kumpulkan services list dari venue
+    final venueRes = GlobalVenueData.venues.where((v) => v['name'] == venueName);
+    final venue = venueRes.isNotEmpty ? venueRes.first : <String, dynamic>{};
+    final courtsList = venue['courts'] as List<dynamic>? ?? [];
+    final seenSvc = <String>{};
+    final svcList = <Map<String, dynamic>>[];
+    for (final c in courtsList) {
+      final cs = c['services'] as List<dynamic>? ?? [];
+      for (final s in cs) {
+        final sm = Map<String, dynamic>.from(s as Map);
+        final sn = sm['name']?.toString() ?? '';
+        sm['id'] = sm['id']?.toString() ?? sn;
+        if (sn.isNotEmpty && !seenSvc.contains(sn)) { seenSvc.add(sn); svcList.add(sm); }
+      }
+    }
+
+    // Header lapangan
+    rows.add(Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        courtName,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+      ),
+    ));
+
+    // Per-slot rows
+    final hours = _parseStartHours(timeSlot);
+    int courtSubTotal = 0;
+    if (hours.isEmpty) {
+      // Fallback: hitung courtPrice = total - services
+      int servicesTotal = 0;
+      if (itemServices != null) {
+        itemServices.forEach((key, qty) {
+          final match = svcList.where((s) => s['id'] == key || s['name'] == key);
+          if (match.isNotEmpty) {
+            final pr = match.first['price'];
+            final sp = pr is int ? pr : int.tryParse(pr?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
+            servicesTotal += sp * qty;
+          }
+        });
+      }
+      final courtPrice = (item['price'] as int? ?? 0) - servicesTotal;
+      rows.add(Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: _buildTransactionRow('Biaya Lapangan', courtPrice),
+      ));
+      courtSubTotal = courtPrice;
+    } else {
+      for (final h in hours) {
+        final slotLabel = '${h.toString().padLeft(2,'0')}:00 - ${(h+1).toString().padLeft(2,'0')}:00';
+        final slotPrice = _getSlotPrice(venueName, courtName, dateStr, h);
+        courtSubTotal += slotPrice;
+        rows.add(Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: _buildTransactionRow(slotLabel, slotPrice, isSlot: true),
+        ));
+      }
+      if (hours.length > 1) {
+        rows.add(Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: _buildTransactionRow('Subtotal Lapangan', courtSubTotal, isSubtotal: true),
+        ));
+      }
+    }
+
+    // Services rows
+    if (itemServices != null && itemServices.isNotEmpty) {
+      itemServices.forEach((key, qty) {
+        final match = svcList.where((s) => s['id'] == key || s['name'] == key);
+        if (match.isNotEmpty) {
+          final s = match.first;
+          final pr = s['price'];
+          final sPrice = pr is int ? pr : int.tryParse(pr?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
+          rows.add(Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildTransactionRow('+ ${s['name']} (x$qty)', sPrice * qty),
+          ));
+        }
+      });
+    }
+
+    rows.add(const SizedBox(height: 6));
+    return rows;
+  }
+
 
   Widget _buildPaymentMethodSection() {
     return Column(
       children: [
-        _buildPaymentOption('qris', 'QRIS (Gopay, OVO, Dana)', Icons.qr_code_2_rounded),
         _buildPaymentOption('gopay', 'GoPay (Uang Elektronik)', Icons.account_balance_wallet_rounded),
+        _buildPaymentOption('shopeepay', 'ShopeePay (Uang Elektronik)', Icons.wallet_rounded),
         _buildPaymentOption('bca', 'BCA Virtual Account', Icons.account_balance_rounded),
         _buildPaymentOption('mandiri', 'Mandiri Virtual Account', Icons.account_balance_rounded),
         _buildPaymentOption('bni', 'BNI Virtual Account', Icons.account_balance_rounded),
+        _buildPaymentOption('bri', 'BRI Virtual Account', Icons.account_balance_rounded),
+        _buildPaymentOption('cimb', 'CIMB Niaga Virtual Account', Icons.account_balance_rounded),
+        _buildPaymentOption('permata', 'Permata Virtual Account', Icons.account_balance_rounded),
         _buildPaymentOption('credit_card', 'Kartu Kredit / Debit', Icons.credit_card_rounded),
       ],
     );
@@ -519,9 +965,27 @@ class _PaymentPageState extends State<PaymentPage> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             String activeVenue = widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName;
+            String activeCourtName = widget.items.isNotEmpty ? (widget.items.first['courtName'] ?? '') : widget.courtName;
             final vRes = GlobalVenueData.venues.where((v) => v['name'] == activeVenue);
             final venue = vRes.isNotEmpty ? vRes.first : <String, dynamic>{};
-            final sList = venue['services'] as List<dynamic>? ?? [];
+            final courtsList = venue['courts'] as List<dynamic>? ?? [];
+            // Kumpulkan services dari court yang aktif, fallback ke semua courts
+            final seenSvc = <String>{};
+            final sList = <Map<String, dynamic>>[];
+            final targetCourts = courtsList.where((c) => c['name'] == activeCourtName).toList();
+            final sourceCourts = targetCourts.isNotEmpty ? targetCourts : courtsList;
+            for (final c in sourceCourts) {
+              final cs = c['services'] as List<dynamic>? ?? [];
+              for (final s in cs) {
+                final sm = Map<String, dynamic>.from(s as Map);
+                final sn = sm['name']?.toString() ?? '';
+                sm['id'] = sm['id']?.toString() ?? sn;
+                if (sn.isNotEmpty && !seenSvc.contains(sn)) {
+                  seenSvc.add(sn);
+                  sList.add(sm);
+                }
+              }
+            }
             return Container(
               decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -538,7 +1002,10 @@ class _PaymentPageState extends State<PaymentPage> {
                       itemCount: sList.length,
                       itemBuilder: (context, i) {
                         final s = sList[i];
-                        final id = s['id'] as String;
+                        final id = s['id']?.toString() ?? '';
+                        final sName = s['name']?.toString() ?? 'Layanan';
+                        final priceRaw = s['price'];
+                        final sPrice = priceRaw is int ? priceRaw : int.tryParse(priceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
                         final qty = _localSelectedServices[id] ?? 0;
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -550,8 +1017,8 @@ class _PaymentPageState extends State<PaymentPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(s['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    Text(_formatCurrency(s['price']), style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600)),
+                                    Text(sName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    Text(_formatCurrency(sPrice), style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600)),
                                   ],
                                 ),
                               ),
@@ -679,6 +1146,45 @@ class _PaymentPageState extends State<PaymentPage> {
     );
 
     try {
+      // Map selected payment option ID to Midtrans supported enabled_payments codes
+      List<String>? enabledPayments;
+      if (_selectedPaymentMethodId != null) {
+        switch (_selectedPaymentMethodId) {
+          case 'qris':
+            // Sekarang QRIS sudah diaktifkan di dashboard Midtrans, kita cukup mengirimkan ['qris']
+            // agar langsung menampilkan QRIS Code/payment channel QRIS di Snap portal.
+            enabledPayments = ['qris'];
+            break;
+          case 'gopay':
+            enabledPayments = ['gopay'];
+            break;
+          case 'shopeepay':
+            enabledPayments = ['shopeepay'];
+            break;
+          case 'bca':
+            enabledPayments = ['bca_va'];
+            break;
+          case 'mandiri':
+            enabledPayments = ['echannel'];
+            break;
+          case 'bni':
+            enabledPayments = ['bni_va'];
+            break;
+          case 'bri':
+            enabledPayments = ['bri_va'];
+            break;
+          case 'permata':
+            enabledPayments = ['permata_va'];
+            break;
+          case 'cimb':
+            enabledPayments = ['cimb_va'];
+            break;
+          case 'credit_card':
+            enabledPayments = ['credit_card'];
+            break;
+        }
+      }
+
       // Hubungkan live dengan Midtrans
       final snapData = await MidtransService.createTransaction(
         orderId: orderId,
@@ -690,6 +1196,7 @@ class _PaymentPageState extends State<PaymentPage> {
             ? (widget.items.length == 1 ? widget.items.first['courtName'] : '${widget.items.length} Lapangan') 
             : widget.courtName,
         venueName: widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName,
+        enabledPayments: enabledPayments,
       );
 
       // Tutup loading dialog
@@ -704,25 +1211,40 @@ class _PaymentPageState extends State<PaymentPage> {
         }
       }
 
-      // Hapus item dari keranjang jika berasal dari keranjang
+      // Hapus item dari keranjang (baik dari checkout keranjang maupun sewa langsung dari venue)
       if (widget.items.isNotEmpty) {
         for (var item in widget.items) {
-          GlobalVenueData.cart.removeWhere((cartItem) => 
-            cartItem['venueName'] == item['venueName'] &&
-            cartItem['courtName'] == item['courtName'] &&
-            cartItem['date'] == item['date'] &&
-            cartItem['timeSlot'] == item['timeSlot']
-          );
+          final itemHours = _parseStartHours(item['timeSlot']?.toString() ?? '');
+          GlobalVenueData.cart.removeWhere((cartItem) {
+            final cartHours = _parseStartHours(cartItem['timeSlot']?.toString() ?? '');
+            final isVenueMatch = cartItem['venueName'] == item['venueName'];
+            final isCourtMatch = cartItem['courtName'] == item['courtName'];
+            final isDateMatch = cartItem['date'] == item['date'];
+            final isTimeOverlap = cartHours.any((h) => itemHours.contains(h));
+            return isVenueMatch && isCourtMatch && isDateMatch && isTimeOverlap;
+          });
         }
+      } else {
+        // Direct booking: hapus item yang cocok dari keranjang jika ada
+        final directHours = _parseStartHours(widget.timeRange);
+        GlobalVenueData.cart.removeWhere((cartItem) {
+          final cartHours = _parseStartHours(cartItem['timeSlot']?.toString() ?? '');
+          final isVenueMatch = cartItem['venueName'] == widget.venueName;
+          final isCourtMatch = cartItem['courtName'] == widget.courtName;
+          final isDateMatch = cartItem['date'] == widget.date;
+          final isTimeOverlap = cartHours.any((h) => directHours.contains(h));
+          return isVenueMatch && isCourtMatch && isDateMatch && isTimeOverlap;
+        });
       }
+      GlobalVenueData.saveCart(); // Simpan perubahan keranjang lokal & sync ke Supabase
 
       if (mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => PaymentInstructionPage(
-              paymentMethodId: _selectedPaymentMethodId ?? 'qris',
-              paymentMethodName: _selectedPaymentMethodId?.toUpperCase() ?? 'QRIS',
+              paymentMethodId: _selectedPaymentMethodId ?? 'gopay',
+              paymentMethodName: _selectedPaymentMethodId?.toUpperCase() ?? 'GOPAY',
               amount: _totalPrice,
               usedPoints: _usePoints ? (_availablePoints > (widget.items.fold(0, (s, i) => s + (i['price'] as int)) + (widget.items.isEmpty ? widget.price : 0)) ? (widget.items.fold(0, (s, i) => s + (i['price'] as int)) + (widget.items.isEmpty ? widget.price : 0)) : _availablePoints) : 0,
               orderId: orderId,
@@ -739,6 +1261,7 @@ class _PaymentPageState extends State<PaymentPage> {
                       'time': item['timeSlot']?.toString() ?? '',
                     }).toList(),
               selectedServices: _localSelectedServices,
+              items: widget.items,
               username: widget.username,
               role: widget.role,
               redirectUrl: redirectUrl,

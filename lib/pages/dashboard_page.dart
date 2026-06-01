@@ -15,6 +15,7 @@ import '../models/review_model.dart';
 import '../data/chat_data.dart';
 import '../data/notification_data.dart';
 import '../data/venue_data.dart';
+import 'package:rensius/services/booking_service.dart';
 import '../widgets/empty_state_widget.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -44,6 +45,10 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _selectedIndex = widget.initialIndex;
     _searchController.addListener(() => setState(() {}));
+    
+    // Auto-refresh data bookings online
+    BookingService.loadBookings(widget.username, widget.role);
+    BookingUtils.loadGlobalBookingsOnline();
   }
 
   @override
@@ -59,6 +64,7 @@ class _DashboardPageState extends State<DashboardPage> {
     CategoryItem('Sepak Bola', Icons.sports_soccer),
     CategoryItem('Badminton', Icons.sports_tennis),
     CategoryItem('Tennis', Icons.sports_tennis),
+    CategoryItem('Futsal', Icons.sports_soccer_outlined),
   ];
 
   static String _monthName(int month) {
@@ -420,20 +426,38 @@ class _DashboardPageState extends State<DashboardPage> {
     final courts = venue['courts'] as List<dynamic>? ?? [];
     final prices = <int>[];
     for (final c in courts) {
-      final priceDay = c['priceDay'] as Map? ?? {};
-      for (final val in priceDay.values) {
-        final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
-        if (v.isNotEmpty) {
-          final n = int.tryParse(v);
-          if (n != null && n > 0) prices.add(n);
+      final cMap = Map<String, dynamic>.from(c as Map);
+      final priceMode = cMap['priceMode'] ?? 'perDay';
+      if (priceMode == 'perSlot') {
+        final pricePerSlot = cMap['pricePerSlot'] as Map? ?? {};
+        for (final val in pricePerSlot.values) {
+          final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+          if (v.isNotEmpty) {
+            final n = int.tryParse(v);
+            if (n != null && n > 0) prices.add(n);
+          }
+        }
+      } else {
+        final priceDay = cMap['priceDay'] as Map? ?? {};
+        for (final val in priceDay.values) {
+          final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+          if (v.isNotEmpty) {
+            final n = int.tryParse(v);
+            if (n != null && n > 0) prices.add(n);
+          }
         }
       }
     }
-    if (prices.isEmpty) return venue['price']?.toString() ?? 'Hubungi Pengelola';
+    if (prices.isEmpty) {
+      final priceVal = venue['price'];
+      if (priceVal == null) return 'Hubungi Pengelola';
+      if (priceVal is int) return 'Rp ${priceVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}/jam';
+      return priceVal.toString();
+    }
     prices.sort();
     final min = prices.first;
     final max = prices.last;
-    String fmt(int n) => 'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+\$)'), (m) => '${m[1]}.')}';
+    String fmt(int n) => 'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
     return min == max ? '${fmt(min)}/jam' : '${fmt(min)} - ${fmt(max)}/jam';
   }
 
@@ -539,13 +563,19 @@ class _DashboardPageState extends State<DashboardPage> {
                   const SizedBox(height: 4),
                   _buildIconText(Icons.location_on, venue['location'] ?? 'Tidak Diketahui'),
                   const SizedBox(height: 4),
-                  _buildIconText(Icons.sports_tennis, venue['type'] ?? 'Umum'),
+                  _buildIconText(_getSportIcon(venue['type'] ?? 'Umum'), venue['type'] ?? 'Umum'),
                   const SizedBox(height: 8),
-                  Text(_getDashboardPriceDisplay(venue),
-                      style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14)),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(_getDashboardPriceDisplay(venue),
+                        style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14),
+                        maxLines: 1,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -567,6 +597,29 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  IconData _getSportIcon(String sportType) {
+    switch (sportType.toLowerCase()) {
+      case 'futsal':
+        return Icons.sports_soccer_outlined;
+      case 'sepak bola':
+      case 'mini soccer':
+        return Icons.sports_soccer;
+      case 'badminton':
+        return Icons.sports_tennis_rounded;
+      case 'tennis':
+      case 'tenis':
+        return Icons.sports_tennis;
+      case 'basket':
+      case 'basketball':
+        return Icons.sports_basketball;
+      case 'voli':
+      case 'volleyball':
+        return Icons.sports_volleyball;
+      default:
+        return Icons.sports_soccer_outlined;
+    }
+  }
+
   Widget _buildIconText(IconData icon, String text) {
     return Row(
       children: [
@@ -577,8 +630,11 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+
   Widget _buildCourtItem(Map<String, dynamic> venue, Map<String, dynamic> court) {
     final String courtName = court['name'] ?? 'Lapangan';
+    final String courtImg = court['image']?.toString() ?? '';
+    final bool hasImg = courtImg.isNotEmpty;
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -601,9 +657,11 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             Row(
               children: [
-                _buildSmallImage(),
-                const SizedBox(width: 12),
-                Expanded(child: _buildCourtInfo(courtName, venue['type'] ?? 'Umum', court['size'] ?? 'Standar')),
+                if (hasImg) ...[
+                  _buildSmallImage(courtImg),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(child: _buildCourtInfo(courtName, court['type'] ?? venue['type'] ?? 'Umum', court['size'] ?? 'Standar')),
               ],
             ),
             const SizedBox(height: 12),
@@ -616,10 +674,32 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildSmallImage() {
+  Widget _buildSmallImage(String courtImg) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: Container(width: 60, height: 60, color: Colors.grey[200], child: const Icon(Icons.image, size: 30, color: Colors.grey)),
+      child: Builder(builder: (context) {
+        final isRemote = courtImg.startsWith('http://') || courtImg.startsWith('https://');
+        final isAsset = courtImg.startsWith('assets/');
+        if (isRemote) {
+          return Image.network(
+            courtImg,
+            width: 60, height: 60, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          );
+        } else if (isAsset) {
+          return Image.asset(
+            courtImg,
+            width: 60, height: 60, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          );
+        } else {
+          return Image.file(
+            File(courtImg),
+            width: 60, height: 60, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          );
+        }
+      }),
     );
   }
 
@@ -631,7 +711,7 @@ class _DashboardPageState extends State<DashboardPage> {
         const SizedBox(height: 4),
         Row(
           children: [
-            Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
+            Icon(_getSportIcon(type), size: 14, color: Colors.grey[400]),
             const SizedBox(width: 4),
             Text(type, style: const TextStyle(color: Colors.grey, fontSize: 11)),
             const SizedBox(width: 10),

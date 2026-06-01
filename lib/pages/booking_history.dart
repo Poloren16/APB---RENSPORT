@@ -5,6 +5,9 @@ import '../utils/alert_utils.dart';
 import 'package:rensius/pages/receipt_page.dart';
 import 'package:rensius/pages/venue_page.dart';
 import 'package:rensius/widgets/empty_state_widget.dart';
+import 'package:rensius/services/booking_service.dart';
+import 'package:rensius/data/auth_data.dart';
+import 'package:rensius/utils/booking_utils.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   final String username;
@@ -30,6 +33,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
   final TextEditingController _searchController = TextEditingController();
   String _statusFilter = 'Semua';
 
+  bool _isLoadingBookings = false;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +47,22 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
       }
     });
     _searchController.addListener(() => setState(() {}));
+    _refreshBookingsOnline();
+  }
+
+  Future<void> _refreshBookingsOnline() async {
+    if (mounted) {
+      setState(() => _isLoadingBookings = true);
+    }
+    final currentUser = GlobalAuthData.currentUser;
+    final role = currentUser?.role ?? 'End User';
+    
+    await BookingService.loadBookings(widget.username, role);
+    await BookingUtils.loadGlobalBookingsOnline();
+    
+    if (mounted) {
+      setState(() => _isLoadingBookings = false);
+    }
   }
 
   @override
@@ -509,13 +530,20 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                               context,
                               title: 'Selesaikan Pemesanan?',
                               message: 'Apakah Anda yakin ingin menyelesaikan pemesanan ini dan memindahkannya ke riwayat transaksi?',
-                              onConfirm: () {
+                              onConfirm: () async {
+                                final finished = BookingHistoryPage.mockHistory[index];
+                                final orderId = finished['orderId']?.toString() ?? '';
+                                
                                 setState(() {
-                                  final finished =
-                                      BookingHistoryPage.mockHistory.removeAt(index);
+                                  BookingHistoryPage.mockHistory.removeAt(index);
                                   finished['status'] = 'Completed';
                                   BookingHistoryPage.mockPastHistory.insert(0, finished);
                                 });
+
+                                if (orderId.isNotEmpty) {
+                                  await BookingService.updateBookingStatus(orderId, 'Completed');
+                                }
+
                                 AlertUtils.showToast(
                                   context,
                                   'Pemesanan selesai & dipindahkan ke riwayat!',

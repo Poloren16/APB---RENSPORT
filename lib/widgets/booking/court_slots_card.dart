@@ -12,6 +12,7 @@ class CourtSlotsCard extends StatelessWidget {
 
   final String venueName;
   final String dateStr;
+  final DateTime selectedDate;
 
   const CourtSlotsCard({
     super.key,
@@ -22,8 +23,33 @@ class CourtSlotsCard extends StatelessWidget {
     required this.selectedSlots,
     required this.onSlotSelected,
     required this.formatCurrency,
+    required this.selectedDate,
     this.onCourtTap,
   });
+
+  int _getSlotPrice(Map<String, dynamic> court, DateTime date, String timeRange) {
+    final dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    final dayName = dayNames[date.weekday - 1];
+    final startStr = timeRange.split(' - ')[0];
+
+    final priceMode = court['priceMode'] ?? 'perDay';
+    final priceDay = court['priceDay'] as Map? ?? {};
+    final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
+
+    if (priceMode == 'perSlot') {
+      final key = '${dayName}_$startStr';
+      final slotPriceStr = pricePerSlot[key]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+      final slotPrice = int.tryParse(slotPriceStr);
+      if (slotPrice != null && slotPrice > 0) {
+        return slotPrice;
+      }
+    }
+
+    // Fallback to priceDay
+    final dayPriceStr = priceDay[dayName]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    final dayPrice = int.tryParse(dayPriceStr) ?? 100000;
+    return dayPrice;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,19 +191,19 @@ class CourtSlotsCard extends StatelessWidget {
                             Text(
                               slot['time'],
                               style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: isBooked
-                                    ? Colors.grey.shade400
-                                    : isSelected
-                                        ? Colors.white
-                                        : AppColors.textPrimary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isBooked
+                                      ? Colors.grey.shade400
+                                      : isSelected
+                                          ? Colors.white
+                                          : AppColors.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 4),
                             if (!isBooked) ...[
                               Text(
-                                formatCurrency(slot['price'] as int),
+                                formatCurrency(_getSlotPrice(court, selectedDate, slot['time'])),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,

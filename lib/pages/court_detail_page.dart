@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../theme/app_colors.dart';
 import '../widgets/shared/venue_date_picker.dart';
 import 'payment_page.dart';
@@ -62,6 +63,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
       }
     });
     
+    _syncSelectedSlotsFromCart();
+    
     if (widget.initialSelectedSlot != null) {
       String? foundKey;
       final groups = _dynamicTimeGroups;
@@ -88,10 +91,96 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   }
 
   String _formatPrice(int price) {
-    return 'IDR ${price.toString().replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+$)'),
-      (m) => '${m[1]},',
-    )}';
+    final formatted = price.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+    return 'Rp$formatted';
+  }
+
+  void _syncSelectedSlotsFromCart() {
+    final dateStr = BookingUtils.formatDate(_selectedDate);
+    final matchingCartItems = GlobalVenueData.cart.where((item) =>
+        item['venueName'] == widget.venueName && 
+        item['courtName'] == widget.courtName && 
+        item['date'] == dateStr).toList();
+
+    _selectedServices.clear();
+    for (final item in matchingCartItems) {
+      if (item['services'] != null) {
+        final Map<dynamic, dynamic> cartServices = item['services'] as Map;
+        cartServices.forEach((key, value) {
+          _selectedServices[key.toString()] = int.tryParse(value.toString()) ?? 0;
+        });
+      }
+    }
+
+    final groups = _dynamicTimeGroups;
+    for (final item in matchingCartItems) {
+      final String timeSlotStr = item['timeSlot']?.toString() ?? '';
+      
+      final List<String> cartTimes = timeSlotStr.contains('Slot:') 
+          ? timeSlotStr.split('Slot:')[1].split(', ').map((e) => e.trim()).toList()
+          : timeSlotStr.split(', ').map((e) => e.trim()).toList();
+
+      for (int gIdx = 0; gIdx < groups.length; gIdx++) {
+        for (int sIdx = 0; sIdx < groups[gIdx].slots.length; sIdx++) {
+          final slotTimeStr = groups[gIdx].slots[sIdx].time;
+          final startTime = slotTimeStr.split(' - ')[0].trim();
+          bool match = cartTimes.any((ct) => ct.contains(startTime) || startTime.contains(ct));
+          if (match) {
+            _selectedSlots.add('${gIdx}_$sIdx');
+          }
+        }
+      }
+    }
+  }
+
+  IconData _getSportIcon(String sportType) {
+    final clean = sportType.toLowerCase().trim();
+    if (clean.contains('futsal') || clean.contains('sepak') || clean.contains('bola') || clean.contains('soccer') || clean.contains('mini')) {
+      return Icons.sports_soccer;
+    } else if (clean.contains('badminton') || clean.contains('bulu') || clean.contains('tangkis') || clean.contains('tennis') || clean.contains('tenis')) {
+      return Icons.sports_tennis;
+    } else if (clean.contains('basket') || clean.contains('ball')) {
+      return Icons.sports_basketball;
+    } else if (clean.contains('voli') || clean.contains('volleyball')) {
+      return Icons.sports_volleyball;
+    }
+    return Icons.sports_soccer; // default fallback
+  }
+
+  Map<String, int> get _dynamicReviewTags {
+    final venueReviews = Review.mockReviews.where((r) => r.venueName == widget.venueName).toList();
+    
+    // Tag categories and their keywords
+    final Map<String, List<String>> categories = {
+      'Fasilitas Bagus': ['bagus', 'nyaman', 'mantap', 'keren', 'oke', 'rekomendasi', 'puas'],
+      'Tempat Bersih': ['bersih', 'rapi', 'wangi', 'higienis', 'bersih sekali'],
+      'Fasilitas Lengkap': ['lengkap', 'fasilitas', 'parkir', 'kamar mandi', 'mushola', 'kantin', 'toilet'],
+      'Harga Terjangkau': ['murah', 'terjangkau', 'hemat', 'ekonomis', 'price'],
+      'Pelayanan Ramah': ['ramah', 'baik', 'pelayanan', 'owner', 'pengelola', 'cepat'],
+    };
+
+    final Map<String, int> tagCounts = {};
+
+    for (final review in venueReviews) {
+      final commentLower = review.comment.toLowerCase();
+      categories.forEach((tag, keywords) {
+        bool match = false;
+        for (final kw in keywords) {
+          if (commentLower.contains(kw)) {
+            match = true;
+            break;
+          }
+        }
+        if (match) {
+          tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
+        }
+      });
+    }
+
+    return tagCounts;
   }
 
   // Ambil data court yang sesuai dari GlobalVenueData
@@ -121,6 +210,14 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     final priceDay = court['priceDay'] as Map? ?? {};
     final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
     final String priceMode = court['priceMode'] ?? 'perDay';
+
+    debugPrint('=== DEBUG COURT DETAIL ===');
+    debugPrint('courtName from widget: ${widget.courtName}');
+    debugPrint('court keys: ${court.keys}');
+    debugPrint('priceMode: $priceMode');
+    debugPrint('priceDay: $priceDay');
+    debugPrint('pricePerSlot: $pricePerSlot');
+    debugPrint('activeDay: $activeDay');
 
     // Harga default dari hari aktif
     final dayPriceStr = priceDay[activeDay]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
@@ -285,7 +382,58 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     );
   }
 
+  Map<String, dynamic> get _venueData {
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    return venueResults.isNotEmpty ? Map<String, dynamic>.from(venueResults.first) : {};
+  }
+
+  Widget _buildFallbackIcon() {
+    IconData icon = Icons.sports_soccer_outlined;
+    switch (widget.sportType.toLowerCase()) {
+      case 'futsal':
+        icon = Icons.sports_soccer_outlined;
+        break;
+      case 'sepak bola':
+      case 'mini soccer':
+        icon = Icons.sports_soccer;
+        break;
+      case 'badminton':
+        icon = Icons.sports_tennis_rounded;
+        break;
+      case 'tennis':
+      case 'tenis':
+        icon = Icons.sports_tennis;
+        break;
+      case 'basket':
+      case 'basketball':
+        icon = Icons.sports_basketball;
+        break;
+      case 'voli':
+      case 'volleyball':
+        icon = Icons.sports_volleyball;
+        break;
+    }
+    return Container(
+      width: 80,
+      height: 80,
+      color: AppColors.primary.withValues(alpha: 0.1),
+      child: Icon(icon, size: 40, color: AppColors.primary),
+    );
+  }
+
   Widget _buildCourtInfoCard() {
+    final court = _courtData;
+    final venue = _venueData;
+    String imgPath = court['image']?.toString() ?? '';
+    if (imgPath.isEmpty) {
+      final venueImages = venue['images'] as List<dynamic>? ?? venue['imagePaths'] as List<dynamic>? ?? [];
+      if (venueImages.isNotEmpty) {
+        imgPath = venueImages.first.toString();
+      } else {
+        imgPath = venue['image']?.toString() ?? '';
+      }
+    }
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.all(16),
@@ -294,12 +442,32 @@ class _CourtDetailPageState extends State<CourtDetailPage>
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: Container(
-              width: 80,
-              height: 80,
-              color: Colors.grey.shade300,
-              child: const Icon(Icons.image, size: 40, color: Colors.grey),
-            ),
+            child: Builder(builder: (context) {
+              if (imgPath.isNotEmpty) {
+                final isRemote = imgPath.startsWith('http://') || imgPath.startsWith('https://');
+                final isAsset = imgPath.startsWith('assets/');
+                if (isRemote) {
+                  return Image.network(
+                    imgPath,
+                    width: 80, height: 80, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _buildFallbackIcon(),
+                  );
+                } else if (isAsset) {
+                  return Image.asset(
+                    imgPath,
+                    width: 80, height: 80, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _buildFallbackIcon(),
+                  );
+                } else {
+                  return Image.file(
+                    File(imgPath),
+                    width: 80, height: 80, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _buildFallbackIcon(),
+                  );
+                }
+              }
+              return _buildFallbackIcon();
+            }),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -317,7 +485,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.sports_tennis,
+                    Icon(_getSportIcon(widget.sportType),
                         size: 14, color: Colors.grey.shade500),
                     const SizedBox(width: 4),
                     Text(widget.sportType,
@@ -396,16 +564,56 @@ class _CourtDetailPageState extends State<CourtDetailPage>
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 12),
+            Builder(
+              builder: (context) {
+                final tags = _dynamicReviewTags;
+                final Map<String, String> tagEmojis = {
+                  'Fasilitas Bagus': '🏟️',
+                  'Tempat Bersih': '👍',
+                  'Fasilitas Lengkap': '⚡',
+                  'Harga Terjangkau': '💰',
+                  'Pelayanan Ramah': '😊',
+                };
+
+                final sortedEntries = tags.entries.where((e) => e.value > 0).toList()
+                  ..sort((a, b) => b.value.compareTo(a.value));
+
+                if (sortedEntries.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      'Belum ada tag ulasan untuk ulasan saat ini.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+                    ),
+                  );
+                }
+
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: sortedEntries.map((entry) {
+                    return _buildReviewChip(
+                      tagEmojis[entry.key] ?? '⭐',
+                      entry.key,
+                      entry.value,
+                    );
+                  }).toList(),
+                );
+              }
+            ),
+          ] else ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Belum ada ulasan untuk lapangan ini.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade500,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
           ],
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildReviewChip('🏟️', 'Fasilitas Bagus', 3),
-              _buildReviewChip('👍', 'Tempat Bersih', 3),
-              _buildReviewChip('⚡', 'Fasilitas Lengkap', 2),
-            ],
-          ),
           const SizedBox(height: 16),
         ],
       ),
@@ -495,6 +703,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                       _selectedDate = DateTime.now();
                       _selectedSlots.clear();
                       _expandedGroups.clear();
+                      _syncSelectedSlotsFromCart();
                     }),
                     child: const Text(
                       'Reset & Ulang',
@@ -516,6 +725,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                   _selectedDate = date;
                   _selectedSlots.clear();
                   _expandedGroups.clear();
+                  _syncSelectedSlotsFromCart();
                 }),
               ),
             ),
@@ -778,6 +988,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                       'date': dateStr,
                       'timeSlot': '${selectedTimes.length} Slot: ${selectedTimes.join(', ')}',
                       'price': _totalPrice,
+                      'services': Map<String, int>.from(_selectedServices),
                     });
                     AlertUtils.showToast(
                       context,

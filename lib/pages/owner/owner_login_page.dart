@@ -10,6 +10,8 @@ import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/services/supabase_service.dart';
 import 'package:rensius/services/supabase_auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:rensius/services/booking_service.dart';
+import 'package:rensius/utils/booking_utils.dart';
 
 class OwnerLoginPage extends StatefulWidget {
   const OwnerLoginPage({super.key});
@@ -98,6 +100,8 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
 
       if (account != null) {
         if (account.role == 'Admin') {
+          await BookingService.loadBookings(account.username, 'Admin');
+          await BookingUtils.loadGlobalBookingsOnline();
           if (!mounted) return;
           Navigator.pushAndRemoveUntil(
             context,
@@ -105,6 +109,8 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
             (route) => false,
           );
         } else if (account.role == 'Owner') {
+          await BookingService.loadBookings(account.username, 'Owner');
+          await BookingUtils.loadGlobalBookingsOnline();
           if (!mounted) return;
           Navigator.pushReplacement(
             context,
@@ -187,6 +193,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SizedBox(height: 48),
                 const Icon(
                   Icons.business_center_rounded,
                   size: 80,
@@ -228,6 +235,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                   ),
                 TextFormField(
                   controller: _usernameController,
+                  scrollPadding: const EdgeInsets.only(bottom: 200),
                   decoration: const InputDecoration(
                     hintText: 'Nama Pengguna',
                     prefixIcon: Icon(Icons.person_outline, color: AppColors.textSecondary),
@@ -237,6 +245,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: !_isPasswordVisible,
+                  scrollPadding: const EdgeInsets.only(bottom: 200),
                   decoration: InputDecoration(
                     hintText: 'Kata Sandi',
                     prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
@@ -293,6 +302,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 120),
               ],
             ),
           ),

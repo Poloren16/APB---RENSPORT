@@ -204,8 +204,8 @@ class _VenuePageState extends State<VenuePage> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => KeranjangPage(
@@ -214,6 +214,7 @@ class _VenuePageState extends State<VenuePage> {
                                 ),
                               ),
                             );
+                            setState(() {}); // Refresh lencana merah notifikasi saat kembali dari keranjang!
                           },
                           child: Stack(
                             clipBehavior: Clip.none,
@@ -429,20 +430,38 @@ class _VenuePageState extends State<VenuePage> {
     final courts = venue['courts'] as List<dynamic>? ?? [];
     final prices = <int>[];
     for (final c in courts) {
-      final priceDay = c['priceDay'] as Map? ?? {};
-      for (final val in priceDay.values) {
-        final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
-        if (v.isNotEmpty) {
-          final n = int.tryParse(v);
-          if (n != null && n > 0) prices.add(n);
+      final cMap = Map<String, dynamic>.from(c as Map);
+      final priceMode = cMap['priceMode'] ?? 'perDay';
+      if (priceMode == 'perSlot') {
+        final pricePerSlot = cMap['pricePerSlot'] as Map? ?? {};
+        for (final val in pricePerSlot.values) {
+          final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+          if (v.isNotEmpty) {
+            final n = int.tryParse(v);
+            if (n != null && n > 0) prices.add(n);
+          }
+        }
+      } else {
+        final priceDay = cMap['priceDay'] as Map? ?? {};
+        for (final val in priceDay.values) {
+          final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+          if (v.isNotEmpty) {
+            final n = int.tryParse(v);
+            if (n != null && n > 0) prices.add(n);
+          }
         }
       }
     }
-    if (prices.isEmpty) return venue['price']?.toString() ?? 'Hubungi Pengelola';
+    if (prices.isEmpty) {
+      final priceVal = venue['price'];
+      if (priceVal == null) return 'Hubungi Pengelola';
+      if (priceVal is int) return 'Rp ${priceVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}/jam';
+      return priceVal.toString();
+    }
     prices.sort();
     final min = prices.first;
     final max = prices.last;
-    String fmt(int n) => 'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+\$)'), (m) => '${m[1]}.')}';
+    String fmt(int n) => 'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
     return min == max ? '${fmt(min)}/jam' : '${fmt(min)} - ${fmt(max)}/jam';
   }
 
@@ -474,8 +493,8 @@ class _VenuePageState extends State<VenuePage> {
             children: [
               // Venue info header zone
               InkWell(
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => BookingPage(
@@ -487,6 +506,7 @@ class _VenuePageState extends State<VenuePage> {
                       ),
                     ),
                   );
+                  setState(() {}); // Refresh red notification badge upon returning!
                 },
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 child: Padding(
@@ -494,66 +514,47 @@ class _VenuePageState extends State<VenuePage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(15),
-                            child: Builder(builder: (context) {
-                              final imgPath = venue['image']?.toString() ?? '';
-                              if (imgPath.isNotEmpty) {
-                                final isRemote = imgPath.startsWith('http://') || imgPath.startsWith('https://');
-                                final isAsset = imgPath.startsWith('assets/');
-                                if (isRemote) {
-                                  return Image.network(
-                                    imgPath,
-                                    width: 120, height: 120, fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      width: 120, height: 120, color: Colors.grey[300],
-                                      child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                                    ),
-                                  );
-                                } else if (isAsset) {
-                                  return Image.asset(
-                                    imgPath,
-                                    width: 120, height: 120, fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      width: 120, height: 120, color: Colors.grey[300],
-                                      child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                                    ),
-                                  );
-                                } else {
-                                  return Image.file(
-                                    File(imgPath),
-                                    width: 120, height: 120, fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      width: 120, height: 120, color: Colors.grey[300],
-                                      child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                                    ),
-                                  );
-                                }
-                              }
-                              return Container(
-                                width: 120, height: 120, color: Colors.grey[300],
-                                child: const Icon(Icons.stadium, size: 50, color: Colors.grey),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: Builder(builder: (context) {
+                          final imgPath = venue['image']?.toString() ?? '';
+                          if (imgPath.isNotEmpty) {
+                            final isRemote = imgPath.startsWith('http://') || imgPath.startsWith('https://');
+                            final isAsset = imgPath.startsWith('assets/');
+                            if (isRemote) {
+                              return Image.network(
+                                imgPath,
+                                width: 120, height: 120, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 120, height: 120, color: Colors.grey[300],
+                                  child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                                ),
                               );
-                            }),
-                          ),
-                          Positioned(
-                            bottom: 8,
-                            left: 8,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.6),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                venue['distance'] ?? '3 km',
-                                style: const TextStyle(color: Colors.white, fontSize: 10),
-                              ),
-                            ),
-                          ),
-                        ],
+                            } else if (isAsset) {
+                              return Image.asset(
+                                imgPath,
+                                width: 120, height: 120, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 120, height: 120, color: Colors.grey[300],
+                                  child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                                ),
+                              );
+                            } else {
+                              return Image.file(
+                                File(imgPath),
+                                width: 120, height: 120, fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 120, height: 120, color: Colors.grey[300],
+                                  child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                                ),
+                              );
+                            }
+                          }
+                          return Container(
+                            width: 120, height: 120, color: Colors.grey[300],
+                            child: const Icon(Icons.stadium, size: 50, color: Colors.grey),
+                          );
+                        }),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -614,7 +615,7 @@ class _VenuePageState extends State<VenuePage> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
+                                Icon(_getSportIcon(venue['type'] ?? 'Olahraga'), size: 14, color: Colors.grey[400]),
                                 const SizedBox(width: 4),
                                 Text(
                                   venue['type'] ?? 'Olahraga',
@@ -623,12 +624,17 @@ class _VenuePageState extends State<VenuePage> {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text(
-                              _getPriceDisplay(venue),
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                _getPriceDisplay(venue),
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                                maxLines: 1,
                               ),
                             ),
                           ],
@@ -660,8 +666,8 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  void _goToCourtDetail(String venueName, String courtName, String sportType, {String? initialSlot}) {
-    Navigator.push(
+  void _goToCourtDetail(String venueName, String courtName, String sportType, {String? initialSlot}) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CourtDetailPage(
@@ -675,124 +681,115 @@ class _VenuePageState extends State<VenuePage> {
         ),
       ),
     );
+    setState(() {}); // Refresh red notification badge upon returning!
+  }
+
+  Widget _buildSmallImage(String courtImg) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Builder(builder: (context) {
+        final isRemote = courtImg.startsWith('http://') || courtImg.startsWith('https://');
+        final isAsset = courtImg.startsWith('assets/');
+        if (isRemote) {
+          return Image.network(
+            courtImg,
+            width: 60, height: 60, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          );
+        } else if (isAsset) {
+          return Image.asset(
+            courtImg,
+            width: 60, height: 60, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          );
+        } else {
+          return Image.file(
+            File(courtImg),
+            width: 60, height: 60, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          );
+        }
+      }),
+    );
   }
 
   Widget _buildCourtItem(String venueName, Map<String, dynamic> court, Map<String, dynamic> venue) {
     final String courtName = court['name'] ?? 'Unknown Court';
     final String sportType = court['type'] ?? 'Tenis';
+    final String courtImg = court['image']?.toString() ?? '';
+    final bool hasImg = courtImg.isNotEmpty;
 
     return InkWell(
       onTap: () => _goToCourtDetail(venueName, courtName, sportType),
       child: Padding(
         padding: const EdgeInsets.all(15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Builder(builder: (context) {
-                  // Coba ambil gambar dari court atau dari venue
-                  final venueImages = venue['images'] as List<dynamic>? ?? venue['imagePaths'] as List<dynamic>? ?? [];
-                  final courtImg = venueImages.isNotEmpty ? venueImages.first.toString() : '';
-                  if (courtImg.isNotEmpty) {
-                    final isRemote = courtImg.startsWith('http://') || courtImg.startsWith('https://');
-                    final isAsset = courtImg.startsWith('assets/');
-                    if (isRemote) {
-                      return Image.network(
-                        courtImg,
-                        width: 60, height: 60, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 60, height: 60, color: Colors.grey[200],
-                          child: const Icon(Icons.image, size: 30, color: Colors.grey),
-                        ),
-                      );
-                    } else if (isAsset) {
-                      return Image.asset(
-                        courtImg,
-                        width: 60, height: 60, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 60, height: 60, color: Colors.grey[200],
-                          child: const Icon(Icons.image, size: 30, color: Colors.grey),
-                        ),
-                      );
-                    } else {
-                      return Image.file(
-                        File(courtImg),
-                        width: 60, height: 60, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 60, height: 60, color: Colors.grey[200],
-                          child: const Icon(Icons.image, size: 30, color: Colors.grey),
-                        ),
-                      );
-                    }
-                  }
-                  return Container(
-                    width: 60, height: 60, color: Colors.grey[200],
-                    child: const Icon(Icons.sports, size: 30, color: Colors.grey),
-                  );
-                }),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      courtName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.sports_tennis, size: 14, color: Colors.grey[400]),
-                        const SizedBox(width: 4),
-                        Text(sportType, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                        const SizedBox(width: 10),
-                        Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
-                        const SizedBox(width: 4),
-                        Text(court['size'] ?? 'Standar', style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Selengkapnya >',
-                      style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (hasImg) ...[
+                  _buildSmallImage(courtImg),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        courtName,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(_getSportIcon(sportType), size: 14, color: Colors.grey[400]),
+                          const SizedBox(width: 4),
+                          Text(sportType, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                          const SizedBox(width: 10),
+                          Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
+                          const SizedBox(width: 4),
+                          Text(court['size'] ?? 'Standar', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Selengkapnya >',
+                        style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Pilih jadwal booking:',
-            style: TextStyle(fontSize: 11, color: Colors.grey),
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Builder(builder: (context) {
-              // Ambil hari aktif dari nama hari sesuai tanggal yang dipilih
-              const dayNames = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
-              final dayIdx = _selectedDate.weekday - 1; // 1=Mon..7=Sun
-              final activeDay = dayNames[dayIdx];
-              final availability = court['availability'] as Map? ?? {};
-              final slots = availability[activeDay] as List<dynamic>? ?? [];
-              if (slots.isEmpty) {
-                return const Text('Tidak ada jadwal', style: TextStyle(color: Colors.grey, fontSize: 11));
-              }
-              final sortedSlots = List<String>.from(slots)..sort();
-              return Row(
-                children: sortedSlots.map((time) =>
-                  _buildTimeSlot(venueName, courtName, sportType, time, isAvailable: true)
-                ).toList(),
-              );
-            }),
-          ),
-        ],
-      ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Pilih jadwal booking:',
+              style: TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Builder(builder: (context) {
+                // Ambil hari aktif dari nama hari sesuai tanggal yang dipilih
+                const dayNames = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+                final dayIdx = _selectedDate.weekday - 1; // 1=Mon..7=Sun
+                final activeDay = dayNames[dayIdx];
+                final availability = court['availability'] as Map? ?? {};
+                final slots = availability[activeDay] as List<dynamic>? ?? [];
+                if (slots.isEmpty) {
+                  return const Text('Tidak ada jadwal', style: TextStyle(color: Colors.grey, fontSize: 11));
+                }
+                final sortedSlots = List<String>.from(slots)..sort();
+                return Row(
+                  children: sortedSlots.map((time) =>
+                    _buildTimeSlot(venueName, courtName, sportType, time, isAvailable: true)
+                  ).toList(),
+                );
+              }),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -839,5 +836,28 @@ class _VenuePageState extends State<VenuePage> {
         ),
       ),
     );
+  }
+
+  IconData _getSportIcon(String sportType) {
+    switch (sportType.toLowerCase()) {
+      case 'futsal':
+        return Icons.sports_soccer_outlined;
+      case 'sepak bola':
+      case 'mini soccer':
+        return Icons.sports_soccer;
+      case 'badminton':
+        return Icons.sports_tennis_rounded;
+      case 'tennis':
+      case 'tenis':
+        return Icons.sports_tennis;
+      case 'basket':
+      case 'basketball':
+        return Icons.sports_basketball;
+      case 'voli':
+      case 'volleyball':
+        return Icons.sports_volleyball;
+      default:
+        return Icons.sports_soccer_outlined;
+    }
   }
 }

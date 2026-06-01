@@ -133,6 +133,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               TextFormField(
                 controller: _passwordController,
                 obscureText: !_isPasswordVisible,
+                scrollPadding: const EdgeInsets.only(bottom: 200),
                 decoration: InputDecoration(
                   hintText: 'Minimal 8 karakter (1 kapital, 1 angka, 1 simbol)',
                   prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
@@ -163,6 +164,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: !_isPasswordVisible,
+                scrollPadding: const EdgeInsets.only(bottom: 200),
                 decoration: const InputDecoration(
                   hintText: 'Ulangi kata sandi baru',
                   prefixIcon: Icon(Icons.lock_outline, color: AppColors.textSecondary),
@@ -186,6 +188,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 120),
             ],
           ),
         ),

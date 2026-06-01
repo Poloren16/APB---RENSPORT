@@ -9,6 +9,7 @@ import 'detail_profile_page.dart';
 import 'pengaturan_keamanan_page.dart';
 import 'favorite_venues_page.dart';
 import '../data/auth_data.dart';
+import '../data/venue_data.dart';
 
 class AkunPage extends StatefulWidget {
   final String username;
@@ -376,6 +377,7 @@ class _AkunPageState extends State<AkunPage> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
+                          GlobalVenueData.cart = []; // Bersihkan keranjang saat logout
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(builder: (context) => const LoginPage()),

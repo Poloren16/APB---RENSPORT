@@ -4,6 +4,7 @@ import 'package:rensius/theme/app_colors.dart';
 import 'package:rensius/data/verification_data.dart';
 import 'package:rensius/models/verification_model.dart';
 import 'package:rensius/utils/alert_utils.dart';
+import 'package:rensius/utils/crypto_utils.dart';
 import 'package:rensius/pages/login_page.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/data/venue_data.dart';
@@ -382,11 +383,22 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                   'Lat: ${double.tryParse(req.venueLat!)?.toStringAsFixed(6) ?? req.venueLat}\nLng: ${double.tryParse(req.venueLng!)?.toStringAsFixed(6) ?? req.venueLng}',
                                   style: TextStyle(fontSize: 11, color: Colors.blue.shade800),
                                 ),
-                                Text(
-                                  'https://maps.google.com/?q=${req.venueLat},${req.venueLng}',
-                                  style: TextStyle(fontSize: 10, color: Colors.blue.shade600, decoration: TextDecoration.underline),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                GestureDetector(
+                                  onTap: () async {
+                                    final String url = 'https://maps.google.com/?q=${req.venueLat},${req.venueLng}';
+                                    try {
+                                      final Uri uri = Uri.parse(url);
+                                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                    } catch (e) {
+                                      AlertUtils.showToast(context, 'Gagal membuka Google Maps!', isSuccess: false);
+                                    }
+                                  },
+                                  child: Text(
+                                    'https://maps.google.com/?q=${req.venueLat},${req.venueLng}',
+                                    style: TextStyle(fontSize: 10, color: Colors.blue.shade600, decoration: TextDecoration.underline),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ],
                             ),
@@ -704,7 +716,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       if (req.type == 'Owner' && req.username != null) {
         final newOwnerAcc = UserAccount(
           username: req.username!,
-          password: req.password ?? '123456',
+          password: CryptoUtils.decrypt(req.password ?? '123456'),
           role: req.type,
           applicantName: req.applicantName,
           email: req.email ?? '',
