@@ -16,6 +16,7 @@ import '../data/chat_data.dart';
 import '../data/notification_data.dart';
 import '../data/venue_data.dart';
 import 'package:rensius/services/booking_service.dart';
+import 'package:rensius/services/review_service.dart';
 import '../widgets/empty_state_widget.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -49,6 +50,7 @@ class _DashboardPageState extends State<DashboardPage> {
     // Auto-refresh data bookings online
     BookingService.loadBookings(widget.username, widget.role);
     BookingUtils.loadGlobalBookingsOnline();
+    ReviewService.loadReviews();
   }
 
   @override

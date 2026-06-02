@@ -6,6 +6,7 @@ import 'package:rensius/pages/receipt_page.dart';
 import 'package:rensius/pages/venue_page.dart';
 import 'package:rensius/widgets/empty_state_widget.dart';
 import 'package:rensius/services/booking_service.dart';
+import 'package:rensius/services/review_service.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/utils/booking_utils.dart';
 
@@ -59,6 +60,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     
     await BookingService.loadBookings(widget.username, role);
     await BookingUtils.loadGlobalBookingsOnline();
+    await ReviewService.loadReviews();
     
     if (mounted) {
       setState(() => _isLoadingBookings = false);
@@ -711,21 +713,19 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
             ElevatedButton(
               onPressed: selectedRating == 0
                   ? null
-                  : () {
-                      setState(() {
-                        if (existingReview != null) {
-                          // Update existing
-                          Review.mockReviews.remove(existingReview);
-                        }
-                        
-                        Review.mockReviews.insert(0, Review(
-                          username: widget.username,
-                          venueName: item['venueName'] ?? 'Venue',
-                          rating: selectedRating.toDouble(),
-                          comment: reviewController.text,
-                          date: DateTime.now(),
-                        ));
-                      });
+                  : () async {
+                      final newReview = Review(
+                        username: widget.username,
+                        venueName: item['venueName'] ?? 'Venue',
+                        rating: selectedRating.toDouble(),
+                        comment: reviewController.text,
+                        date: DateTime.now(),
+                      );
+
+                      await ReviewService.saveReview(newReview);
+
+                      if (!mounted) return;
+                      setState(() {});
                       
                       Navigator.pop(context);
                       AlertUtils.showResultDialog(

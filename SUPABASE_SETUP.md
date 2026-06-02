@@ -123,6 +123,20 @@ CREATE TABLE public.bookings (
   services text,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- =======================================================
+-- 5. TABEL REVIEWS (Ulasan & Rating Lapangan)
+-- =======================================================
+CREATE TABLE public.reviews (
+  id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+  username text NOT NULL,
+  venue_name text NOT NULL,
+  rating double precision NOT NULL,
+  comment text NOT NULL,
+  date timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE (username, venue_name)
+);
 ```
 
 4. Tempelkan (paste) kode di atas ke editor, lalu klik tombol **"Run"** berwarna hijau di pojok kanan bawah editor (atau tekan `Ctrl + Enter`).
