@@ -666,16 +666,19 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  void _goToCourtDetail(String venueName, String courtName, String sportType, {String? initialSlot}) async {
+  void _goToCourtDetail(String venueName, Map<String, dynamic> court, {String? initialSlot}) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CourtDetailPage(
           username: widget.username,
           role: widget.role,
-          courtName: courtName,
+          courtName: court['name'] ?? 'Lapangan',
           venueName: venueName,
-          sportType: sportType,
+          sportType: court['type'] ?? 'Umum',
+          dimensions: court['size']?.toString() ?? '-',
+          courtCategory: court['courtCategory']?.toString() ?? '-',
+          floorType: court['floorType']?.toString() ?? '-',
           initialSelectedSlot: initialSlot,
           initialSelectedDate: _selectedDate,
         ),
@@ -720,7 +723,7 @@ class _VenuePageState extends State<VenuePage> {
     final bool hasImg = courtImg.isNotEmpty;
 
     return InkWell(
-      onTap: () => _goToCourtDetail(venueName, courtName, sportType),
+      onTap: () => _goToCourtDetail(venueName, court),
       child: Padding(
         padding: const EdgeInsets.all(15),
         child: Column(
@@ -783,7 +786,7 @@ class _VenuePageState extends State<VenuePage> {
                 final sortedSlots = List<String>.from(slots)..sort();
                 return Row(
                   children: sortedSlots.map((time) =>
-                    _buildTimeSlot(venueName, courtName, sportType, time, isAvailable: true)
+                    _buildTimeSlot(venueName, court, time, isAvailable: true)
                   ).toList(),
                 );
               }),
@@ -794,7 +797,8 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildTimeSlot(String venueName, String courtName, String sportType, String time, {required bool isAvailable}) {
+  Widget _buildTimeSlot(String venueName, Map<String, dynamic> court, String time, {required bool isAvailable}) {
+    final courtName = court['name'] ?? 'Lapangan';
     final dateStr = BookingUtils.formatDate(_selectedDate);
     final isBooked = BookingUtils.isSlotBooked(
       venueName: venueName,
@@ -812,7 +816,7 @@ class _VenuePageState extends State<VenuePage> {
 
     return GestureDetector(
       onTap: effectiveAvailable
-          ? () => _goToCourtDetail(venueName, courtName, sportType, initialSlot: timeRange)
+          ? () => _goToCourtDetail(venueName, court, initialSlot: timeRange)
           : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),

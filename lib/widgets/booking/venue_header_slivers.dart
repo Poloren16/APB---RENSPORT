@@ -117,6 +117,28 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
 
   @override
   Widget build(BuildContext context) {
+    String displayedVenueType = widget.venueType;
+    IconData displayedIcon = _getSportIcon(widget.venueType);
+    final venueMatch = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+    if (venueMatch.isNotEmpty) {
+      final courts = venueMatch.first['courts'] as List<dynamic>? ?? [];
+      final types = <String>{};
+      for (final c in courts) {
+        final type = c['type']?.toString() ?? '';
+        if (type.isNotEmpty) {
+          types.add(type);
+        }
+      }
+      if (types.isNotEmpty) {
+        displayedVenueType = types.join(', ');
+        if (types.length == 1) {
+          displayedIcon = _getSportIcon(types.first);
+        } else {
+          displayedIcon = Icons.sports;
+        }
+      }
+    }
+
     return SliverMainAxisGroup(
       slivers: [
         // Hero Header with Venue Image
@@ -430,11 +452,11 @@ class _VenueHeaderSliversState extends State<VenueHeaderSlivers> {
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  Icon(_getSportIcon(widget.venueType),
+                                  Icon(displayedIcon,
                                       size: 14, color: AppColors.textSecondary),
                                   const SizedBox(width: 4),
                                   Text(
-                                    widget.venueType,
+                                    displayedVenueType,
                                     style: const TextStyle(
                                       fontSize: 13,
                                       color: AppColors.textSecondary,

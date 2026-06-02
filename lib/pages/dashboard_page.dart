@@ -647,7 +647,10 @@ class _DashboardPageState extends State<DashboardPage> {
               role: widget.role,
               courtName: courtName,
               venueName: venue['name'] ?? 'Venue',
-              sportType: venue['type'] ?? 'Umum',
+              sportType: court['type'] ?? venue['type'] ?? 'Umum',
+              dimensions: court['size']?.toString() ?? '-',
+              courtCategory: court['courtCategory']?.toString() ?? '-',
+              floorType: court['floorType']?.toString() ?? '-',
             ),
           ),
         );
@@ -735,11 +738,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
     final venueData = GlobalVenueData.venues.where((v) => v['name'] == venueName);
     List<String> slots = [];
+    Map<String, dynamic>? courtMap;
     if (venueData.isNotEmpty) {
       final courts = venueData.first['courts'] as List<dynamic>? ?? [];
       final court = courts.where((c) => c['name'] == courtName);
       if (court.isNotEmpty) {
-        final avail = (court.first['availability'] as Map?)?[dayName];
+        courtMap = Map<String, dynamic>.from(court.first as Map);
+        final avail = (courtMap['availability'] as Map?)?[dayName];
         if (avail != null) {
           slots = List<String>.from(avail)..sort();
         }
@@ -761,13 +766,14 @@ class _DashboardPageState extends State<DashboardPage> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: slots
-            .map((time) => _buildTimeSlot(venueName, courtName, time, isAvailable: true))
+            .map((time) => _buildTimeSlot(venueName, courtMap ?? {'name': courtName}, time, isAvailable: true))
             .toList(),
       ),
     );
   }
 
-  Widget _buildTimeSlot(String venueName, String courtName, String time, {required bool isAvailable}) {
+  Widget _buildTimeSlot(String venueName, Map<String, dynamic> court, String time, {required bool isAvailable}) {
+    final courtName = court['name'] ?? 'Lapangan';
     final dateStr = BookingUtils.formatDate(_selectedDate);
     final isBooked = BookingUtils.isSlotBooked(
       venueName: venueName,
@@ -794,6 +800,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       role: widget.role,
                       courtName: courtName,
                       venueName: venueName,
+                      sportType: court['type'] ?? 'Umum',
+                      dimensions: court['size']?.toString() ?? '-',
+                      courtCategory: court['courtCategory']?.toString() ?? '-',
+                      floorType: court['floorType']?.toString() ?? '-',
                       initialSelectedSlot: timeRange,
                       initialSelectedDate: _selectedDate,
                     ),

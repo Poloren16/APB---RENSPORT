@@ -258,7 +258,7 @@ class _BookingPageState extends State<BookingPage>
       final key = '${dayName}_$startStr';
       final slotPriceStr = pricePerSlot[key]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
       final slotPrice = int.tryParse(slotPriceStr);
-      if (slotPrice != null && slotPrice > 0) {
+      if (slotPrice != null && slotPrice >= 0) {
         return slotPrice;
       }
     }

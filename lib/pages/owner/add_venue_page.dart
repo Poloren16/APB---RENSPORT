@@ -129,7 +129,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
           if (map['priceDay'] == null) {
             map['priceDay'] = { for (var day in _daysOfWeek) day: '' };
           } else {
-            map['priceDay'] = Map<String, String>.from(map['priceDay']);
+            map['priceDay'] = (map['priceDay'] as Map).map((k, v) => MapEntry(k.toString(), v.toString()));
           }
 
           if (map['services'] == null) {
@@ -141,7 +141,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
           if (map['pricePerSlot'] == null) {
             map['pricePerSlot'] = <String, String>{};
           } else {
-            map['pricePerSlot'] = Map<String, String>.from(map['pricePerSlot'] as Map);
+            map['pricePerSlot'] = (map['pricePerSlot'] as Map).map((k, v) => MapEntry(k.toString(), v.toString()));
           }
 
           if (map['priceMode'] == null) {
@@ -290,6 +290,52 @@ class _AddVenuePageState extends State<AddVenuePage> {
   }
 
   void _saveVenue() async {
+    // Validasi harga slot/harian dari semua court untuk hari-hari yang aktif
+    for (int i = 0; i < _courts.length; i++) {
+      final court = _courts[i];
+      final courtName = court['name'] ?? 'Lapangan ${i + 1}';
+      final priceMode = court['priceMode'] ?? 'perDay';
+      final priceDay = court['priceDay'] as Map? ?? {};
+      final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
+      final availability = court['availability'] as Map? ?? {};
+
+      for (final dayName in _daysOfWeek) {
+        final dynamic times = availability[dayName];
+        final bool hasSlots = times != null && (times is Set ? times.isNotEmpty : (times as List).isNotEmpty);
+        
+        if (hasSlots) {
+          if (priceMode == 'perDay') {
+            final val = priceDay[dayName]?.toString().trim() ?? '';
+            if (val.isEmpty) {
+              AlertUtils.showToast(context, 'Harga harian $courtName pada hari $dayName wajib diisi.');
+              return;
+            }
+            final p = int.tryParse(val.replaceAll(RegExp(r'[^0-9]'), ''));
+            if (p == null || p <= 0) {
+              AlertUtils.showToast(context, 'Harga harian $courtName pada hari $dayName tidak boleh 0.');
+              return;
+            }
+          } else {
+            // perSlot
+            final List<String> slotTimes = List<String>.from(times as Iterable);
+            for (final time in slotTimes) {
+              final slotKey = '${dayName}_$time';
+              final val = pricePerSlot[slotKey]?.toString().trim() ?? '';
+              if (val.isEmpty) {
+                AlertUtils.showToast(context, 'Harga slot $time $courtName pada hari $dayName wajib diisi.');
+                return;
+              }
+              final p = int.tryParse(val.replaceAll(RegExp(r'[^0-9]'), ''));
+              if (p == null || p <= 0) {
+                AlertUtils.showToast(context, 'Harga slot $time $courtName pada hari $dayName tidak boleh 0.');
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
+
     if (_formKey.currentState!.validate()) {
       // Konfirmasi sebelum kirim/simpan
       final isEdit = widget.venueToEdit != null;
@@ -370,7 +416,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
           final extension = path.split('.').last;
           final destination = 'venue_img_${DateTime.now().millisecondsSinceEpoch}_$i.$extension';
           final publicUrl = await SupabaseService.uploadFile(
-            bucketName: 'documents',
+            bucketName: 'venues',
             filePath: path,
             destinationPath: destination,
           );
@@ -398,7 +444,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
           final extension = courtImgPath.split('.').last;
           final destination = 'court_img_${DateTime.now().millisecondsSinceEpoch}_$i.$extension';
           final publicUrl = await SupabaseService.uploadFile(
-            bucketName: 'documents',
+            bucketName: 'venues',
             filePath: courtImgPath,
             destinationPath: destination,
           );
@@ -1146,21 +1192,45 @@ class _AddVenuePageState extends State<AddVenuePage> {
                     children: [
                       const Text('Jadwal & Harga', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       // Toggle mode harga
-                      ChoiceChip(
-                        label: Text(
-                          court['priceMode'] == 'perSlot' ? 'Harga Per Jam' : 'Harga Sama Semua',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                        selected: court['priceMode'] == 'perSlot',
-                        selectedColor: AppColors.primary,
-                        labelStyle: TextStyle(
-                          color: court['priceMode'] == 'perSlot' ? Colors.white : Colors.black87,
-                          fontSize: 11,
-                        ),
-                        showCheckmark: false,
-                        onSelected: (val) => setState(() {
-                          _courts[index]['priceMode'] = val ? 'perSlot' : 'perDay';
-                        }),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Flat Harian', style: TextStyle(fontSize: 11)),
+                            selected: (court['priceMode'] ?? 'perDay') == 'perDay',
+                            selectedColor: AppColors.primary,
+                            labelStyle: TextStyle(
+                              color: (court['priceMode'] ?? 'perDay') == 'perDay' ? Colors.white : Colors.black87,
+                              fontSize: 11,
+                            ),
+                            showCheckmark: false,
+                            onSelected: (val) {
+                              if (val) {
+                                setState(() {
+                                  _courts[index]['priceMode'] = 'perDay';
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: const Text('Beda Per Jam', style: TextStyle(fontSize: 11)),
+                            selected: court['priceMode'] == 'perSlot',
+                            selectedColor: AppColors.primary,
+                            labelStyle: TextStyle(
+                              color: court['priceMode'] == 'perSlot' ? Colors.white : Colors.black87,
+                              fontSize: 11,
+                            ),
+                            showCheckmark: false,
+                            onSelected: (val) {
+                              if (val) {
+                                setState(() {
+                                  _courts[index]['priceMode'] = 'perSlot';
+                                });
+                              }
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1204,6 +1274,16 @@ class _AddVenuePageState extends State<AddVenuePage> {
                           floatingLabelBehavior: FloatingLabelBehavior.always,
                           border: const OutlineInputBorder(),
                         ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Harga harian wajib diisi';
+                          }
+                          final p = int.tryParse(val.replaceAll(RegExp(r'[^0-9]'), ''));
+                          if (p == null || p <= 0) {
+                            return 'Harga harus lebih besar dari 0';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -1258,8 +1338,8 @@ class _AddVenuePageState extends State<AddVenuePage> {
                         final bool isSelected = dayData is Set ? dayData.contains(time) : (dayData as List).contains(time);
                         // pricePerSlot map: key = 'day_time'
                         final Map<String, String> pricePerSlot = court['pricePerSlot'] != null 
-                            ? Map<String, String>.from(court['pricePerSlot'] as Map)
-                            : <String, String>{};
+                             ? (court['pricePerSlot'] as Map).map((k, v) => MapEntry(k.toString(), v.toString()))
+                             : <String, String>{};
                         final slotKey = '${activeDay}_$time';
 
                         return Column(
@@ -1298,7 +1378,18 @@ class _AddVenuePageState extends State<AddVenuePage> {
                                     isDense: true,
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                    errorStyle: const TextStyle(fontSize: 8, height: 1),
                                   ),
+                                  validator: (val) {
+                                    if (val == null || val.trim().isEmpty) {
+                                      return 'Wajib';
+                                    }
+                                    final p = int.tryParse(val.replaceAll(RegExp(r'[^0-9]'), ''));
+                                    if (p == null || p <= 0) {
+                                      return 'Min 1';
+                                    }
+                                    return null;
+                                  },
                                   onChanged: (val) {
                                     if (_courts[index]['pricePerSlot'] == null) {
                                       _courts[index]['pricePerSlot'] = <String, String>{};

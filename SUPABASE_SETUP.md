@@ -190,6 +190,18 @@ ON storage.objects FOR INSERT TO public WITH CHECK (bucket_id = 'documents');
 
 CREATE POLICY "Allow Public Update for documents" 
 ON storage.objects FOR UPDATE TO public USING (bucket_id = 'documents');
+
+-- =======================================================
+-- POLICY UNTUK BUCKET 'venues' (Foto Venue & Lapangan)
+-- =======================================================
+CREATE POLICY "Allow Public Read for venues" 
+ON storage.objects FOR SELECT TO public USING (bucket_id = 'venues');
+
+CREATE POLICY "Allow Public Insert for venues" 
+ON storage.objects FOR INSERT TO public WITH CHECK (bucket_id = 'venues');
+
+CREATE POLICY "Allow Public Update for venues" 
+ON storage.objects FOR UPDATE TO public USING (bucket_id = 'venues');
 ```
 
 4. Klik tombol **"Run"** dan tunggu hingga muncul status hijau sukses.

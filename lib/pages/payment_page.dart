@@ -213,7 +213,7 @@ class _PaymentPageState extends State<PaymentPage> {
       final key = '${dayName}_${startHour.toString().padLeft(2,'0')}:00';
       final val = pricePerSlot[key]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
       final p = int.tryParse(val);
-      if (p != null && p > 0) return p;
+      if (p != null && p >= 0) return p;
     }
     // Fallback: priceDay
     final priceDay = court['priceDay'] as Map? ?? {};

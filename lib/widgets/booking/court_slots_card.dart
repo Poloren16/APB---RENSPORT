@@ -40,7 +40,7 @@ class CourtSlotsCard extends StatelessWidget {
       final key = '${dayName}_$startStr';
       final slotPriceStr = pricePerSlot[key]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
       final slotPrice = int.tryParse(slotPriceStr);
-      if (slotPrice != null && slotPrice > 0) {
+      if (slotPrice != null && slotPrice >= 0) {
         return slotPrice;
       }
     }
@@ -49,6 +49,22 @@ class CourtSlotsCard extends StatelessWidget {
     final dayPriceStr = priceDay[dayName]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
     final dayPrice = int.tryParse(dayPriceStr) ?? 100000;
     return dayPrice;
+  }
+
+  IconData _getSportIcon(String type) {
+    final cleanType = type.toLowerCase().trim();
+    if (cleanType.contains('futsal') || cleanType.contains('sepak') || cleanType.contains('bola') || cleanType.contains('soccer') || cleanType.contains('mini')) {
+      return Icons.sports_soccer;
+    } else if (cleanType.contains('badminton') || cleanType.contains('bulu') || cleanType.contains('tangkis')) {
+      return Icons.sports_tennis;
+    } else if (cleanType.contains('tennis') || cleanType.contains('tenis')) {
+      return Icons.sports_tennis;
+    } else if (cleanType.contains('basket') || cleanType.contains('ball')) {
+      return Icons.sports_basketball;
+    } else if (cleanType.contains('voli') || cleanType.contains('volleyball')) {
+      return Icons.sports_volleyball;
+    }
+    return Icons.sports;
   }
 
   @override
@@ -120,7 +136,7 @@ class CourtSlotsCard extends StatelessWidget {
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      const Icon(Icons.sports_tennis,
+                                      Icon(_getSportIcon(court['type']?.toString() ?? ''),
                                           size: 11, color: AppColors.textSecondary),
                                       const SizedBox(width: 3),
                                       Text(
