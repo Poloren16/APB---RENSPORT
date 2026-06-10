@@ -18,11 +18,18 @@ class NotifikasiPage extends StatefulWidget {
 }
 
 class _NotifikasiPageState extends State<NotifikasiPage> {
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
-    // Mark as read when opened
-    GlobalNotificationData.markAllAsRead(widget.username, widget.role);
+    _loadAndMarkRead();
+  }
+
+  Future<void> _loadAndMarkRead() async {
+    await GlobalNotificationData.loadNotifications(widget.username, widget.role);
+    await GlobalNotificationData.markAllAsRead(widget.username, widget.role);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   String _formatTime(DateTime time) {
@@ -49,7 +56,9 @@ class _NotifikasiPageState extends State<NotifikasiPage> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: notifications.isEmpty
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : notifications.isEmpty
           ? const EmptyStateWidget(
               message: 'Belum ada notifikasi.',
               subMessage: 'Kami akan memberitahu Anda ketika ada sesuatu yang penting terjadi.',

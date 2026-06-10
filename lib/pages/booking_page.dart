@@ -250,7 +250,8 @@ class _BookingPageState extends State<BookingPage>
     final dayName = dayNames[date.weekday - 1];
     final startStr = timeRange.split(' - ')[0];
 
-    final priceMode = court['priceMode'] ?? 'perDay';
+    final priceModeDay = court['priceModeDay'] as Map? ?? {};
+    final priceMode = priceModeDay[dayName] ?? court['priceMode'] ?? 'perDay';
     final priceDay = court['priceDay'] as Map? ?? {};
     final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
 
@@ -906,6 +907,16 @@ class _BookingPageState extends State<BookingPage>
                           return _courts[courtIndex]['name'] as String;
                         }).toSet().join(', ');
 
+                        final individualSlots = _selectedSlots.map((key) {
+                          final parts = key.split('_');
+                          final slotIdx = int.tryParse(parts[0]) ?? 0;
+                          final courtIdx = int.tryParse(parts[1]) ?? 0;
+                          return {
+                            'court': _courts[courtIdx]['name'] as String,
+                            'time': _timeSlots[slotIdx]['time'] as String,
+                          };
+                        }).toList();
+
                         GlobalVenueData.addToCart({
                           'venueName': widget.venueName,
                           'courtName': selectedCourts.isEmpty ? 'Beberapa Lapangan' : selectedCourts,
@@ -913,6 +924,7 @@ class _BookingPageState extends State<BookingPage>
                           'timeSlot': selectedTimes.join(', '),
                           'price': _totalPrice,
                           'services': Map<String, int>.from(_selectedServices),
+                          'individualSlots': individualSlots,
                         });
 
                         AlertUtils.showToast(

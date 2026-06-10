@@ -50,24 +50,26 @@ class _FavoriteVenuesPageState extends State<FavoriteVenuesPage> {
     final courts = activeVenue['courts'] as List<dynamic>? ?? [];
     final prices = <int>[];
     
+    final dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
     for (final c in courts) {
       final cMap = Map<String, dynamic>.from(c as Map);
-      
-      // 1. Ambil harga harian (priceDay)
-      final priceDay = cMap['priceDay'] as Map? ?? {};
-      for (final val in priceDay.values) {
-        final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
-        if (v.isNotEmpty) {
-          final n = int.tryParse(v);
-          if (n != null && n > 0) prices.add(n);
-        }
-      }
-      
-      // 2. Ambil harga per jam (pricePerSlot) jika mode perSlot aktif
-      final priceMode = cMap['priceMode'] ?? 'perDay';
-      if (priceMode == 'perSlot') {
-        final pricePerSlot = cMap['pricePerSlot'] as Map? ?? {};
-        for (final val in pricePerSlot.values) {
+      final priceModeDay = cMap['priceModeDay'] as Map? ?? {};
+      for (final dayName in dayNames) {
+        final priceMode = priceModeDay[dayName] ?? cMap['priceMode'] ?? 'perDay';
+        if (priceMode == 'perSlot') {
+          final pricePerSlot = cMap['pricePerSlot'] as Map? ?? {};
+          pricePerSlot.forEach((k, val) {
+            if (k.startsWith('${dayName}_')) {
+              final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+              if (v.isNotEmpty) {
+                final n = int.tryParse(v);
+                if (n != null && n > 0) prices.add(n);
+              }
+            }
+          });
+        } else {
+          final priceDay = cMap['priceDay'] as Map? ?? {};
+          final val = priceDay[dayName];
           final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
           if (v.isNotEmpty) {
             final n = int.tryParse(v);

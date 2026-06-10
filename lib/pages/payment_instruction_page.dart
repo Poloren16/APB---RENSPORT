@@ -239,12 +239,12 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
             : widget.timeRange.split(' ')[0];
 
         // Notify End User - Confirmation
-        GlobalNotificationData.addNotification(
+        await GlobalNotificationData.addNotification(
           AppNotification(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             username: widget.username,
-            title: 'Booking Berhasil Konfirmasi!',
-            message: 'Pemesanan lapangan berhasil dilakukan di ${widget.venueName}',
+            title: 'Pembayaran Sukses! 🎉',
+            message: 'Anda berhasil membayar ${_formatPrice(widget.amount)} untuk booking di ${widget.venueName}.',
             timestamp: DateTime.now(),
             icon: Icons.check_circle_outline,
             color: AppColors.accent,
@@ -254,7 +254,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         final bookingStart = _getBookingStartDateTime();
 
         // Notify End User - Less than 1 Hour Reminder
-        GlobalNotificationData.addNotification(
+        await GlobalNotificationData.addNotification(
           AppNotification(
             id: '${DateTime.now().millisecondsSinceEpoch}_rem1h',
             username: widget.username,
@@ -267,7 +267,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         );
 
         // Notify End User - 15 Minute Reminder
-        GlobalNotificationData.addNotification(
+        await GlobalNotificationData.addNotification(
           AppNotification(
             id: '${DateTime.now().millisecondsSinceEpoch}_rem15m',
             username: widget.username,
@@ -280,12 +280,12 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         );
 
         // Notify Admin
-        GlobalNotificationData.addNotification(
+        await GlobalNotificationData.addNotification(
           AppNotification(
             id: '${DateTime.now().millisecondsSinceEpoch}_admin',
             username: 'admin',
-            title: 'Pemesanan Baru',
-            message: '${widget.username} telah memesan lapangan di ${widget.venueName}',
+            title: 'Pemesanan Baru Masuk! 💰',
+            message: '${widget.username} telah membayar ${_formatPrice(widget.amount)} untuk ${widget.venueName}.',
             timestamp: DateTime.now(),
             icon: Icons.receipt_long,
             color: AppColors.accent,
@@ -345,7 +345,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
       setState(() => _isCheckingStatus = false);
       AlertUtils.showToast(
         context,
-        'Gagal memeriksa status: ${e.toString().replaceAll("Exception: ", "")}',
+        'Gagal memeriksa status pembayaran. Silakan coba beberapa saat lagi.',
         isSuccess: false,
       );
     }
@@ -582,7 +582,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
                       await launchUrl(uri, mode: LaunchMode.externalApplication);
                     }
                   } catch (e) {
-                    AlertUtils.showToast(context, 'Gagal membuka portal pembayaran: $e', isSuccess: false);
+                    AlertUtils.showToast(context, 'Tidak dapat membuka portal pembayaran. Pastikan browser terinstal.', isSuccess: false);
                   }
                 },
                 icon: const Icon(Icons.open_in_browser_rounded, size: 20, color: Colors.white),

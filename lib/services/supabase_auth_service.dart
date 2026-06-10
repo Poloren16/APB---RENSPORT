@@ -60,6 +60,12 @@ class SupabaseAuthService {
     );
   }
 
+  /// Memperbarui kata sandi pengguna yang sedang masuk di Supabase Auth
+  static Future<UserResponse> updatePassword(String newPassword) async {
+    _assertInitialized();
+    return await _auth.updateUser(UserAttributes(password: newPassword));
+  }
+
   /// Mengirim link reset kata sandi ke email pengguna
   static Future<void> sendPasswordResetEmail(String email) async {
     _assertInitialized();

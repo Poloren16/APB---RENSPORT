@@ -32,7 +32,8 @@ class CourtSlotsCard extends StatelessWidget {
     final dayName = dayNames[date.weekday - 1];
     final startStr = timeRange.split(' - ')[0];
 
-    final priceMode = court['priceMode'] ?? 'perDay';
+    final priceModeDay = court['priceModeDay'] as Map? ?? {};
+    final priceMode = priceModeDay[dayName] ?? court['priceMode'] ?? 'perDay';
     final priceDay = court['priceDay'] as Map? ?? {};
     final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
 

@@ -119,7 +119,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
 
           if (map['availability'] == null) {
             map['availability'] = {
-              for (var day in _daysOfWeek) day: <String>{'06:00', '07:00', '08:00'}
+              for (var day in _daysOfWeek) day: <String>{}
             };
           } else {
             final rawAvailability = map['availability'] as Map;
@@ -148,6 +148,12 @@ class _AddVenuePageState extends State<AddVenuePage> {
             map['priceMode'] = (map['pricePerSlot'] != null && (map['pricePerSlot'] as Map).isNotEmpty) ? 'perSlot' : 'perDay';
           } else {
             map['priceMode'] = map['priceMode'].toString();
+          }
+
+          if (map['priceModeDay'] == null) {
+            map['priceModeDay'] = <String, String>{};
+          } else {
+            map['priceModeDay'] = (map['priceModeDay'] as Map).map((k, v) => MapEntry(k.toString(), v.toString()));
           }
 
           return map;
@@ -270,9 +276,10 @@ class _AddVenuePageState extends State<AddVenuePage> {
         'services': <Map<String, dynamic>>[],
         'activeDayIndex': 0,
         'availability': {
-          for (var day in _daysOfWeek) day: <String>{'06:00', '07:00', '08:00'}
+          for (var day in _daysOfWeek) day: <String>{}
         },
         'priceMode': 'perDay',
+        'priceModeDay': <String, String>{},
         'pricePerSlot': <String, String>{},
         'isExpanded': true,
       });
@@ -294,8 +301,8 @@ class _AddVenuePageState extends State<AddVenuePage> {
     for (int i = 0; i < _courts.length; i++) {
       final court = _courts[i];
       final courtName = court['name'] ?? 'Lapangan ${i + 1}';
-      final priceMode = court['priceMode'] ?? 'perDay';
       final priceDay = court['priceDay'] as Map? ?? {};
+      final priceModeDay = court['priceModeDay'] as Map? ?? {};
       final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
       final availability = court['availability'] as Map? ?? {};
 
@@ -304,7 +311,8 @@ class _AddVenuePageState extends State<AddVenuePage> {
         final bool hasSlots = times != null && (times is Set ? times.isNotEmpty : (times as List).isNotEmpty);
         
         if (hasSlots) {
-          if (priceMode == 'perDay') {
+          final dayPriceMode = priceModeDay[dayName] ?? court['priceMode'] ?? 'perDay';
+          if (dayPriceMode == 'perDay') {
             final val = priceDay[dayName]?.toString().trim() ?? '';
             if (val.isEmpty) {
               AlertUtils.showToast(context, 'Harga harian $courtName pada hari $dayName wajib diisi.');
@@ -393,7 +401,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                 children: [
                   CircularProgressIndicator(color: AppColors.primary),
                   SizedBox(height: 16),
-                  Text('Mengunggah gambar ke server...', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('Mengunggah gambar...', style: TextStyle(fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -504,6 +512,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
             'facilities': c['facilities'] is List ? List<String>.from(c['facilities']) : (c['facility'] != null ? [c['facility']] : <String>[]),
             'priceDay': c['priceDay'],
             'priceMode': c['priceMode'] ?? 'perDay',
+            'priceModeDay': c['priceModeDay'] ?? <String, String>{},
             'pricePerSlot': c['pricePerSlot'] ?? <String, String>{},
             'services': c['services'],
             'availability': (availability as Map).map((day, times) {
@@ -985,6 +994,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
     final dynamic availabilityData = court['availability'];
     final Map<String, String> priceDay = court['priceDay'];
     final List<Map<String, dynamic>> services = court['services'];
+    final dayPriceMode = (court['priceModeDay'] as Map? ?? {})[activeDay] ?? court['priceMode'] ?? 'perDay';
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1187,52 +1197,64 @@ class _AddVenuePageState extends State<AddVenuePage> {
                   }),
                   // ── Jadwal & Harga ───────────────────────────────────────
                   const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Jadwal & Harga', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      // Toggle mode harga
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('Flat Harian', style: TextStyle(fontSize: 11)),
-                            selected: (court['priceMode'] ?? 'perDay') == 'perDay',
-                            selectedColor: AppColors.primary,
-                            labelStyle: TextStyle(
-                              color: (court['priceMode'] ?? 'perDay') == 'perDay' ? Colors.white : Colors.black87,
-                              fontSize: 11,
+                  SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        const Text('Jadwal & Harga', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        // Toggle mode harga
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('Flat Harian', style: TextStyle(fontSize: 11)),
+                              selected: ((court['priceModeDay'] as Map? ?? {})[activeDay] ?? court['priceMode'] ?? 'perDay') == 'perDay',
+                              selectedColor: AppColors.primary,
+                              labelStyle: TextStyle(
+                                color: ((court['priceModeDay'] as Map? ?? {})[activeDay] ?? court['priceMode'] ?? 'perDay') == 'perDay' ? Colors.white : Colors.black87,
+                                fontSize: 11,
+                              ),
+                              showCheckmark: false,
+                              onSelected: (val) {
+                                if (val) {
+                                  setState(() {
+                                    if (_courts[index]['priceModeDay'] == null) {
+                                      _courts[index]['priceModeDay'] = <String, String>{};
+                                    }
+                                    (_courts[index]['priceModeDay'] as Map)[activeDay] = 'perDay';
+                                  });
+                                }
+                              },
                             ),
-                            showCheckmark: false,
-                            onSelected: (val) {
-                              if (val) {
-                                setState(() {
-                                  _courts[index]['priceMode'] = 'perDay';
-                                });
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          ChoiceChip(
-                            label: const Text('Beda Per Jam', style: TextStyle(fontSize: 11)),
-                            selected: court['priceMode'] == 'perSlot',
-                            selectedColor: AppColors.primary,
-                            labelStyle: TextStyle(
-                              color: court['priceMode'] == 'perSlot' ? Colors.white : Colors.black87,
-                              fontSize: 11,
+                            const SizedBox(width: 8),
+                            ChoiceChip(
+                              label: const Text('Beda Per Jam', style: TextStyle(fontSize: 11)),
+                              selected: ((court['priceModeDay'] as Map? ?? {})[activeDay] ?? court['priceMode'] ?? 'perDay') == 'perSlot',
+                              selectedColor: AppColors.primary,
+                              labelStyle: TextStyle(
+                                color: ((court['priceModeDay'] as Map? ?? {})[activeDay] ?? court['priceMode'] ?? 'perDay') == 'perSlot' ? Colors.white : Colors.black87,
+                                fontSize: 11,
+                              ),
+                              showCheckmark: false,
+                              onSelected: (val) {
+                                if (val) {
+                                  setState(() {
+                                    if (_courts[index]['priceModeDay'] == null) {
+                                      _courts[index]['priceModeDay'] = <String, String>{};
+                                    }
+                                    (_courts[index]['priceModeDay'] as Map)[activeDay] = 'perSlot';
+                                  });
+                                }
+                              },
                             ),
-                            showCheckmark: false,
-                            onSelected: (val) {
-                              if (val) {
-                                setState(() {
-                                  _courts[index]['priceMode'] = 'perSlot';
-                                });
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                   // Pilih Hari
@@ -1260,7 +1282,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                   const SizedBox(height: 16),
 
                   // Jika mode harga per hari (sama semua jam)
-                  if ((court['priceMode'] ?? 'perDay') == 'perDay') ...
+                  if (dayPriceMode == 'perDay') ...
                     [
                       TextFormField(
                         key: ValueKey('price_${index}_$activeDay'),
@@ -1364,7 +1386,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                               },
                             ),
                             // Jika mode per jam, tampilkan input harga kecil di bawah chip
-                            if ((court['priceMode'] ?? 'perDay') == 'perSlot' && isSelected)
+                            if (dayPriceMode == 'perSlot' && isSelected)
                               SizedBox(
                                 width: 80,
                                 child: TextFormField(

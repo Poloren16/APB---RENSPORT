@@ -749,7 +749,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
         // Notification for the owner
         if (req.username != null) {
-          GlobalNotificationData.addNotification(AppNotification(
+          await GlobalNotificationData.addNotification(AppNotification(
             id: 'owner_venue_approved_${req.id}',
             username: req.username!,
             title: 'Venue Disetujui!',
@@ -761,7 +761,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         }
 
         // Broadcast notification to all end users
-        GlobalNotificationData.addNotification(AppNotification(
+        await GlobalNotificationData.addNotification(AppNotification(
           id: 'new_venue_broadcast_${req.id}',
           username: 'all',
           title: 'Venue Baru Tersedia!',
@@ -786,7 +786,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       } else if (req.type == 'Venue') {
         // Notification for the owner about rejection
         if (req.username != null) {
-          GlobalNotificationData.addNotification(AppNotification(
+          await GlobalNotificationData.addNotification(AppNotification(
             id: 'owner_venue_rejected_${req.id}',
             username: req.username!,
             title: 'Venue Ditolak',

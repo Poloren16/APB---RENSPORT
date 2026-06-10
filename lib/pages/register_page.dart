@@ -163,7 +163,7 @@ class _RegisterPageState extends State<RegisterPage> {
   String _supabaseAuthErrorMessage(AuthException error) {
     final msg = error.message.toLowerCase();
     if (msg.contains('already registered') || msg.contains('already exists')) {
-      return 'Email ini sudah terdaftar di sistem Supabase.';
+      return 'Email ini sudah terdaftar. Silakan gunakan email lain atau masuk ke akun Anda.';
     } else if (msg.contains('invalid email')) {
       return 'Format email tidak valid.';
     } else if (msg.contains('should be at least') || msg.contains('weak')) {
@@ -171,7 +171,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } else if (msg.contains('network') || msg.contains('connect') || msg.contains('request failed')) {
       return 'Koneksi internet bermasalah. Coba lagi beberapa saat.';
     }
-    return error.message;
+    return AlertUtils.sanitizeErrorMessage(error.message);
   }
 
   @override
@@ -309,14 +309,21 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 24),
                 
                 // Login Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 4,
                   children: [
                     const Text(
                       'Sudah punya akun?',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     TextButton(
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       onPressed: () {
                         Navigator.pop(context);
                       },

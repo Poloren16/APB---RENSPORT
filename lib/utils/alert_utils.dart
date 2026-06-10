@@ -2,6 +2,97 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 class AlertUtils {
+  static String sanitizeErrorMessage(String originalMessage) {
+    final lower = originalMessage.toLowerCase();
+    
+    if (lower.contains('supabase') || 
+        lower.contains('postgrest') || 
+        lower.contains('socketexception') || 
+        lower.contains('failed host') || 
+        lower.contains('connection') || 
+        lower.contains('network') || 
+        lower.contains('http') ||
+        lower.contains('client') ||
+        lower.contains('database') ||
+        lower.contains('sql') ||
+        lower.contains('relation') ||
+        lower.contains('uuid') ||
+        lower.contains('api') ||
+        lower.contains('timeout') ||
+        lower.contains('server') ||
+        lower.contains('exception') ||
+        lower.contains('null') ||
+        lower.contains('bad request') ||
+        lower.contains('not found') ||
+        lower.contains('internal server error') ||
+        lower.contains('auth') || 
+        lower.contains('credential') || 
+        lower.contains('invalid login') || 
+        lower.contains('token') || 
+        lower.contains('jwt') ||
+        lower.contains('midtrans') || 
+        lower.contains('snap') || 
+        lower.contains('payment') || 
+        lower.contains('gateway') || 
+        lower.contains('transaction') ||
+        lower.contains('transaksi') ||
+        lower.contains('error') ||
+        lower.contains('failed') ||
+        lower.contains('refused') ||
+        lower.contains('unauthorized') ||
+        lower.contains('forbidden') ||
+        lower.contains('dns') ||
+        lower.contains('socket') ||
+        lower.contains('port') ||
+        lower.contains('response') ||
+        lower.contains('status code') ||
+        lower.contains('null check') ||
+        lower.contains('type') ||
+        lower.contains('cast') ||
+        lower.contains('index') ||
+        lower.contains('range') ||
+        lower.contains('length') ||
+        lower.contains('overflow') ||
+        lower.contains('unhandled') ||
+        lower.contains('assertion') ||
+        lower.contains('parse') ||
+        lower.contains('format') ||
+        lower.contains('arguments') ||
+        lower.contains('parameter')) {
+      
+      if (lower.contains('connection') || 
+          lower.contains('network') || 
+          lower.contains('socketexception') || 
+          lower.contains('failed host') ||
+          lower.contains('dns') ||
+          lower.contains('socket') ||
+          lower.contains('refused') ||
+          lower.contains('timeout')) {
+        return 'Gagal terhubung ke jaringan. Periksa koneksi internet Anda dan coba lagi.';
+      }
+      if (lower.contains('midtrans') || 
+          lower.contains('snap') || 
+          lower.contains('payment') || 
+          lower.contains('gateway') || 
+          lower.contains('transaction') || 
+          lower.contains('transaksi')) {
+        return 'Gagal memproses pembayaran. Silakan coba beberapa saat lagi atau hubungi pihak venue.';
+      }
+      if (lower.contains('auth') || 
+          lower.contains('credential') || 
+          lower.contains('invalid login') || 
+          lower.contains('token') || 
+          lower.contains('jwt') ||
+          lower.contains('unauthorized') ||
+          lower.contains('forbidden')) {
+        return 'Gagal memverifikasi akun Anda. Periksa nama pengguna dan kata sandi Anda.';
+      }
+      return 'Terjadi kendala pada aplikasi. Mohon coba beberapa saat lagi.';
+    }
+    
+    return originalMessage;
+  }
+
   static void showResultDialog(
     BuildContext context, {
     required bool isSuccess,
@@ -11,6 +102,11 @@ class AlertUtils {
     IconData? customIcon,
     Color? customColor,
   }) {
+    String sanitizedMessage = message;
+    if (!isSuccess) {
+      debugPrint('DEVELOPER ERROR LOG: $message');
+      sanitizedMessage = sanitizeErrorMessage(message);
+    }
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -58,7 +154,7 @@ class AlertUtils {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    message,
+                    sanitizedMessage,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 15,
@@ -102,10 +198,15 @@ class AlertUtils {
   }
 
   static void showToast(BuildContext context, String message, {bool isSuccess = true}) {
+    String sanitizedMessage = message;
+    if (!isSuccess) {
+      debugPrint('DEVELOPER TOAST ERROR LOG: $message');
+      sanitizedMessage = sanitizeErrorMessage(message);
+    }
     final overlay = Overlay.of(context);
     final overlayEntry = OverlayEntry(
       builder: (context) => _ToastWidget(
-        message: message,
+        message: sanitizedMessage,
         isSuccess: isSuccess,
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:async';
 import '../theme/app_colors.dart';
 import '../utils/booking_utils.dart';
 import 'notifikasi.dart';
@@ -40,6 +41,7 @@ class _DashboardPageState extends State<DashboardPage> {
   DateTime _selectedDate = DateTime.now();
   String _selectedCategory = 'Semua';
   final TextEditingController _searchController = TextEditingController();
+  Timer? _notificationTimer;
 
   @override
   void initState() {
@@ -51,10 +53,23 @@ class _DashboardPageState extends State<DashboardPage> {
     BookingService.loadBookings(widget.username, widget.role);
     BookingUtils.loadGlobalBookingsOnline();
     ReviewService.loadReviews();
+
+    // Memuat notifikasi awal dan memperbaruinya setiap 10 detik secara berkala
+    GlobalNotificationData.loadNotifications(widget.username, widget.role).then((_) {
+      if (mounted) setState(() {});
+    });
+    _notificationTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) {
+        GlobalNotificationData.loadNotifications(widget.username, widget.role).then((_) {
+          if (mounted) setState(() {});
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _notificationTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -182,9 +197,9 @@ class _DashboardPageState extends State<DashboardPage> {
     final String query = _searchController.text.toLowerCase();
     
     final List<Map<String, dynamic>> filteredVenues = allVenues.where((v) {
+      final bool isFav = _selectedCategory == 'Favorit' || _selectedCategory == 'Favorite';
       final bool matchesCategory = _selectedCategory == 'Semua' || 
-                                  _selectedCategory == 'Favorit' || // Filter logic handled by VenuePage usually, but here for Search
-                                  v['type'] == _selectedCategory;
+                                  (isFav ? GlobalVenueData.isFavorite(v['name'] ?? '') : v['type'] == _selectedCategory);
       final bool matchesSearch = (v['name'] ?? '').toLowerCase().contains(query) || 
                                 (v['location'] ?? '').toLowerCase().contains(query) ||
                                 (v['type'] ?? '').toLowerCase().contains(query);
@@ -218,13 +233,6 @@ class _DashboardPageState extends State<DashboardPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Halo, ${widget.username}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      Row(
-                        children: [
-                          Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
-                          const SizedBox(width: 4),
-                          Text('Lokasi Kamu', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                        ],
-                      ),
                     ],
                   ),
                 ),
@@ -304,9 +312,6 @@ class _DashboardPageState extends State<DashboardPage> {
                   selectedCategory: _selectedCategory,
                   onCategorySelected: (cat) {
                     setState(() => _selectedCategory = cat);
-                    if (cat == 'Favorite') {
-                      _navigateToVenueWithCategory('Favorite');
-                    }
                   },
                 ),
                 const SizedBox(height: 20),
@@ -329,11 +334,20 @@ class _DashboardPageState extends State<DashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 RichText(
-                  text: const TextSpan(
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                  text: TextSpan(
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
                     children: [
-                      TextSpan(text: 'Rekomendasi '),
-                      TextSpan(text: 'Venue', style: TextStyle(color: AppColors.primary)),
+                      TextSpan(
+                        text: (_selectedCategory == 'Favorit' || _selectedCategory == 'Favorite')
+                            ? 'Venue '
+                            : 'Rekomendasi ',
+                      ),
+                      TextSpan(
+                        text: (_selectedCategory == 'Favorit' || _selectedCategory == 'Favorite')
+                            ? 'Favorit'
+                            : 'Venue',
+                        style: const TextStyle(color: AppColors.primary),
+                      ),
                     ],
                   ),
                 ),
@@ -427,21 +441,26 @@ class _DashboardPageState extends State<DashboardPage> {
   String _getDashboardPriceDisplay(Map<String, dynamic> venue) {
     final courts = venue['courts'] as List<dynamic>? ?? [];
     final prices = <int>[];
+    final dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
     for (final c in courts) {
       final cMap = Map<String, dynamic>.from(c as Map);
-      final priceMode = cMap['priceMode'] ?? 'perDay';
-      if (priceMode == 'perSlot') {
-        final pricePerSlot = cMap['pricePerSlot'] as Map? ?? {};
-        for (final val in pricePerSlot.values) {
-          final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
-          if (v.isNotEmpty) {
-            final n = int.tryParse(v);
-            if (n != null && n > 0) prices.add(n);
-          }
-        }
-      } else {
-        final priceDay = cMap['priceDay'] as Map? ?? {};
-        for (final val in priceDay.values) {
+      final priceModeDay = cMap['priceModeDay'] as Map? ?? {};
+      for (final dayName in dayNames) {
+        final priceMode = priceModeDay[dayName] ?? cMap['priceMode'] ?? 'perDay';
+        if (priceMode == 'perSlot') {
+          final pricePerSlot = cMap['pricePerSlot'] as Map? ?? {};
+          pricePerSlot.forEach((k, val) {
+            if (k.startsWith('${dayName}_')) {
+              final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+              if (v.isNotEmpty) {
+                final n = int.tryParse(v);
+                if (n != null && n > 0) prices.add(n);
+              }
+            }
+          });
+        } else {
+          final priceDay = cMap['priceDay'] as Map? ?? {};
+          final val = priceDay[dayName];
           final v = val?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
           if (v.isNotEmpty) {
             final n = int.tryParse(v);

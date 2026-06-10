@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_colors.dart';
 import '../utils/alert_utils.dart';
 import '../data/auth_data.dart';
 import '../data/verification_data.dart';
+import '../services/supabase_service.dart';
+import '../services/supabase_auth_service.dart';
 import 'login_page.dart';
 
 class PengaturanKeamananPage extends StatefulWidget {
@@ -139,7 +142,13 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   }
 
   void _showChangePhoneDialog() {
-    final TextEditingController phoneController = TextEditingController(text: currentPhone == 'Belum Diatur' ? '' : currentPhone);
+    String initialText = currentPhone == 'Belum Diatur' ? '' : currentPhone;
+    if (initialText.startsWith('+62')) {
+      initialText = initialText.substring(3).trim();
+    } else if (initialText.startsWith('62')) {
+      initialText = initialText.substring(2).trim();
+    }
+    final TextEditingController phoneController = TextEditingController(text: initialText);
     showDialog(
       context: context,
       builder: (context) {
@@ -166,6 +175,10 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
                 String phoneDigits = phoneController.text.trim();
                 if (phoneDigits.startsWith('+62')) {
                    phoneDigits = phoneDigits.replaceFirst('+62', '').trim();
+                } else if (phoneDigits.startsWith('62')) {
+                   phoneDigits = phoneDigits.replaceFirst('62', '').trim();
+                } else if (phoneDigits.startsWith('0')) {
+                   phoneDigits = phoneDigits.replaceFirst('0', '').trim();
                 }
                 await GlobalAuthData.updateAccount(widget.username, newPhone: '+62$phoneDigits');
                 _refreshData();
@@ -182,53 +195,177 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
   }
 
   void _showChangePasswordDialog() {
+    final TextEditingController oldPasswordController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
+    bool isSaving = false;
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Ubah Kata Sandi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          content: TextField(
-            controller: passwordController,
-            scrollPadding: const EdgeInsets.only(bottom: 200),
-            decoration: InputDecoration(
-            hintText: 'Minimal 8 karakter (1 kapital, 1 angka, 1 simbol)',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            obscureText: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final passwordVal = passwordController.text;
-                final uppercaseRegex = RegExp(r'[A-Z]');
-                final numericRegex = RegExp(r'[0-9]');
-                final symbolRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>\-_=+\\\/\[\]]');
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Ubah Kata Sandi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: oldPasswordController,
+                    scrollPadding: const EdgeInsets.only(bottom: 200),
+                    decoration: InputDecoration(
+                      hintText: 'Kata Sandi Saat Ini',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    obscureText: true,
+                    enabled: !isSaving,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: passwordController,
+                    scrollPadding: const EdgeInsets.only(bottom: 200),
+                    decoration: InputDecoration(
+                      hintText: 'Kata Sandi Baru (Min. 8 karakter)',
+                      helperText: '1 kapital, 1 angka, 1 simbol',
+                      helperStyle: const TextStyle(fontSize: 9),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    obscureText: true,
+                    enabled: !isSaving,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.pop(context),
+                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          final oldPasswordVal = oldPasswordController.text;
+                          final passwordVal = passwordController.text;
 
-                if (passwordVal.length < 8 ||
-                    !uppercaseRegex.hasMatch(passwordVal) ||
-                    !numericRegex.hasMatch(passwordVal) ||
-                    !symbolRegex.hasMatch(passwordVal)) {
-                  AlertUtils.showToast(context, 'Kata sandi harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.', isSuccess: false);
-                  return;
-                }
-                await GlobalAuthData.updateAccount(widget.username, newPassword: passwordController.text);
-                if (mounted) Navigator.pop(context);
-                AlertUtils.showResultDialog(
-                  context,
-                  isSuccess: true,
-                  title: 'Kata Sandi Diperbarui!',
-                  message: 'Kata sandi akun Anda telah berhasil diubah dengan aman.',
-                );
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+                          if (oldPasswordVal.isEmpty || passwordVal.isEmpty) {
+                            AlertUtils.showToast(context, 'Harap isi semua kolom.', isSuccess: false);
+                            return;
+                          }
+
+                          final uppercaseRegex = RegExp(r'[A-Z]');
+                          final numericRegex = RegExp(r'[0-9]');
+                          final symbolRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>\-_=+\\\/\[\]]');
+
+                          if (passwordVal.length < 8 ||
+                              !uppercaseRegex.hasMatch(passwordVal) ||
+                              !numericRegex.hasMatch(passwordVal) ||
+                              !symbolRegex.hasMatch(passwordVal)) {
+                            AlertUtils.showToast(context, 'Kata sandi baru harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.', isSuccess: false);
+                            return;
+                          }
+
+                          final acc = GlobalAuthData.getAccount(widget.username);
+                          if (acc == null) {
+                            AlertUtils.showToast(context, 'Akun tidak ditemukan.', isSuccess: false);
+                            return;
+                          }
+
+                          setDialogState(() {
+                            isSaving = true;
+                          });
+
+                          try {
+                            // 1. Verifikasi Kata Sandi Lama
+                            if (SupabaseService.isInitialized && acc.role != 'Admin' && acc.email.isNotEmpty) {
+                              try {
+                                await SupabaseAuthService.signInWithEmail(
+                                  email: acc.email,
+                                  password: oldPasswordVal,
+                                );
+                              } on AuthException catch (e) {
+                                final msg = e.message.toLowerCase();
+                                if (msg.contains('invalid login credentials') || msg.contains('invalid_credentials')) {
+                                  AlertUtils.showToast(context, 'Kata sandi saat ini salah.', isSuccess: false);
+                                } else {
+                                  AlertUtils.showToast(
+                                    context,
+                                    AlertUtils.sanitizeErrorMessage('Gagal memverifikasi kata sandi: ${e.message}'),
+                                    isSuccess: false,
+                                  );
+                                }
+                                setDialogState(() {
+                                  isSaving = false;
+                                });
+                                return;
+                              } catch (e) {
+                                // Fallback ke cek lokal jika terjadi masalah koneksi atau error tak terduga
+                                if (acc.password.isNotEmpty && acc.password != oldPasswordVal) {
+                                  AlertUtils.showToast(context, 'Kata sandi saat ini salah.', isSuccess: false);
+                                  setDialogState(() {
+                                    isSaving = false;
+                                  });
+                                  return;
+                                }
+                              }
+                            } else {
+                              // Cek lokal saja untuk Admin atau jika Supabase nonaktif
+                              if (acc.password.isNotEmpty && acc.password != oldPasswordVal) {
+                                AlertUtils.showToast(context, 'Kata sandi saat ini salah.', isSuccess: false);
+                                setDialogState(() {
+                                  isSaving = false;
+                                });
+                                return;
+                              }
+                            }
+
+                            // 2. Pembaruan di Supabase Auth
+                            if (SupabaseService.isInitialized && acc.role != 'Admin' && acc.email.isNotEmpty) {
+                              try {
+                                await SupabaseAuthService.updatePassword(passwordVal);
+                              } on AuthException catch (e) {
+                                AlertUtils.showToast(
+                                  context,
+                                  AlertUtils.sanitizeErrorMessage('Gagal memperbarui di Supabase: ${e.message}'),
+                                  isSuccess: false,
+                                );
+                                setDialogState(() {
+                                  isSaving = false;
+                                });
+                                return;
+                              }
+                            }
+
+                            // 3. Pembaruan di Cache Lokal
+                            await GlobalAuthData.updateAccount(widget.username, newPassword: passwordVal);
+                            
+                            if (mounted) Navigator.pop(context);
+                            AlertUtils.showResultDialog(
+                              context,
+                              isSuccess: true,
+                              title: 'Kata Sandi Diperbarui!',
+                              message: 'Kata sandi akun Anda telah berhasil diubah dengan aman.',
+                            );
+                          } catch (e) {
+                            AlertUtils.showToast(context, 'Gagal memperbarui kata sandi. Silakan coba lagi.', isSuccess: false);
+                          } finally {
+                            if (mounted) {
+                              setDialogState(() {
+                                isSaving = false;
+                              });
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Simpan', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
         );
       },
     );

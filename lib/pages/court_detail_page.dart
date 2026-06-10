@@ -209,7 +209,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
 
     final priceDay = court['priceDay'] as Map? ?? {};
     final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
-    final String priceMode = court['priceMode'] ?? 'perDay';
+    final priceModeDay = court['priceModeDay'] as Map? ?? {};
+    final String priceMode = priceModeDay[activeDay] ?? court['priceMode'] ?? 'perDay';
 
     debugPrint('=== DEBUG COURT DETAIL ===');
     debugPrint('courtName from widget: ${widget.courtName}');

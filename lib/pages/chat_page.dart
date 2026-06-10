@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../theme/app_colors.dart';
 import '../data/chat_data.dart';
 import 'chat_detail_page.dart';
 import '../widgets/empty_state_widget.dart';
+import '../data/auth_data.dart';
+import '../data/venue_data.dart';
 
 class ChatPage extends StatefulWidget {
   final String username;
@@ -21,6 +24,22 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThreads();
+  }
+
+  Future<void> _loadThreads() async {
+    final bool isOwner = widget.role == 'Owner' || widget.role == 'Admin';
+    await GlobalChatData.loadThreads(
+      filterUsername: isOwner ? null : widget.username,
+    );
+    if (mounted) setState(() => _isLoading = false);
+  }
+
   String _formatTime(DateTime time) {
     if (DateTime.now().difference(time).inDays == 0 && DateTime.now().day == time.day) {
       return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
@@ -53,7 +72,9 @@ class _ChatPageState extends State<ChatPage> {
           onPressed: widget.onBack ?? () => Navigator.pop(context),
         ),
       ),
-      body: displayThreads.isEmpty
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : displayThreads.isEmpty
           ? const EmptyStateWidget(
               message: 'Belum ada pesan',
               subMessage: 'Hubungi pengelola venue untuk menanyakan jadwal atau fasilitas lainnya!',
@@ -66,7 +87,7 @@ class _ChatPageState extends State<ChatPage> {
                 
                 final displayTitle = isOwner ? thread.username : thread.venueName;
                 final lastMsg = thread.messages.last;
-                final unreadCount = isOwner ? thread.unreadCounts['owner'] ?? 0 : thread.unreadCounts['user'] ?? 0;
+                final unreadCount = thread.unreadCountFor(isOwner: isOwner);
 
                 bool isMe = false;
                 if (isOwner && lastMsg.sender == 'owner') {
@@ -79,13 +100,51 @@ class _ChatPageState extends State<ChatPage> {
 
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: CircleAvatar(
-                    radius: 24,
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    child: Icon(
-                      isOwner ? Icons.person : Icons.stadium,
-                      color: AppColors.primary,
-                    ),
+                  leading: Builder(
+                    builder: (context) {
+                      String? imagePath;
+                      IconData fallbackIcon = Icons.person;
+                      
+                      if (isOwner) {
+                        // Lawan bicara adalah user. Ambil profil user.
+                        imagePath = GlobalAuthData.getAccount(thread.username)?.profileImagePath;
+                        fallbackIcon = Icons.person;
+                      } else {
+                        // Lawan bicara adalah venue. Ambil gambar venue.
+                        final venue = GlobalVenueData.venues.firstWhere(
+                          (v) => v['name'] == thread.venueName,
+                          orElse: () => <String, dynamic>{},
+                        );
+                        imagePath = venue['image']?.toString();
+                        fallbackIcon = Icons.stadium;
+                      }
+
+                      if (imagePath == null || imagePath.isEmpty) {
+                        return CircleAvatar(
+                          radius: 24,
+                          backgroundColor: AppColors.primary.withOpacity(0.1),
+                          child: Icon(fallbackIcon, color: AppColors.primary, size: 24),
+                        );
+                      }
+
+                      final isRemote = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+                      final isAsset = imagePath.startsWith('assets/');
+
+                      ImageProvider provider;
+                      if (isRemote) {
+                        provider = NetworkImage(imagePath);
+                      } else if (isAsset) {
+                        provider = AssetImage(imagePath);
+                      } else {
+                        provider = FileImage(File(imagePath));
+                      }
+
+                      return CircleAvatar(
+                        radius: 24,
+                        backgroundImage: provider,
+                        backgroundColor: Colors.grey.shade200,
+                      );
+                    },
                   ),
                   title: Text(
                     displayTitle,
@@ -148,7 +207,9 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                       ),
                     );
-                    setState(() {}); // Refresh list to update read status/last message
+                    // Refresh setelah kembali dari chat detail
+                    await _loadThreads();
+                    if (mounted) setState(() {});
                   },
                 );
               },

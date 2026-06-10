@@ -10,6 +10,7 @@ import 'package:rensius/services/supabase_service.dart';
 import 'package:rensius/services/supabase_auth_service.dart';
 import 'package:rensius/services/booking_service.dart';
 import 'package:rensius/utils/booking_utils.dart';
+import 'package:rensius/utils/alert_utils.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -55,7 +56,7 @@ class _LoginPageState extends State<LoginPage> {
           );
         } on Object catch (e) {
           setState(() {
-            _errorMessage = 'Gagal masuk via Supabase: ${e.toString()}';
+            _errorMessage = AlertUtils.sanitizeErrorMessage('Gagal masuk via Supabase: ${e.toString()}');
             _isLoading = false;
           });
           return;
@@ -110,10 +111,10 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 const SizedBox(height: 48),
                 // Logo or Icon Placeholder
-                const Icon(
-                  Icons.sports_soccer_rounded,
-                  size: 80,
-                  color: AppColors.primary,
+                Image.asset(
+                  'assets/images/logo.png',
+                  height: 100,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -240,14 +241,21 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 24),
                 
                 // Register Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 4,
                   children: [
                     const Text(
                       "Belum punya akun?",
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     TextButton(
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       onPressed: () {
                         Navigator.push(
                           context,

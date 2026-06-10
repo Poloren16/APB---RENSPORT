@@ -10,7 +10,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
-        android:label="rensius"
+        android:label="Rensius"
+        android:icon="@mipmap/ic_launcher"
         android:debuggable="false">
 
         <activity

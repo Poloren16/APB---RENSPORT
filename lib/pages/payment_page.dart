@@ -70,11 +70,23 @@ class _PaymentPageState extends State<PaymentPage> {
         final cName = item['courtName']?.toString() ?? widget.courtName;
         final dStr = item['date']?.toString() ?? widget.date;
         final tSlot = item['timeSlot']?.toString() ?? widget.timeRange;
-        final hours = _parseStartHours(tSlot);
-        if (hours.isNotEmpty) {
-          basePrice = hours.fold(0, (sum, h) => sum + _getSlotPrice(vName, cName, dStr, h));
+        final List<dynamic>? itemIndividualSlots = item['individualSlots'] as List<dynamic>?;
+        if (itemIndividualSlots != null && itemIndividualSlots.isNotEmpty) {
+          basePrice = itemIndividualSlots.fold(0, (sum, slotObj) {
+            final slot = Map<String, dynamic>.from(slotObj as Map);
+            final courtName = slot['court']?.toString() ?? cName;
+            final timeStr = slot['time']?.toString() ?? '';
+            final startStr = timeStr.contains(' - ') ? timeStr.split(' - ')[0] : timeStr;
+            final h = int.tryParse(startStr.split(':')[0]) ?? 0;
+            return sum + _getSlotPrice(vName, courtName, dStr, h);
+          });
         } else {
-          basePrice = item['price'] as int? ?? 0;
+          final hours = _parseStartHours(tSlot);
+          if (hours.isNotEmpty) {
+            basePrice = hours.fold(0, (sum, h) => sum + _getSlotPrice(vName, cName, dStr, h));
+          } else {
+            basePrice = item['price'] as int? ?? 0;
+          }
         }
       } else {
         // Multiple cart items checkout: static sum of cart prices
@@ -83,12 +95,22 @@ class _PaymentPageState extends State<PaymentPage> {
     } else {
       // Direct booking: widget.price include initial services (dari court_detail_page._totalPrice)
       // Recalculate court-only price dari slot data agar perubahan services akurat
-      final hours = _parseStartHours(widget.timeRange);
-      if (hours.isNotEmpty) {
-        basePrice = hours.fold(0, (sum, h) => sum + _getSlotPrice(widget.venueName, widget.courtName, widget.date, h));
+      if (widget.individualSlots.isNotEmpty) {
+        basePrice = widget.individualSlots.fold(0, (sum, slot) {
+          final cName = slot['court'] ?? widget.courtName;
+          final timeStr = slot['time'] ?? '';
+          final startStr = timeStr.contains(' - ') ? timeStr.split(' - ')[0] : timeStr;
+          final h = int.tryParse(startStr.split(':')[0]) ?? 0;
+          return sum + _getSlotPrice(widget.venueName, cName, widget.date, h);
+        });
       } else {
-        // Fallback: tidak bisa recalculate, pakai widget.price langsung
-        basePrice = widget.price;
+        final hours = _parseStartHours(widget.timeRange);
+        if (hours.isNotEmpty) {
+          basePrice = hours.fold(0, (sum, h) => sum + _getSlotPrice(widget.venueName, widget.courtName, widget.date, h));
+        } else {
+          // Fallback: tidak bisa recalculate, pakai widget.price langsung
+          basePrice = widget.price;
+        }
       }
     }
 
@@ -207,7 +229,8 @@ class _PaymentPageState extends State<PaymentPage> {
     final parts = dateStr.split(',');
     if (parts.isNotEmpty) dayName = parts.first.trim();
 
-    final priceMode = court['priceMode'] ?? 'perDay';
+    final priceModeDay = court['priceModeDay'] as Map? ?? {};
+    final priceMode = priceModeDay[dayName] ?? court['priceMode'] ?? 'perDay';
     if (priceMode == 'perSlot') {
       final pricePerSlot = court['pricePerSlot'] as Map? ?? {};
       final key = '${dayName}_${startHour.toString().padLeft(2,'0')}:00';
@@ -585,7 +608,12 @@ class _PaymentPageState extends State<PaymentPage> {
       children: [
         Icon(icon, size: 16, color: AppColors.primary.withValues(alpha: 0.7)),
         const SizedBox(width: 10),
-        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+        Expanded(
+          child: Text(
+            label, 
+            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
+          ),
+        ),
       ],
     );
   }
@@ -688,40 +716,84 @@ class _PaymentPageState extends State<PaymentPage> {
         ? (widget.items.first['timeSlot']?.toString() ?? widget.timeRange)
         : widget.timeRange;
 
-    // Header nama lapangan
-    rows.add(Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        activeCourtName,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
-      ),
-    ));
-
-    final hours = _parseStartHours(activeTimeRange);
-    int courtSubTotal = 0;
-
-    if (hours.isEmpty) {
-      // Fallback: tampilkan total langsung
-      rows.add(Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: _buildTransactionRow('Biaya Lapangan', widget.price),
-      ));
-    } else {
-      // Tampilkan per-slot
-      for (final h in hours) {
-        final slotLabel = '${h.toString().padLeft(2,'0')}:00 - ${(h+1).toString().padLeft(2,'0')}:00';
-        final slotPrice = _getSlotPrice(activeVenueName, activeCourtName, activeDate, h);
-        courtSubTotal += slotPrice;
-        rows.add(Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: _buildTransactionRow(slotLabel, slotPrice, isSlot: true),
-        ));
+    if (widget.individualSlots.isNotEmpty) {
+      // Group slots by court
+      final Map<String, List<Map<String, String>>> grouped = {};
+      for (final slot in widget.individualSlots) {
+        final cName = slot['court'] ?? widget.courtName;
+        grouped.putIfAbsent(cName, () => []).add(slot);
       }
-      if (hours.length > 1) {
+
+      int courtSubTotal = 0;
+      int idxGroup = 0;
+      grouped.forEach((cName, slots) {
         rows.add(Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: EdgeInsets.only(top: idxGroup > 0 ? 12.0 : 0.0, bottom: 4),
+          child: Text(
+            cName,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+          ),
+        ));
+        idxGroup++;
+
+        for (final slot in slots) {
+          final timeStr = slot['time'] ?? '';
+          final startStr = timeStr.contains(' - ') ? timeStr.split(' - ')[0] : timeStr;
+          final h = int.tryParse(startStr.split(':')[0]) ?? 0;
+          final slotLabel = '${h.toString().padLeft(2,'0')}:00 - ${(h+1).toString().padLeft(2,'0')}:00';
+          
+          final slotPrice = _getSlotPrice(activeVenueName, cName, activeDate, h);
+          courtSubTotal += slotPrice;
+
+          rows.add(Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildTransactionRow(slotLabel, slotPrice, isSlot: true),
+          ));
+        }
+      });
+
+      if (widget.individualSlots.length > 1) {
+        rows.add(Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 8),
           child: _buildTransactionRow('Subtotal Lapangan', courtSubTotal, isSubtotal: true),
         ));
+      }
+    } else {
+      // Header nama lapangan
+      rows.add(Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Text(
+          activeCourtName,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+        ),
+      ));
+
+      final hours = _parseStartHours(activeTimeRange);
+      int courtSubTotal = 0;
+
+      if (hours.isEmpty) {
+        // Fallback: tampilkan total langsung
+        rows.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _buildTransactionRow('Biaya Lapangan', widget.price),
+        ));
+      } else {
+        // Tampilkan per-slot
+        for (final h in hours) {
+          final slotLabel = '${h.toString().padLeft(2,'0')}:00 - ${(h+1).toString().padLeft(2,'0')}:00';
+          final slotPrice = _getSlotPrice(activeVenueName, activeCourtName, activeDate, h);
+          courtSubTotal += slotPrice;
+          rows.add(Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildTransactionRow(slotLabel, slotPrice, isSlot: true),
+          ));
+        }
+        if (hours.length > 1) {
+          rows.add(Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildTransactionRow('Subtotal Lapangan', courtSubTotal, isSubtotal: true),
+          ));
+        }
       }
     }
 
@@ -786,52 +858,99 @@ class _PaymentPageState extends State<PaymentPage> {
       }
     }
 
-    // Header lapangan
-    rows.add(Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        courtName,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
-      ),
-    ));
+    final List<dynamic>? itemIndividualSlots = item['individualSlots'] as List<dynamic>?;
 
-    // Per-slot rows
-    final hours = _parseStartHours(timeSlot);
-    int courtSubTotal = 0;
-    if (hours.isEmpty) {
-      // Fallback: hitung courtPrice = total - services
-      int servicesTotal = 0;
-      if (itemServices != null) {
-        itemServices.forEach((key, qty) {
-          final match = svcList.where((s) => s['id'] == key || s['name'] == key);
-          if (match.isNotEmpty) {
-            final pr = match.first['price'];
-            final sp = pr is int ? pr : int.tryParse(pr?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
-            servicesTotal += sp * qty;
-          }
-        });
+    if (itemIndividualSlots != null && itemIndividualSlots.isNotEmpty) {
+      // Group slots by court
+      final Map<String, List<Map<String, String>>> grouped = {};
+      for (final slotObj in itemIndividualSlots) {
+        final slot = Map<String, String>.from((slotObj as Map).map((k, v) => MapEntry(k.toString(), v.toString())));
+        final cName = slot['court'] ?? courtName;
+        grouped.putIfAbsent(cName, () => []).add(slot);
       }
-      final courtPrice = (item['price'] as int? ?? 0) - servicesTotal;
-      rows.add(Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: _buildTransactionRow('Biaya Lapangan', courtPrice),
-      ));
-      courtSubTotal = courtPrice;
-    } else {
-      for (final h in hours) {
-        final slotLabel = '${h.toString().padLeft(2,'0')}:00 - ${(h+1).toString().padLeft(2,'0')}:00';
-        final slotPrice = _getSlotPrice(venueName, courtName, dateStr, h);
-        courtSubTotal += slotPrice;
+
+      int courtSubTotal = 0;
+      int idxGroup = 0;
+      grouped.forEach((cName, slots) {
         rows.add(Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: _buildTransactionRow(slotLabel, slotPrice, isSlot: true),
+          padding: EdgeInsets.only(top: idxGroup > 0 ? 12.0 : 0.0, bottom: 4),
+          child: Text(
+            cName,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+          ),
         ));
-      }
-      if (hours.length > 1) {
+        idxGroup++;
+
+        for (final slot in slots) {
+          final timeStr = slot['time'] ?? '';
+          final startStr = timeStr.contains(' - ') ? timeStr.split(' - ')[0] : timeStr;
+          final h = int.tryParse(startStr.split(':')[0]) ?? 0;
+          final slotLabel = '${h.toString().padLeft(2,'0')}:00 - ${(h+1).toString().padLeft(2,'0')}:00';
+          
+          final slotPrice = _getSlotPrice(venueName, cName, dateStr, h);
+          courtSubTotal += slotPrice;
+
+          rows.add(Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildTransactionRow(slotLabel, slotPrice, isSlot: true),
+          ));
+        }
+      });
+
+      if (itemIndividualSlots.length > 1) {
         rows.add(Padding(
-          padding: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.only(top: 4, bottom: 8),
           child: _buildTransactionRow('Subtotal Lapangan', courtSubTotal, isSubtotal: true),
         ));
+      }
+    } else {
+      // Header lapangan
+      rows.add(Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Text(
+          courtName,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+        ),
+      ));
+
+      // Per-slot rows
+      final hours = _parseStartHours(timeSlot);
+      int courtSubTotal = 0;
+      if (hours.isEmpty) {
+        // Fallback: hitung courtPrice = total - services
+        int servicesTotal = 0;
+        if (itemServices != null) {
+          itemServices.forEach((key, qty) {
+            final match = svcList.where((s) => s['id'] == key || s['name'] == key);
+            if (match.isNotEmpty) {
+              final pr = match.first['price'];
+              final sp = pr is int ? pr : int.tryParse(pr?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
+              servicesTotal += sp * qty;
+            }
+          });
+        }
+        final courtPrice = (item['price'] as int? ?? 0) - servicesTotal;
+        rows.add(Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: _buildTransactionRow('Biaya Lapangan', courtPrice),
+        ));
+        courtSubTotal = courtPrice;
+      } else {
+        for (final h in hours) {
+          final slotLabel = '${h.toString().padLeft(2,'0')}:00 - ${(h+1).toString().padLeft(2,'0')}:00';
+          final slotPrice = _getSlotPrice(venueName, courtName, dateStr, h);
+          courtSubTotal += slotPrice;
+          rows.add(Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildTransactionRow(slotLabel, slotPrice, isSlot: true),
+          ));
+        }
+        if (hours.length > 1) {
+          rows.add(Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildTransactionRow('Subtotal Lapangan', courtSubTotal, isSubtotal: true),
+          ));
+        }
       }
     }
 
@@ -1236,7 +1355,9 @@ class _PaymentPageState extends State<PaymentPage> {
         GlobalVenueData.cart.removeWhere((cartItem) {
           final cartHours = _parseStartHours(cartItem['timeSlot']?.toString() ?? '');
           final isVenueMatch = cartItem['venueName'] == widget.venueName;
-          final isCourtMatch = cartItem['courtName'] == widget.courtName;
+          final isCourtMatch = widget.individualSlots.isNotEmpty
+              ? widget.individualSlots.any((slot) => slot['court'] == cartItem['courtName'])
+              : cartItem['courtName'] == widget.courtName;
           final isDateMatch = cartItem['date'] == widget.date;
           final isTimeOverlap = cartHours.any((h) => directHours.contains(h));
           return isVenueMatch && isCourtMatch && isDateMatch && isTimeOverlap;
@@ -1262,10 +1383,21 @@ class _PaymentPageState extends State<PaymentPage> {
               timeRange: widget.items.isNotEmpty ? widget.items.first['timeSlot'] : widget.timeRange,
               individualSlots: widget.individualSlots.isNotEmpty 
                   ? widget.individualSlots 
-                  : widget.items.map((item) => {
-                      'court': item['courtName']?.toString() ?? '',
-                      'time': item['timeSlot']?.toString() ?? '',
-                    }).toList(),
+                  : () {
+                      final list = <Map<String, String>>[];
+                      for (final item in widget.items) {
+                        final itemSlots = item['individualSlots'] as List?;
+                        if (itemSlots != null) {
+                          list.addAll(itemSlots.map((e) => Map<String, String>.from(e as Map)));
+                        } else {
+                          list.add({
+                            'court': item['courtName']?.toString() ?? '',
+                            'time': item['timeSlot']?.toString() ?? '',
+                          });
+                        }
+                      }
+                      return list;
+                    }(),
               selectedServices: _localSelectedServices,
               items: widget.items,
               username: widget.username,
@@ -1285,7 +1417,7 @@ class _PaymentPageState extends State<PaymentPage> {
           context,
           isSuccess: false,
           title: "Gagal Menghubungkan",
-          message: e.toString().replaceAll("Exception: ", ""),
+          message: "Gagal menghubungkan pembayaran. Silakan periksa koneksi internet Anda dan coba lagi.",
         );
       }
     }

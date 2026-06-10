@@ -269,7 +269,10 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     final filtered = BookingHistoryPage.mockHistory.where((item) {
       final matchesSearch = (item['venueName'] ?? '').toLowerCase().contains(query) || 
                             (item['courtName'] ?? '').toLowerCase().contains(query);
-      final matchesStatus = _statusFilter == 'Semua' || item['status'] == _statusFilter;
+      final matchesStatus = _statusFilter == 'Semua' || 
+                            (_statusFilter == 'Pembayaran Berhasil' && (item['status'] == 'Menunggu Jadwal' || item['status'] == 'Pembayaran Berhasil')) ||
+                            (_statusFilter == 'Menunggu Pembayaran' && item['status'] == 'Menunggu Pembayaran') ||
+                            (_statusFilter == 'Selesai' && (item['status'] == 'Completed' || item['status'] == 'Selesai'));
       return matchesSearch && matchesStatus;
     }).toList();
 
@@ -315,7 +318,10 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     final filtered = BookingHistoryPage.mockPastHistory.where((item) {
       final matchesSearch = (item['venueName'] ?? '').toLowerCase().contains(query) || 
                             (item['courtName'] ?? '').toLowerCase().contains(query);
-      final matchesStatus = _statusFilter == 'Semua' || item['status'] == _statusFilter;
+      final matchesStatus = _statusFilter == 'Semua' || 
+                            (_statusFilter == 'Pembayaran Berhasil' && (item['status'] == 'Menunggu Jadwal' || item['status'] == 'Pembayaran Berhasil')) ||
+                            (_statusFilter == 'Menunggu Pembayaran' && item['status'] == 'Menunggu Pembayaran') ||
+                            (_statusFilter == 'Selesai' && (item['status'] == 'Completed' || item['status'] == 'Selesai'));
       return matchesSearch && matchesStatus;
     }).toList();
 

@@ -69,14 +69,14 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
               );
             } catch (signUpErr) {
               setState(() {
-                _errorMessage = 'Gagal sinkronisasi Supabase Auth: ${signUpErr.toString()}';
+                _errorMessage = AlertUtils.sanitizeErrorMessage('Gagal sinkronisasi Supabase Auth: ${signUpErr.toString()}');
                 _isLoading = false;
               });
               return;
             }
           } else {
             setState(() {
-              _errorMessage = 'Gagal masuk via Supabase: ${e.message}';
+              _errorMessage = AlertUtils.sanitizeErrorMessage('Gagal masuk via Supabase: ${e.message}');
               _isLoading = false;
             });
             return;
@@ -87,7 +87,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
             print('Supabase Auth error, falling back to local offline session: $e');
           } else {
             setState(() {
-              _errorMessage = 'Gagal masuk via Supabase: ${e.toString()}';
+              _errorMessage = AlertUtils.sanitizeErrorMessage('Gagal masuk via Supabase: ${e.toString()}');
               _isLoading = false;
             });
             return;
@@ -145,12 +145,11 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
               customColor: Colors.amber,
             );
           } else if (verificationReq.status == 'Rejected') {
-            final reason = verificationReq.rejectionReason ?? 'Dokumen KTP kurang jelas/tidak terbaca';
             AlertUtils.showResultDialog(
               context,
               isSuccess: false,
               title: 'Pendaftaran Ditolak',
-              message: 'Mohon maaf, pendaftaran Anda ditolak oleh Admin.\n\nAlasan:\n"$reason"\n\nSilakan ketuk OK untuk melakukan pendaftaran ulang dengan berkas yang benar.',
+              message: 'Mohon maaf, pendaftaran Anda ditolak oleh Admin. Silakan lakukan pendaftaran ulang dengan berkas yang benar.',
               onConfirm: () {
                 Navigator.pop(context); // Tutup dialog hasil
                 Navigator.push(
@@ -194,10 +193,10 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 48),
-                const Icon(
-                  Icons.business_center_rounded,
-                  size: 80,
-                  color: AppColors.primary,
+                Image.asset(
+                  'assets/images/logo.png',
+                  height: 100,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -276,14 +275,21 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 4,
                   children: [
                     const Text(
                       "Belum punya akun pemilik?",
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     TextButton(
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       onPressed: () {
                         Navigator.push(
                           context,

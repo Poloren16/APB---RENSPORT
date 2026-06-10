@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_colors.dart';
 import '../data/auth_data.dart';
 import '../utils/alert_utils.dart';
+import '../services/supabase_service.dart';
+import '../services/supabase_auth_service.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String username;
@@ -15,6 +18,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
   void _handleResetPassword() async {
     String password = _passwordController.text.trim();
@@ -42,22 +46,122 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       return;
     }
 
-    // Update the password in local storage
-    await GlobalAuthData.updateAccount(
-      widget.username,
-      newPassword: password,
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
-    AlertUtils.showResultDialog(
-      context,
-      isSuccess: true,
-      title: 'Kata Sandi Diperbarui!',
-      message: 'Kata sandi Anda telah berhasil diubah. Silakan masuk dengan kata sandi baru Anda.',
-      onConfirm: () {
-        // Pop back to login (pop twice since we are in ResetPasswordPage <- ForgotPasswordPage <- LoginPage)
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      },
-    );
+    try {
+      final account = GlobalAuthData.getAccount(widget.username);
+      if (account == null) {
+        AlertUtils.showToast(context, 'Akun tidak ditemukan.', isSuccess: false);
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // 1. Sinkronisasi dengan Supabase Auth jika aktif
+      if (SupabaseService.isInitialized && account.role != 'Admin' && account.email.isNotEmpty) {
+        bool loggedIn = false;
+        bool isNetworkError = false;
+
+        if (account.password.isNotEmpty) {
+          try {
+            await SupabaseAuthService.signInWithEmail(
+              email: account.email,
+              password: account.password,
+            );
+            loggedIn = true;
+          } on AuthException catch (e) {
+            final msg = e.message.toLowerCase();
+            if (msg.contains('network') || msg.contains('connect') || msg.contains('request failed')) {
+              isNetworkError = true;
+            }
+          } catch (e) {
+            isNetworkError = true;
+          }
+        }
+
+        if (isNetworkError) {
+          AlertUtils.showToast(context, 'Koneksi internet bermasalah. Coba lagi beberapa saat.', isSuccess: false);
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+
+        if (loggedIn) {
+          try {
+            await SupabaseAuthService.updatePassword(password);
+            await SupabaseAuthService.signOut();
+          } on AuthException catch (e) {
+            AlertUtils.showToast(
+              context,
+              AlertUtils.sanitizeErrorMessage('Gagal memperbarui kata sandi di Supabase: ${e.message}'),
+              isSuccess: false,
+            );
+            setState(() {
+              _isLoading = false;
+            });
+            return;
+          }
+        } else {
+          // Self-healing: daftarkan ulang user ke Supabase Auth dengan kata sandi baru
+          try {
+            final tempAccount = UserAccount(
+              username: account.username,
+              password: password,
+              role: account.role,
+              applicantName: account.applicantName,
+              email: account.email,
+              phoneNumber: account.phoneNumber,
+              bio: account.bio,
+              sportsInterests: account.sportsInterests,
+              instagram: account.instagram,
+              twitter: account.twitter,
+              facebook: account.facebook,
+              profileImagePath: account.profileImagePath,
+              ktpImagePath: account.ktpImagePath,
+              gender: account.gender,
+              dateOfBirth: account.dateOfBirth,
+              points: account.points,
+              cart: account.cart,
+              favorites: account.favorites,
+            );
+            await SupabaseAuthService.registerEndUser(account: tempAccount);
+            await SupabaseAuthService.signOut();
+          } catch (signUpErr) {
+            print('Pendaftaran mandiri gagal saat reset sandi: $signUpErr');
+          }
+        }
+      }
+
+      // 2. Update kata sandi secara lokal
+      await GlobalAuthData.updateAccount(
+        widget.username,
+        newPassword: password,
+      );
+
+      if (mounted) {
+        AlertUtils.showResultDialog(
+          context,
+          isSuccess: true,
+          title: 'Kata Sandi Diperbarui!',
+          message: 'Kata sandi Anda telah berhasil diubah. Silakan masuk dengan kata sandi baru Anda.',
+          onConfirm: () {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
+        );
+      }
+    } catch (e) {
+      AlertUtils.showToast(context, 'Gagal memperbarui kata sandi. Silakan coba lagi.', isSuccess: false);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -133,6 +237,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               TextFormField(
                 controller: _passwordController,
                 obscureText: !_isPasswordVisible,
+                enabled: !_isLoading,
                 scrollPadding: const EdgeInsets.only(bottom: 200),
                 decoration: InputDecoration(
                   hintText: 'Minimal 8 karakter (1 kapital, 1 angka, 1 simbol)',
@@ -164,6 +269,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: !_isPasswordVisible,
+                enabled: !_isLoading,
                 scrollPadding: const EdgeInsets.only(bottom: 200),
                 decoration: const InputDecoration(
                   hintText: 'Ulangi kata sandi baru',
@@ -175,17 +281,19 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               SizedBox(
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _handleResetPassword,
+                  onPressed: _isLoading ? null : _handleResetPassword,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Simpan Kata Sandi',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'Simpan Kata Sandi',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
               const SizedBox(height: 120),

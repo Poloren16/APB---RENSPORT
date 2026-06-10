@@ -137,6 +137,34 @@ CREATE TABLE public.reviews (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE (username, venue_name)
 );
+
+-- =======================================================
+-- 6. TABEL CHATS (Pesan antara End User & Owner Venue)
+-- =======================================================
+CREATE TABLE public.chats (
+  id uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+  username text NOT NULL,
+  venue_name text NOT NULL,
+  sender text NOT NULL,
+  message text NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  read_by_user boolean DEFAULT false NOT NULL,
+  read_by_owner boolean DEFAULT false NOT NULL
+);
+
+-- =======================================================
+-- 7. TABEL NOTIFICATIONS (Notifikasi In-App untuk User)
+-- =======================================================
+CREATE TABLE public.notifications (
+  id text NOT NULL PRIMARY KEY,
+  username text NOT NULL,
+  title text NOT NULL,
+  message text NOT NULL,
+  icon_code integer NOT NULL,
+  color_value integer NOT NULL,
+  is_read boolean DEFAULT false NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 ```
 
 4. Tempelkan (paste) kode di atas ke editor, lalu klik tombol **"Run"** berwarna hijau di pojok kanan bawah editor (atau tekan `Ctrl + Enter`).
@@ -208,7 +236,122 @@ ON storage.objects FOR UPDATE TO public USING (bucket_id = 'venues');
 
 ---
 
-## 5. Mengisi Berkas `.env` Lokal
+## 5. Menerapkan Database Row Level Security (RLS SQL) untuk Chats & Notifications
+Agar data percakapan chat dan notifikasi in-app aman dan tidak bisa dibaca/ditulis oleh sembarang orang, kita perlu mengaktifkan Row Level Security (RLS) di PostgreSQL Supabase dan menambahkan kebijakan (policy) hak akses yang sesuai.
+
+1. Buka kembali menu **SQL Editor** di sidebar kiri.
+2. Klik **"+ New query"** untuk membuat editor baru.
+3. Salin dan tempel skrip SQL policy berikut secara lengkap:
+
+```sql
+-- =======================================================
+-- ROW LEVEL SECURITY (RLS) UNTUK TABEL CHATS
+-- =======================================================
+-- 1. Aktifkan RLS pada tabel chats
+ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
+
+-- 2. Kebijakan SELECT (Membaca chat)
+-- Pengguna hanya bisa membaca chat miliknya sendiri, atau chat dari venue miliknya (jika dia Owner)
+CREATE POLICY "Allow users to read their own chats"
+ON public.chats
+FOR SELECT
+TO authenticated
+USING (
+  username = (SELECT username FROM public.users WHERE id = auth.uid())
+  OR venue_name IN (
+    SELECT name FROM public.venues
+    WHERE owner_username = (SELECT username FROM public.users WHERE id = auth.uid())
+  )
+);
+
+-- 3. Kebijakan INSERT (Mengirim chat)
+-- Hanya memperbolehkan pengiriman chat jika dia adalah pengirim yang sah (username-nya cocok dengan profilnya atau dia adalah owner venue)
+CREATE POLICY "Allow users to insert their own chats"
+ON public.chats
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  username = (SELECT username FROM public.users WHERE id = auth.uid())
+  OR venue_name IN (
+    SELECT name FROM public.venues
+    WHERE owner_username = (SELECT username FROM public.users WHERE id = auth.uid())
+  )
+);
+
+-- 4. Kebijakan UPDATE (Mengupdate status read/unread chat)
+CREATE POLICY "Allow users to update their own chats"
+ON public.chats
+FOR UPDATE
+TO authenticated
+USING (
+  username = (SELECT username FROM public.users WHERE id = auth.uid())
+  OR venue_name IN (
+    SELECT name FROM public.venues
+    WHERE owner_username = (SELECT username FROM public.users WHERE id = auth.uid())
+  )
+)
+WITH CHECK (
+  username = (SELECT username FROM public.users WHERE id = auth.uid())
+  OR venue_name IN (
+    SELECT name FROM public.venues
+    WHERE owner_username = (SELECT username FROM public.users WHERE id = auth.uid())
+  )
+);
+
+-- =======================================================
+-- ROW LEVEL SECURITY (RLS) UNTUK TABEL NOTIFICATIONS
+-- =======================================================
+-- 1. Aktifkan RLS pada tabel notifications
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+-- 2. Kebijakan SELECT (Membaca notifikasi)
+-- Pengguna hanya bisa membaca notifikasi yang ditujukan untuk dirinya sendiri, ditujukan ke semua (all), atau ditujukan ke admin (jika dia Admin/Owner)
+CREATE POLICY "Allow users to read their own notifications"
+ON public.notifications
+FOR SELECT
+TO authenticated
+USING (
+  username = 'all'
+  OR username = (SELECT username FROM public.users WHERE id = auth.uid())
+  OR (
+    username = 'admin'
+    AND (SELECT role FROM public.users WHERE id = auth.uid()) IN ('Admin', 'Owner')
+  )
+);
+
+-- 3. Kebijakan INSERT (Membuat notifikasi)
+CREATE POLICY "Allow authenticated users to insert notifications"
+ON public.notifications
+FOR INSERT
+TO authenticated
+WITH CHECK (true);
+
+-- 4. Kebijakan UPDATE (Menandai notifikasi telah dibaca)
+CREATE POLICY "Allow users to update their own notifications"
+ON public.notifications
+FOR UPDATE
+TO authenticated
+USING (
+  username = (SELECT username FROM public.users WHERE id = auth.uid())
+  OR (
+    username = 'admin'
+    AND (SELECT role FROM public.users WHERE id = auth.uid()) IN ('Admin', 'Owner')
+  )
+)
+WITH CHECK (
+  username = (SELECT username FROM public.users WHERE id = auth.uid())
+  OR (
+    username = 'admin'
+    AND (SELECT role FROM public.users WHERE id = auth.uid()) IN ('Admin', 'Owner')
+  )
+);
+```
+
+4. Klik tombol **"Run"** dan tunggu hingga muncul status hijau sukses.
+
+---
+
+## 6. Mengisi Berkas `.env` Lokal
 Kunci API Supabase Anda harus diintegrasikan ke dalam berkas konfigurasi lokal project agar aplikasi dapat terhubung ke server Anda.
 
 1. Buka kembali dashboard Supabase Anda.
@@ -242,7 +385,7 @@ MIDTRANS_SERVER_KEY=your-midtrans-server-key-here
 
 ---
 
-## 6. Jalankan Project!
+## 7. Jalankan Project!
 Sekarang project Anda sudah siap dijalankan dengan backend Supabase mandiri. Ikuti perintah terminal berikut dari root directory project Anda:
 
 1. **Bersihkan sisa cache build lama**:
