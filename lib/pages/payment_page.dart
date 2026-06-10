@@ -1206,8 +1206,14 @@ class _PaymentPageState extends State<PaymentPage> {
 
       if (redirectUrl != null) {
         final uri = Uri.parse(redirectUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        try {
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        } catch (e) {
+          debugPrint('Error launching Midtrans URL: $e');
         }
       }
 

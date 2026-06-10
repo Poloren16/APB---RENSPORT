@@ -574,10 +574,15 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
               child: ElevatedButton.icon(
                 onPressed: () async {
                   final uri = Uri.parse(widget.redirectUrl!);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } else {
-                    AlertUtils.showToast(context, 'Gagal membuka portal pembayaran', isSuccess: false);
+                  try {
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      // Fallback: try launching directly
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  } catch (e) {
+                    AlertUtils.showToast(context, 'Gagal membuka portal pembayaran: $e', isSuccess: false);
                   }
                 },
                 icon: const Icon(Icons.open_in_browser_rounded, size: 20, color: Colors.white),

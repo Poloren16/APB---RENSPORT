@@ -47,14 +47,19 @@ class _VenueMapPageState extends State<VenueMapPage> {
     final webUri = Uri.parse(
         'https://www.google.com/maps/search/?api=1&query=${widget.latitude},${widget.longitude}');
 
-    if (await canLaunchUrl(geoUri)) {
-      await launchUrl(geoUri, mode: LaunchMode.externalApplication);
-    } else if (await canLaunchUrl(webUri)) {
-      await launchUrl(webUri, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      if (await canLaunchUrl(geoUri)) {
+        await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+      } else if (await canLaunchUrl(webUri)) {
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      } else {
+        // Fallback: try launching the web URL directly
+        await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tidak dapat membuka aplikasi peta')),
+          SnackBar(content: Text('Tidak dapat membuka aplikasi peta: $e')),
         );
       }
     }
