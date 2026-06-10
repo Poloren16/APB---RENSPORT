@@ -25,7 +25,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     String confirmPass = _confirmPasswordController.text.trim();
 
     if (password.isEmpty || confirmPass.isEmpty) {
-      AlertUtils.showToast(context, 'Harap isi semua kolom', isSuccess: false);
+      AlertUtils.showToast(context, 'Harap isi semua kolom', isSuccess: false, isUserFacing: true);
       return;
     }
 
@@ -37,12 +37,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         !uppercaseRegex.hasMatch(password) ||
         !numericRegex.hasMatch(password) ||
         !symbolRegex.hasMatch(password)) {
-      AlertUtils.showToast(context, 'Kata sandi harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.', isSuccess: false);
+      AlertUtils.showToast(context, 'Kata sandi harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.', isSuccess: false, isUserFacing: true);
       return;
     }
 
     if (password != confirmPass) {
-      AlertUtils.showToast(context, 'Konfirmasi kata sandi tidak cocok', isSuccess: false);
+      AlertUtils.showToast(context, 'Konfirmasi kata sandi tidak cocok', isSuccess: false, isUserFacing: true);
       return;
     }
 
@@ -53,7 +53,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     try {
       final account = GlobalAuthData.getAccount(widget.username);
       if (account == null) {
-        AlertUtils.showToast(context, 'Akun tidak ditemukan.', isSuccess: false);
+        AlertUtils.showToast(context, 'Akun tidak ditemukan.', isSuccess: false, isUserFacing: true);
         setState(() {
           _isLoading = false;
         });
@@ -94,11 +94,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           try {
             await SupabaseAuthService.updatePassword(password);
             await SupabaseAuthService.signOut();
-          } on AuthException catch (e) {
+          } on AuthException catch (_) {
             AlertUtils.showToast(
               context,
-              AlertUtils.sanitizeErrorMessage('Gagal memperbarui kata sandi di Supabase: ${e.message}'),
+              'Gagal memperbarui kata sandi. Silakan coba lagi beberapa saat.',
               isSuccess: false,
+              isUserFacing: true,
             );
             setState(() {
               _isLoading = false;

@@ -10,7 +10,7 @@ import 'package:rensius/services/supabase_service.dart';
 import 'package:rensius/services/supabase_auth_service.dart';
 import 'package:rensius/services/booking_service.dart';
 import 'package:rensius/utils/booking_utils.dart';
-import 'package:rensius/utils/alert_utils.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -54,9 +54,9 @@ class _LoginPageState extends State<LoginPage> {
             email: localAccount.email,
             password: password,
           );
-        } on Object catch (e) {
+        } on Object catch (_) {
           setState(() {
-            _errorMessage = AlertUtils.sanitizeErrorMessage('Gagal masuk via Supabase: ${e.toString()}');
+            _errorMessage = 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
             _isLoading = false;
           });
           return;

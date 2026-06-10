@@ -245,27 +245,26 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
                       : () async {
                           final oldPasswordVal = oldPasswordController.text;
                           final passwordVal = passwordController.text;
-
                           if (oldPasswordVal.isEmpty || passwordVal.isEmpty) {
-                            AlertUtils.showToast(context, 'Harap isi semua kolom.', isSuccess: false);
+                            AlertUtils.showToast(context, 'Harap isi semua kolom.', isSuccess: false, isUserFacing: true);
                             return;
                           }
 
                           final uppercaseRegex = RegExp(r'[A-Z]');
                           final numericRegex = RegExp(r'[0-9]');
-                          final symbolRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>\-_=+\\\/\[\]]');
+                          final symbolRegex = RegExp(r'[!@#$%^&*(),.?":{}|<>\-_=+\\/\[\]]');
 
                           if (passwordVal.length < 8 ||
                               !uppercaseRegex.hasMatch(passwordVal) ||
                               !numericRegex.hasMatch(passwordVal) ||
                               !symbolRegex.hasMatch(passwordVal)) {
-                            AlertUtils.showToast(context, 'Kata sandi baru harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.', isSuccess: false);
+                            AlertUtils.showToast(context, 'Kata sandi baru harus minimal 8 karakter dan mengandung minimal 1 huruf kapital, 1 angka, dan 1 simbol.', isSuccess: false, isUserFacing: true);
                             return;
                           }
 
                           final acc = GlobalAuthData.getAccount(widget.username);
                           if (acc == null) {
-                            AlertUtils.showToast(context, 'Akun tidak ditemukan.', isSuccess: false);
+                            AlertUtils.showToast(context, 'Akun tidak ditemukan.', isSuccess: false, isUserFacing: true);
                             return;
                           }
 
@@ -284,22 +283,23 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
                               } on AuthException catch (e) {
                                 final msg = e.message.toLowerCase();
                                 if (msg.contains('invalid login credentials') || msg.contains('invalid_credentials')) {
-                                  AlertUtils.showToast(context, 'Kata sandi saat ini salah.', isSuccess: false);
+                                  AlertUtils.showToast(context, 'Kata sandi saat ini salah.', isSuccess: false, isUserFacing: true);
                                 } else {
                                   AlertUtils.showToast(
                                     context,
-                                    AlertUtils.sanitizeErrorMessage('Gagal memverifikasi kata sandi: ${e.message}'),
+                                    'Gagal terhubung ke server. Silakan coba lagi.',
                                     isSuccess: false,
+                                    isUserFacing: true,
                                   );
                                 }
                                 setDialogState(() {
                                   isSaving = false;
                                 });
                                 return;
-                              } catch (e) {
+                              } catch (_) {
                                 // Fallback ke cek lokal jika terjadi masalah koneksi atau error tak terduga
                                 if (acc.password.isNotEmpty && acc.password != oldPasswordVal) {
-                                  AlertUtils.showToast(context, 'Kata sandi saat ini salah.', isSuccess: false);
+                                  AlertUtils.showToast(context, 'Kata sandi saat ini salah.', isSuccess: false, isUserFacing: true);
                                   setDialogState(() {
                                     isSaving = false;
                                   });
@@ -321,11 +321,12 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
                             if (SupabaseService.isInitialized && acc.role != 'Admin' && acc.email.isNotEmpty) {
                               try {
                                 await SupabaseAuthService.updatePassword(passwordVal);
-                              } on AuthException catch (e) {
+                              } on AuthException catch (_) {
                                 AlertUtils.showToast(
                                   context,
-                                  AlertUtils.sanitizeErrorMessage('Gagal memperbarui di Supabase: ${e.message}'),
+                                  'Gagal memperbarui kata sandi. Silakan coba lagi beberapa saat.',
                                   isSuccess: false,
+                                  isUserFacing: true,
                                 );
                                 setDialogState(() {
                                   isSaving = false;

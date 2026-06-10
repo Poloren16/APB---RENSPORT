@@ -175,6 +175,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       isSuccess: false,
       title: 'Data Tidak Lengkap',
       message: message,
+      isUserFacing: true,
     );
   }
 
@@ -265,6 +266,7 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
         isSuccess: false,
         title: 'Dokumen Kurang',
         message: 'Harap unggah foto KTP Anda terlebih dahulu.',
+        isUserFacing: true,
       );
       return;
     }

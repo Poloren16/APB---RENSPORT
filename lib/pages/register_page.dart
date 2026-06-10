@@ -129,8 +129,8 @@ class _RegisterPageState extends State<RegisterPage> {
     } on AuthException catch (error) {
       _showError(_supabaseAuthErrorMessage(error));
       return;
-    } on Object catch (error) {
-      _showError('Pendaftaran gagal: $error');
+    } on Object catch (_) {
+      _showError('Pendaftaran gagal karena masalah server. Silakan coba lagi beberapa saat.');
       return;
     } finally {
       if (mounted) {
@@ -157,6 +157,7 @@ class _RegisterPageState extends State<RegisterPage> {
       isSuccess: false,
       title: 'Data Tidak Valid',
       message: message,
+      isUserFacing: true,
     );
   }
 

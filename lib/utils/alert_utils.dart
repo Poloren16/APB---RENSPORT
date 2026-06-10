@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
 class AlertUtils {
+  /// Sanitize pesan error teknis dari backend/exception agar tidak tampil ke user.
+  /// Hanya panggil ini untuk pesan yang berasal dari exception/catch block.
+  /// Pesan validasi user-facing TIDAK perlu melalui fungsi ini.
   static String sanitizeErrorMessage(String originalMessage) {
     final lower = originalMessage.toLowerCase();
     
+    // Hanya filter pesan yang jelas bersifat teknis/backend
     if (lower.contains('supabase') || 
         lower.contains('postgrest') || 
         lower.contains('socketexception') || 
         lower.contains('failed host') || 
-        lower.contains('connection') || 
-        lower.contains('network') || 
         lower.contains('http') ||
-        lower.contains('client') ||
         lower.contains('database') ||
         lower.contains('sql') ||
         lower.contains('relation') ||
@@ -21,48 +22,28 @@ class AlertUtils {
         lower.contains('timeout') ||
         lower.contains('server') ||
         lower.contains('exception') ||
-        lower.contains('null') ||
+        lower.contains('nullpointer') ||
         lower.contains('bad request') ||
-        lower.contains('not found') ||
         lower.contains('internal server error') ||
-        lower.contains('auth') || 
-        lower.contains('credential') || 
-        lower.contains('invalid login') || 
-        lower.contains('token') || 
+        lower.contains('invalid login credentials') ||
+        lower.contains('invalid_credentials') ||
         lower.contains('jwt') ||
         lower.contains('midtrans') || 
         lower.contains('snap') || 
-        lower.contains('payment') || 
         lower.contains('gateway') || 
-        lower.contains('transaction') ||
-        lower.contains('transaksi') ||
-        lower.contains('error') ||
-        lower.contains('failed') ||
         lower.contains('refused') ||
         lower.contains('unauthorized') ||
         lower.contains('forbidden') ||
         lower.contains('dns') ||
         lower.contains('socket') ||
-        lower.contains('port') ||
-        lower.contains('response') ||
         lower.contains('status code') ||
         lower.contains('null check') ||
-        lower.contains('type') ||
-        lower.contains('cast') ||
-        lower.contains('index') ||
-        lower.contains('range') ||
-        lower.contains('length') ||
         lower.contains('overflow') ||
         lower.contains('unhandled') ||
         lower.contains('assertion') ||
-        lower.contains('parse') ||
-        lower.contains('format') ||
-        lower.contains('arguments') ||
-        lower.contains('parameter')) {
+        lower.contains('stacktrace')) {
       
-      if (lower.contains('connection') || 
-          lower.contains('network') || 
-          lower.contains('socketexception') || 
+      if (lower.contains('socketexception') || 
           lower.contains('failed host') ||
           lower.contains('dns') ||
           lower.contains('socket') ||
@@ -72,16 +53,11 @@ class AlertUtils {
       }
       if (lower.contains('midtrans') || 
           lower.contains('snap') || 
-          lower.contains('payment') || 
-          lower.contains('gateway') || 
-          lower.contains('transaction') || 
-          lower.contains('transaksi')) {
+          lower.contains('gateway')) {
         return 'Gagal memproses pembayaran. Silakan coba beberapa saat lagi atau hubungi pihak venue.';
       }
-      if (lower.contains('auth') || 
-          lower.contains('credential') || 
-          lower.contains('invalid login') || 
-          lower.contains('token') || 
+      if (lower.contains('invalid login credentials') || 
+          lower.contains('invalid_credentials') || 
           lower.contains('jwt') ||
           lower.contains('unauthorized') ||
           lower.contains('forbidden')) {
@@ -101,11 +77,15 @@ class AlertUtils {
     VoidCallback? onConfirm,
     IconData? customIcon,
     Color? customColor,
+    /// Set true jika pesan sudah ramah pengguna (dari validasi input).
+    /// Set false (default) jika pesan berasal dari catch/exception (akan disanitize).
+    bool isUserFacing = false,
   }) {
     String sanitizedMessage = message;
     if (!isSuccess) {
       debugPrint('DEVELOPER ERROR LOG: $message');
-      sanitizedMessage = sanitizeErrorMessage(message);
+      // Hanya sanitize jika pesan bukan dari validasi user (bisa mengandung info teknis)
+      sanitizedMessage = isUserFacing ? message : sanitizeErrorMessage(message);
     }
     showGeneralDialog(
       context: context,
@@ -197,11 +177,11 @@ class AlertUtils {
     );
   }
 
-  static void showToast(BuildContext context, String message, {bool isSuccess = true}) {
+  static void showToast(BuildContext context, String message, {bool isSuccess = true, bool isUserFacing = false}) {
     String sanitizedMessage = message;
     if (!isSuccess) {
       debugPrint('DEVELOPER TOAST ERROR LOG: $message');
-      sanitizedMessage = sanitizeErrorMessage(message);
+      sanitizedMessage = isUserFacing ? message : sanitizeErrorMessage(message);
     }
     final overlay = Overlay.of(context);
     final overlayEntry = OverlayEntry(

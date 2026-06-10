@@ -69,25 +69,25 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
               );
             } catch (signUpErr) {
               setState(() {
-                _errorMessage = AlertUtils.sanitizeErrorMessage('Gagal sinkronisasi Supabase Auth: ${signUpErr.toString()}');
+                _errorMessage = 'Terjadi kendala saat menghubungi server. Silakan coba lagi.';
                 _isLoading = false;
               });
               return;
             }
           } else {
             setState(() {
-              _errorMessage = AlertUtils.sanitizeErrorMessage('Gagal masuk via Supabase: ${e.message}');
+              _errorMessage = 'Nama pengguna atau kata sandi salah.';
               _isLoading = false;
             });
             return;
           }
-        } on Object catch (e) {
+        } on Object catch (_) {
           // Fallback lokal: Jika password lokal cocok, tetap izinkan masuk secara lokal jika ada kendala koneksi
           if (localAccount.password == password) {
-            print('Supabase Auth error, falling back to local offline session: $e');
+            // Offline fallback - lanjutkan login lokal
           } else {
             setState(() {
-              _errorMessage = AlertUtils.sanitizeErrorMessage('Gagal masuk via Supabase: ${e.toString()}');
+              _errorMessage = 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
               _isLoading = false;
             });
             return;
@@ -143,6 +143,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
               message: 'Pendaftaran akun Anda masih dalam proses verifikasi oleh Admin. Mohon tunggu beberapa saat.',
               customIcon: Icons.remove_circle_rounded,
               customColor: Colors.amber,
+              isUserFacing: true,
             );
           } else if (verificationReq.status == 'Rejected') {
             AlertUtils.showResultDialog(
@@ -150,6 +151,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
               isSuccess: false,
               title: 'Pendaftaran Ditolak',
               message: 'Mohon maaf, pendaftaran Anda ditolak oleh Admin. Silakan lakukan pendaftaran ulang dengan berkas yang benar.',
+              isUserFacing: true,
               onConfirm: () {
                 Navigator.pop(context); // Tutup dialog hasil
                 Navigator.push(

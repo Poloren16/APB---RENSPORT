@@ -18,7 +18,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     String input = _inputController.text.trim();
 
     if (input.isEmpty) {
-      AlertUtils.showToast(context, 'Harap masukkan email atau nomor telepon Anda', isSuccess: false);
+      AlertUtils.showToast(context, 'Harap masukkan email atau nomor telepon Anda', isSuccess: false, isUserFacing: true);
       return;
     }
 
@@ -26,14 +26,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     if (input.contains('@')) {
       final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
       if (!emailRegex.hasMatch(input)) {
-        AlertUtils.showToast(context, 'Format email tidak valid', isSuccess: false);
+        AlertUtils.showToast(context, 'Format email tidak valid', isSuccess: false, isUserFacing: true);
         return;
       }
     } else {
       // Validate phone number format (numbers, spaces, dashes, optionally start with +)
       final phoneRegex = RegExp(r'^\+?[0-9\s\-]{7,15}$');
       if (!phoneRegex.hasMatch(input)) {
-        AlertUtils.showToast(context, 'Format nomor telepon tidak valid', isSuccess: false);
+        AlertUtils.showToast(context, 'Format nomor telepon tidak valid', isSuccess: false, isUserFacing: true);
         return;
       }
     }
@@ -55,6 +55,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         isSuccess: false,
         title: 'Akun Tidak Ditemukan',
         message: 'Maaf, akun dengan email atau nomor telepon tersebut tidak ditemukan.',
+        isUserFacing: true,
       );
     }
   }
