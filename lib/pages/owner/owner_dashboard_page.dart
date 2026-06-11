@@ -10,6 +10,9 @@ import '../../widgets/empty_state_widget.dart';
 import '../../data/venue_data.dart';
 import '../../utils/booking_utils.dart';
 import 'package:rensius/services/booking_service.dart';
+import '../chat_detail_page.dart';
+import '../receipt_page.dart';
+
 
 class OwnerDashboardPage extends StatefulWidget {
   final String username;
@@ -320,10 +323,27 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               Row(
                 children: [
                   _buildActionIcon(Icons.chat_bubble_outline, () {
-                    // Logika ke halaman chat
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChatDetailPage(
+                          username: booking['username'] ?? '',
+                          venueName: booking['venueName'] ?? '',
+                          role: widget.role,
+                        ),
+                      ),
+                    );
                   }),
                   const SizedBox(width: 8),
-                  _buildActionIcon(Icons.receipt_long_outlined, () {}),
+                  _buildActionIcon(Icons.receipt_long_outlined, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ReceiptPage(booking: booking),
+                      ),
+                    );
+                  }),
+
                 ],
               ),
             ],

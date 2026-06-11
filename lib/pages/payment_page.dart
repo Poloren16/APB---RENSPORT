@@ -7,6 +7,7 @@ import '../data/auth_data.dart';
 import '../services/midtrans_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/alert_utils.dart';
+import '../utils/booking_utils.dart';
 
 
 class PaymentPage extends StatefulWidget {
@@ -46,6 +47,103 @@ class _PaymentPageState extends State<PaymentPage> {
   bool _usePoints = false;
   int _availablePoints = 0;
 
+  void _clampSelectedServices(
+    Map<String, int> selectedSvc, 
+    String venueName, 
+    String courtName, {
+    String dateStr = '',
+    String timeRange = '',
+    List<Map<String, dynamic>> otherCheckedItems = const [],
+  }) {
+    try {
+      final vRes = GlobalVenueData.venues.where((v) => v['name'] == venueName);
+      if (vRes.isEmpty) return;
+      final venue = vRes.first;
+      final courtsList = venue['courts'] as List<dynamic>? ?? [];
+      final targetCourts = courtName.isNotEmpty ? courtsList.where((c) => c['name'] == courtName).toList() : [];
+      final sourceCourts = targetCourts.isNotEmpty ? targetCourts : courtsList;
+      final seenSvc = <String>{};
+      final sList = <Map<String, dynamic>>[];
+      for (final c in sourceCourts) {
+        final cs = c['services'] as List<dynamic>? ?? [];
+        for (final s in cs) {
+          final sm = Map<String, dynamic>.from(s as Map);
+          final sn = sm['name']?.toString() ?? '';
+          sm['id'] = sm['id']?.toString() ?? sn;
+          if (sn.isNotEmpty && !seenSvc.contains(sn)) {
+            seenSvc.add(sn);
+            sList.add(sm);
+          }
+        }
+      }
+      for (final service in sList) {
+        final id = service['id']?.toString() ?? '';
+        final sName = service['name']?.toString() ?? id;
+        final stockRaw = service['stock'];
+        final baseStock = stockRaw is int ? stockRaw : int.tryParse(stockRaw?.toString() ?? '') ?? 99;
+        
+        // Hitung stok secara dinamis jika ada data tanggal dan jam sewa
+        int stock = (dateStr.isNotEmpty && timeRange.isNotEmpty)
+            ? BookingUtils.getAvailableServiceStock(
+                venueName: venueName,
+                serviceName: sName,
+                baseStock: baseStock,
+                dateStr: dateStr,
+                timeRange: timeRange,
+              )
+            : baseStock;
+            
+        // Deduct quantities already allocated to the same service name on overlapping times in otherCheckedItems
+        if (dateStr.isNotEmpty && timeRange.isNotEmpty && otherCheckedItems.isNotEmpty) {
+          final List<String> selectedTimes = timeRange
+              .split(',')
+              .map((t) => t.trim().split(' - ')[0].trim())
+              .where((t) => t.isNotEmpty)
+              .toList();
+
+          int alreadyAllocated = 0;
+          for (final other in otherCheckedItems) {
+            final otherVenue = (other['venueName'] ?? '').toString();
+            final otherDate = (other['date'] ?? '').toString();
+            final otherTime = (other['timeSlot'] ?? '').toString();
+            if (otherVenue == venueName && otherDate == dateStr) {
+              bool hasOverlap = false;
+              for (final t in selectedTimes) {
+                if (otherTime.contains(t)) {
+                  hasOverlap = true;
+                  break;
+                }
+              }
+              if (hasOverlap) {
+                final otherServices = other['services'];
+                if (otherServices is Map) {
+                  final otherQty = otherServices[id] ?? otherServices[sName] ?? 0;
+                  if (otherQty is int) {
+                    alreadyAllocated += otherQty;
+                  } else {
+                    alreadyAllocated += int.tryParse(otherQty.toString()) ?? 0;
+                  }
+                }
+              }
+            }
+          }
+          stock = (stock - alreadyAllocated).clamp(0, baseStock);
+        }
+            
+        final qty = selectedSvc[id] ?? 0;
+        if (qty > stock) {
+          if (stock > 0) {
+            selectedSvc[id] = stock;
+          } else {
+            selectedSvc.remove(id);
+          }
+        }
+      }
+    } catch (e) {
+      print('Gagal clamp service qty di PaymentPage: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +153,64 @@ class _PaymentPageState extends State<PaymentPage> {
     } else {
       _localSelectedServices = Map<String, int>.from(widget.selectedServices);
     }
+
+    GlobalVenueData.init().then((_) {
+      if (mounted) {
+        setState(() {
+          // 1. Clamp services inside all items (both single-item and multi-item) and adjust item prices
+          if (widget.items.isNotEmpty) {
+            bool cartChanged = false;
+            final List<Map<String, dynamic>> processedItems = [];
+            for (final item in widget.items) {
+              final itemSvc = item['services'];
+              if (itemSvc != null) {
+                final Map<String, int> svcMap = Map<String, int>.from(itemSvc);
+                final oldSvcCost = _calcServiceCost(svcMap, item['venueName']?.toString() ?? '', item['courtName']?.toString() ?? '');
+                _clampSelectedServices(
+                  svcMap, 
+                  item['venueName']?.toString() ?? '', 
+                  item['courtName']?.toString() ?? '',
+                  dateStr: item['date']?.toString() ?? '',
+                  timeRange: item['timeSlot']?.toString() ?? '',
+                  otherCheckedItems: processedItems,
+                );
+                final newSvcCost = _calcServiceCost(svcMap, item['venueName']?.toString() ?? '', item['courtName']?.toString() ?? '');
+                
+                // Simpan map hasil clamp kembali ke item agar booking dibuat dengan data yang benar
+                item['services'] = svcMap;
+                
+                if (oldSvcCost != newSvcCost) {
+                  final int oldPrice = item['price'] as int? ?? 0;
+                  item['price'] = oldPrice - (oldSvcCost - newSvcCost);
+                  cartChanged = true;
+                }
+              }
+              processedItems.add(item);
+            }
+            if (cartChanged) {
+              GlobalVenueData.saveCart();
+            }
+          }
+
+          // 2. Sinkronisasikan _localSelectedServices dengan map yang sudah ter-clamp
+          if (widget.items.length == 1) {
+            final itemSvc = widget.items.first['services'];
+            _localSelectedServices = itemSvc != null ? Map<String, int>.from(itemSvc) : {};
+          } else if (widget.items.isEmpty) {
+            // Sewa langsung: clamp direct selected services
+            _clampSelectedServices(
+              _localSelectedServices, 
+              widget.venueName, 
+              widget.courtName,
+              dateStr: widget.date,
+              timeRange: widget.timeRange,
+            );
+          }
+        });
+      }
+    });
+
+
     _availablePoints = GlobalAuthData.getAccount(widget.username)?.points ?? 0;
   }
 
@@ -114,6 +270,22 @@ class _PaymentPageState extends State<PaymentPage> {
       }
     }
 
+    if (basePrice <= 0) {
+      if (widget.items.isNotEmpty && widget.items.length == 1) {
+        final item = widget.items.first;
+        final vName = item['venueName']?.toString() ?? widget.venueName;
+        final cName = item['courtName']?.toString() ?? widget.courtName;
+        final itemSvc = item['services'];
+        final Map<String, int> itemSvcMap = itemSvc != null ? Map<String, int>.from(itemSvc) : {};
+        final itemSvcTotal = _calcServiceCost(itemSvcMap, vName, cName);
+        final cartPrice = item['price'] as int? ?? 0;
+        basePrice = (cartPrice - itemSvcTotal).clamp(0, double.infinity).toInt();
+      } else if (widget.items.isEmpty) {
+        final serviceTotal = _calcServiceCost(widget.selectedServices, widget.venueName, widget.courtName);
+        basePrice = (widget.price - serviceTotal).clamp(0, double.infinity).toInt();
+      }
+    }
+
     final activeVenueName = widget.items.isNotEmpty ? (widget.items.first['venueName']?.toString() ?? widget.venueName) : widget.venueName;
     final activeCourtName = widget.items.isNotEmpty ? (widget.items.first['courtName']?.toString() ?? widget.courtName) : widget.courtName;
     final serviceTotal = _calcServiceCost(_localSelectedServices, activeVenueName, activeCourtName);
@@ -133,18 +305,36 @@ class _PaymentPageState extends State<PaymentPage> {
     final courtsList = vRes.first['courts'] as List<dynamic>? ?? [];
     final seenSvc = <String>{};
     final svcList = <Map<String, dynamic>>[];
-    // Utamakan court spesifik, fallback ke semua courts
+    
+    // 1. Kumpulkan service dari court spesifik terlebih dahulu
     final targetCourts = courtName.isNotEmpty ? courtsList.where((c) => c['name'] == courtName).toList() : [];
-    final sourceCourts = targetCourts.isNotEmpty ? targetCourts : courtsList;
-    for (final c in sourceCourts) {
+    for (final c in targetCourts) {
       final cs = c['services'] as List<dynamic>? ?? [];
       for (final s in cs) {
         final sm = Map<String, dynamic>.from(s as Map);
         final sn = sm['name']?.toString() ?? '';
         sm['id'] = sm['id']?.toString() ?? sn;
-        if (sn.isNotEmpty && !seenSvc.contains(sn)) { seenSvc.add(sn); svcList.add(sm); }
+        if (sn.isNotEmpty && !seenSvc.contains(sn)) {
+          seenSvc.add(sn);
+          svcList.add(sm);
+        }
       }
     }
+    
+    // 2. Kumpulkan service dari court lain sebagai fallback
+    for (final c in courtsList) {
+      final cs = c['services'] as List<dynamic>? ?? [];
+      for (final s in cs) {
+        final sm = Map<String, dynamic>.from(s as Map);
+        final sn = sm['name']?.toString() ?? '';
+        sm['id'] = sm['id']?.toString() ?? sn;
+        if (sn.isNotEmpty && !seenSvc.contains(sn)) {
+          seenSvc.add(sn);
+          svcList.add(sm);
+        }
+      }
+    }
+    
     int total = 0;
     services.forEach((id, qty) {
       final match = svcList.where((s) => s['id'] == id || s['name'] == id);
@@ -163,6 +353,13 @@ class _PaymentPageState extends State<PaymentPage> {
       (m) => '${m[1]}.',
     );
     return 'Rp$formatted';
+  }
+
+  String _formatNumber(int amount) {
+    return amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
   }
 
   /// Parse start-time list dari string timeSlot (e.g. "2 Slot: 06:00, 07:00" atau "2 Slot Waktu (06:00, 07:00)")
@@ -229,6 +426,14 @@ class _PaymentPageState extends State<PaymentPage> {
     final parts = dateStr.split(',');
     if (parts.isNotEmpty) dayName = parts.first.trim();
 
+    final dayNamesList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    if (!dayNamesList.contains(dayName)) {
+      final parsedDate = BookingUtils.parseDateStr(dateStr);
+      if (parsedDate != null) {
+        dayName = dayNamesList[parsedDate.weekday - 1];
+      }
+    }
+
     final priceModeDay = court['priceModeDay'] as Map? ?? {};
     final priceMode = priceModeDay[dayName] ?? court['priceMode'] ?? 'perDay';
     if (priceMode == 'perSlot') {
@@ -242,6 +447,212 @@ class _PaymentPageState extends State<PaymentPage> {
     final priceDay = court['priceDay'] as Map? ?? {};
     final dayVal = priceDay[dayName]?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '';
     return int.tryParse(dayVal) ?? 0;
+  }
+
+  Map<String, int> _filterServicesForCourt(String venueName, String courtName, Map<String, int> allServices) {
+    final Map<String, int> filtered = {};
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == venueName);
+    if (venueResults.isEmpty) return filtered;
+    final venue = venueResults.first;
+    final courts = venue['courts'] as List<dynamic>? ?? [];
+    final courtRes = courts.where((c) => c['name'] == courtName);
+    if (courtRes.isEmpty) return filtered;
+    final court = courtRes.first;
+    final courtServices = court['services'] as List<dynamic>? ?? [];
+    final courtServiceIds = courtServices.map((s) => s['id']?.toString() ?? s['name']?.toString() ?? '').toSet();
+    
+    allServices.forEach((id, qty) {
+      if (courtServiceIds.contains(id)) {
+        filtered[id] = qty;
+      }
+    });
+    return filtered;
+  }
+
+  List<BookingCardData> get _bookingCards {
+    final List<BookingCardData> cards = [];
+    
+    if (widget.items.isNotEmpty) {
+      for (final item in widget.items) {
+        final vName = item['venueName']?.toString() ?? 'Venue';
+        final cName = item['courtName']?.toString() ?? 'Lapangan';
+        final dStr = item['date']?.toString() ?? '-';
+        final tSlot = item['timeSlot']?.toString() ?? '-';
+        final itemSvcRaw = item['services'];
+        final Map<String, int> itemSvc = itemSvcRaw != null ? Map<String, int>.from(itemSvcRaw) : {};
+        
+        final List<dynamic>? itemIndividualSlots = item['individualSlots'] as List<dynamic>?;
+        if (itemIndividualSlots != null && itemIndividualSlots.isNotEmpty) {
+          final Map<String, List<String>> courtSlots = {};
+          for (final slotObj in itemIndividualSlots) {
+            final slot = Map<String, dynamic>.from(slotObj as Map);
+            final court = slot['court']?.toString() ?? cName;
+            final time = slot['time']?.toString() ?? '';
+            courtSlots.putIfAbsent(court, () => []).add(time);
+          }
+          
+          final Map<String, Map<String, int>> courtServices = {};
+          final Set<String> assignedServices = {};
+          
+          courtSlots.keys.forEach((court) {
+            final filtered = _filterServicesForCourt(vName, court, itemSvc);
+            courtServices[court] = filtered;
+            assignedServices.addAll(filtered.keys);
+          });
+          
+          final leftover = <String, int>{};
+          itemSvc.forEach((id, qty) {
+            if (!assignedServices.contains(id)) {
+              leftover[id] = qty;
+            }
+          });
+          
+          if (leftover.isNotEmpty && courtSlots.isNotEmpty) {
+            final firstCourt = courtSlots.keys.first;
+            courtServices[firstCourt]!.addAll(leftover);
+          }
+          
+          courtSlots.forEach((court, times) {
+            cards.add(BookingCardData(
+              venueName: vName,
+              courtName: court,
+              date: dStr,
+              timeRange: times.join(', '),
+              services: courtServices[court] ?? {},
+            ));
+          });
+        } else {
+          final List<String> courts = cName.split(',').map((e) => e.trim()).toList();
+          if (courts.length > 1) {
+            final Map<String, Map<String, int>> courtServices = {};
+            final Set<String> assignedServices = {};
+            
+            for (final court in courts) {
+              final filtered = _filterServicesForCourt(vName, court, itemSvc);
+              courtServices[court] = filtered;
+              assignedServices.addAll(filtered.keys);
+            }
+            
+            final leftover = <String, int>{};
+            itemSvc.forEach((id, qty) {
+              if (!assignedServices.contains(id)) {
+                leftover[id] = qty;
+              }
+            });
+            
+            if (leftover.isNotEmpty) {
+              courtServices[courts.first]!.addAll(leftover);
+            }
+            
+            for (final court in courts) {
+              cards.add(BookingCardData(
+                venueName: vName,
+                courtName: court,
+                date: dStr,
+                timeRange: tSlot,
+                services: courtServices[court] ?? {},
+              ));
+            }
+          } else {
+            cards.add(BookingCardData(
+              venueName: vName,
+              courtName: cName,
+              date: dStr,
+              timeRange: tSlot,
+              services: itemSvc,
+            ));
+          }
+        }
+      }
+    } else {
+      final vName = widget.venueName;
+      final cName = widget.courtName;
+      final dStr = widget.date;
+      final tSlot = widget.timeRange;
+      
+      if (widget.individualSlots.isNotEmpty) {
+        final Map<String, List<String>> courtSlots = {};
+        for (final slot in widget.individualSlots) {
+          final court = slot['court'] ?? cName;
+          final time = slot['time'] ?? '';
+          courtSlots.putIfAbsent(court, () => []).add(time);
+        }
+        
+        final Map<String, Map<String, int>> courtServices = {};
+        final Set<String> assignedServices = {};
+        
+        courtSlots.keys.forEach((court) {
+          final filtered = _filterServicesForCourt(vName, court, _localSelectedServices);
+          courtServices[court] = filtered;
+          assignedServices.addAll(filtered.keys);
+        });
+        
+        final leftover = <String, int>{};
+        _localSelectedServices.forEach((id, qty) {
+          if (!assignedServices.contains(id)) {
+            leftover[id] = qty;
+          }
+        });
+        
+        if (leftover.isNotEmpty && courtSlots.isNotEmpty) {
+          final firstCourt = courtSlots.keys.first;
+          courtServices[firstCourt]!.addAll(leftover);
+        }
+        
+        courtSlots.forEach((court, times) {
+          cards.add(BookingCardData(
+            venueName: vName,
+            courtName: court,
+            date: dStr,
+            timeRange: times.join(', '),
+            services: courtServices[court] ?? {},
+          ));
+        });
+      } else {
+        final List<String> courts = cName.split(',').map((e) => e.trim()).toList();
+        if (courts.length > 1) {
+          final Map<String, Map<String, int>> courtServices = {};
+          final Set<String> assignedServices = {};
+          
+          for (final court in courts) {
+            final filtered = _filterServicesForCourt(vName, court, _localSelectedServices);
+            courtServices[court] = filtered;
+            assignedServices.addAll(filtered.keys);
+          }
+          
+          final leftover = <String, int>{};
+          _localSelectedServices.forEach((id, qty) {
+            if (!assignedServices.contains(id)) {
+              leftover[id] = qty;
+            }
+          });
+          
+          if (leftover.isNotEmpty) {
+            courtServices[courts.first]!.addAll(leftover);
+          }
+          
+          for (final court in courts) {
+            cards.add(BookingCardData(
+              venueName: vName,
+              courtName: court,
+              date: dStr,
+              timeRange: tSlot,
+              services: courtServices[court] ?? {},
+            ));
+          }
+        } else {
+          cards.add(BookingCardData(
+            venueName: vName,
+            courtName: cName,
+            date: dStr,
+            timeRange: tSlot,
+            services: _localSelectedServices,
+          ));
+        }
+      }
+    }
+    
+    return cards;
   }
 
   @override
@@ -263,42 +674,23 @@ class _PaymentPageState extends State<PaymentPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (widget.items.length <= 1) ...[
-                    _buildSectionHeader('Venue'),
-                    _buildVenueCard(widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName),
-                    const SizedBox(height: 20),
-                    _buildSectionHeader('Detail Pemesanan'),
-                    _buildBookingDetailCard(
-                      venueName: widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName,
-                      courtName: widget.items.isNotEmpty ? widget.items.first['courtName'] : widget.courtName,
-                      date: widget.items.isNotEmpty ? widget.items.first['date'] : widget.date,
-                      timeRange: widget.items.isNotEmpty ? widget.items.first['timeSlot'] : widget.timeRange,
-                      price: widget.items.isNotEmpty ? widget.items.first['price'] : widget.price,
-                      services: _localSelectedServices,
+                  _buildSectionHeader('Venue'),
+                  _buildVenueCard(widget.items.isNotEmpty ? widget.items.first['venueName'] : widget.venueName),
+                  const SizedBox(height: 20),
+                  _buildSectionHeader('Detail Pemesanan'),
+                  ..._bookingCards.map((card) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _buildBookingDetailCard(
+                      venueName: card.venueName,
+                      courtName: card.courtName,
+                      date: card.date,
+                      timeRange: card.timeRange,
+                      price: 0,
+                      services: card.services,
                     ),
-                    const SizedBox(height: 12),
-                    _buildAddServiceButton(),
-                  ] else ...[
-                    _buildSectionHeader('Rincian Pesanan (${widget.items.length})'),
-                    ...widget.items.asMap().entries.map((entry) {
-                      final item = entry.value;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _buildBookingDetailCard(
-                          venueName: item['venueName'] ?? 'Venue',
-                          courtName: item['courtName'] ?? 'Lapangan',
-                          date: item['date'] ?? '-',
-                          timeRange: item['timeSlot'] ?? '-',
-                          price: item['price'] ?? 0,
-                          services: item['services'] != null 
-                              ? Map<String, int>.from(item['services']) 
-                              : null,
-                        ),
-                      );
-                    }).toList(),
-                    const SizedBox(height: 12),
-                    _buildAddServiceButton(),
-                  ],
+                  )).toList(),
+                  const SizedBox(height: 12),
+                  _buildAddServiceButton(),
 
                   const SizedBox(height: 24),
                   _buildPointsSection(),
@@ -1078,7 +1470,7 @@ class _PaymentPageState extends State<PaymentPage> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Tersedia: $_availablePoints Point (Rp$_availablePoints)',
+            'Tersedia: ${_formatNumber(_availablePoints)} Point (${_formatCurrency(_availablePoints)})',
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
           ),
         ],
@@ -1175,6 +1567,8 @@ class _PaymentPageState extends State<PaymentPage> {
                         final sName = s['name']?.toString() ?? 'Layanan';
                         final priceRaw = s['price'];
                         final sPrice = priceRaw is int ? priceRaw : int.tryParse(priceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
+                        final stockRaw = s['stock'];
+                        final stock = stockRaw is int ? stockRaw : int.tryParse(stockRaw?.toString() ?? '') ?? 99;
                         final qty = _localSelectedServices[id] ?? 0;
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -1187,7 +1581,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(sName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    Text(_formatCurrency(sPrice), style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600)),
+                                    Text('${_formatCurrency(sPrice)} (Stok: $stock)', style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600)),
                                   ],
                                 ),
                               ),
@@ -1199,8 +1593,8 @@ class _PaymentPageState extends State<PaymentPage> {
                                   ),
                                   Text('$qty', style: const TextStyle(fontWeight: FontWeight.bold)),
                                   IconButton(
-                                    onPressed: () { setState(() => _localSelectedServices[id] = qty + 1); setModalState(() {}); },
-                                    icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                                    onPressed: qty < stock ? () { setState(() => _localSelectedServices[id] = qty + 1); setModalState(() {}); } : null,
+                                    icon: Icon(Icons.add_circle_outline, color: qty < stock ? AppColors.primary : Colors.grey),
                                   ),
                                 ],
                               ),
@@ -1308,7 +1702,7 @@ class _PaymentPageState extends State<PaymentPage> {
           children: [
             CircularProgressIndicator(color: AppColors.primary),
             SizedBox(width: 20),
-            Expanded(child: Text("Menghubungkan dengan Midtrans...")),
+            Expanded(child: Text("Menghubungkan ke sistem pembayaran...")),
           ],
         ),
       ),
@@ -1466,10 +1860,26 @@ class _PaymentPageState extends State<PaymentPage> {
         AlertUtils.showResultDialog(
           context,
           isSuccess: false,
-          title: "Gagal Menghubungkan",
-          message: "Gagal menghubungkan pembayaran. Silakan periksa koneksi internet Anda dan coba lagi.",
+          title: "Koneksi Terganggu",
+          message: "Koneksi terganggu. Silakan periksa koneksi internet Anda dan coba lagi.",
         );
       }
     }
   }
+}
+
+class BookingCardData {
+  final String venueName;
+  final String courtName;
+  final String date;
+  final String timeRange;
+  final Map<String, int> services;
+
+  BookingCardData({
+    required this.venueName,
+    required this.courtName,
+    required this.date,
+    required this.timeRange,
+    required this.services,
+  });
 }

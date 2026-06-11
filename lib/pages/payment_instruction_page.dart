@@ -202,7 +202,14 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
   }
 
   String _formatPrice(int price) {
-    return 'IDR ${price.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},')}';
+    return 'IDR ${price.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}';
+  }
+
+  String _formatNumber(int amount) {
+    return amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
   }
 
   DateTime _getBookingStartDateTime() {
@@ -395,7 +402,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
           context,
           isSuccess: true,
           title: 'Pembayaran Berhasil!',
-          message: 'Kami telah menerima pembayaran Anda. Anda mendapatkan $pointsEarned Rensius Point! Pantau status pesanan di menu Aktivitas.',
+          message: 'Kami telah menerima pembayaran Anda. Anda mendapatkan ${_formatNumber(pointsEarned)} Rensius Point! Pantau status pesanan di menu Aktivitas.',
           onConfirm: () {
             Navigator.pushAndRemoveUntil(
               context,
@@ -430,6 +437,26 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
           }
           await BookingService.cancelPendingBooking(oid);
         }
+
+        // Add failure notifications
+        await GlobalNotificationData.addNotification(
+          AppNotification(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            username: widget.username,
+            title: 'Pembayaran Gagal/Kadaluwarsa ❌',
+            message: 'Pembayaran untuk booking di ${widget.venueName} gagal dilakukan atau telah kadaluwarsa. Silakan lakukan pembayaran.',
+            timestamp: DateTime.now(),
+            icon: Icons.cancel_outlined,
+            color: Colors.red,
+          )
+        );
+
+        LocalNotificationService.showNotification(
+          id: widget.orderId.hashCode,
+          title: 'Pembayaran Gagal/Kadaluwarsa ❌',
+          body: 'Pembayaran untuk booking di ${widget.venueName} gagal. Silakan lakukan pembayaran.',
+        );
+
         AlertUtils.showResultDialog(
           context,
           isSuccess: false,
@@ -442,7 +469,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
       setState(() => _isCheckingStatus = false);
       AlertUtils.showToast(
         context,
-        'Gagal memeriksa status pembayaran. Silakan coba beberapa saat lagi.',
+        'Koneksi terganggu. Silakan coba beberapa saat lagi.',
         isSuccess: false,
       );
     }
@@ -575,7 +602,37 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () async {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                );
+                
+                try {
+                  if (widget.items.isNotEmpty) {
+                    for (int i = 0; i < widget.items.length; i++) {
+                      final itemOrderId = '${widget.orderId}-${i + 1}';
+                      await BookingService.deleteBooking(itemOrderId);
+                      BookingHistoryPage.mockHistory.removeWhere((b) => b['orderId'] == itemOrderId);
+                      BookingHistoryPage.mockPastHistory.removeWhere((b) => b['orderId'] == itemOrderId);
+                    }
+                  } else {
+                    await BookingService.deleteBooking(widget.orderId);
+                    BookingHistoryPage.mockHistory.removeWhere((b) => b['orderId'] == widget.orderId);
+                    BookingHistoryPage.mockPastHistory.removeWhere((b) => b['orderId'] == widget.orderId);
+                  }
+                } catch (e) {
+                  print('Error deleting old pending booking: $e');
+                }
+                
+                if (mounted) {
+                  Navigator.pop(context); // Tutup loading dialog
+                  Navigator.pop(context); // Kembali ke PaymentPage
+                }
+              },
               child: const Text('Ubah Metode Pembayaran', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             ),
           ],

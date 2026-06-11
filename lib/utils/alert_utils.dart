@@ -49,12 +49,23 @@ class AlertUtils {
           lower.contains('socket') ||
           lower.contains('refused') ||
           lower.contains('timeout')) {
-        return 'Gagal terhubung ke jaringan. Periksa koneksi internet Anda dan coba lagi.';
+        return 'Koneksi terganggu. Periksa koneksi internet Anda dan coba lagi.';
       }
       if (lower.contains('midtrans') || 
           lower.contains('snap') || 
           lower.contains('gateway')) {
         return 'Gagal memproses pembayaran. Silakan coba beberapa saat lagi atau hubungi pihak venue.';
+      }
+      if (lower.contains('database') || 
+          lower.contains('sql') || 
+          lower.contains('relation') ||
+          lower.contains('postgrest')) {
+        return 'Koneksi terganggu. Silakan coba beberapa saat lagi.';
+      }
+      if (lower.contains('server') || 
+          lower.contains('internal server error') ||
+          lower.contains('bad request')) {
+        return 'Koneksi terganggu. Silakan coba beberapa saat lagi.';
       }
       if (lower.contains('invalid login credentials') || 
           lower.contains('invalid_credentials') || 

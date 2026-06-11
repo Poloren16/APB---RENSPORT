@@ -16,6 +16,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
   String _selectedCountryCode = '+62';
   final List<String> _countryCodes = ['+62', '+1', '+60', '+65', '+44', '+81'];
   
@@ -130,7 +131,7 @@ class _RegisterPageState extends State<RegisterPage> {
       _showError(_supabaseAuthErrorMessage(error));
       return;
     } on Object catch (_) {
-      _showError('Pendaftaran gagal karena masalah server. Silakan coba lagi beberapa saat.');
+      _showError('Koneksi terganggu. Silakan coba beberapa saat lagi.');
       return;
     } finally {
       if (mounted) {
@@ -170,7 +171,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } else if (msg.contains('should be at least') || msg.contains('weak')) {
       return 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.';
     } else if (msg.contains('network') || msg.contains('connect') || msg.contains('request failed')) {
-      return 'Koneksi internet bermasalah. Coba lagi beberapa saat.';
+      return 'Koneksi terganggu. Silakan coba beberapa saat lagi.';
     }
     return AlertUtils.sanitizeErrorMessage(error.message);
   }
@@ -277,11 +278,22 @@ class _RegisterPageState extends State<RegisterPage> {
                 _buildLabel('Konfirmasi Kata Sandi'),
                 TextFormField(
                   controller: _confirmPasswordController,
-                  obscureText: !_isPasswordVisible,
+                  obscureText: !_isConfirmPasswordVisible,
                   scrollPadding: const EdgeInsets.only(bottom: 200),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Ulangi kata sandi Anda',
-                    prefixIcon: Icon(Icons.lock_outline, color: AppColors.textSecondary),
+                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isConfirmPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                        color: AppColors.textSecondary,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                        });
+                      },
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),

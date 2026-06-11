@@ -69,7 +69,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
               );
             } catch (signUpErr) {
               setState(() {
-                _errorMessage = 'Terjadi kendala saat menghubungi server. Silakan coba lagi.';
+                _errorMessage = 'Koneksi terganggu. Silakan coba beberapa saat lagi.';
                 _isLoading = false;
               });
               return;
@@ -87,7 +87,7 @@ class _OwnerLoginPageState extends State<OwnerLoginPage> {
             // Offline fallback - lanjutkan login lokal
           } else {
             setState(() {
-              _errorMessage = 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
+              _errorMessage = 'Koneksi terganggu. Periksa koneksi internet Anda dan coba lagi.';
               _isLoading = false;
             });
             return;

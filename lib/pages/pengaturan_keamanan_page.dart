@@ -287,7 +287,7 @@ class _PengaturanKeamananPageState extends State<PengaturanKeamananPage> {
                                 } else {
                                   AlertUtils.showToast(
                                     context,
-                                    'Gagal terhubung ke server. Silakan coba lagi.',
+                                    'Koneksi terganggu. Silakan coba beberapa saat lagi.',
                                     isSuccess: false,
                                     isUserFacing: true,
                                   );

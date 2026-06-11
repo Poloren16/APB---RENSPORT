@@ -30,6 +30,13 @@ class AkunPage extends StatefulWidget {
 }
 
 class _AkunPageState extends State<AkunPage> {
+  String _formatNumber(int amount) {
+    return amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Fetch real account data
@@ -190,7 +197,7 @@ class _AkunPageState extends State<AkunPage> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      '${account?.points ?? 0} Rensius Points',
+                      '${_formatNumber(account?.points ?? 0)} Rensius Points',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,

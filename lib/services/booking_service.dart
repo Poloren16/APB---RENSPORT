@@ -3,6 +3,7 @@ import 'package:rensius/services/supabase_service.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/pages/booking_history.dart';
 import 'package:rensius/utils/booking_utils.dart';
+import 'package:rensius/data/venue_data.dart';
 
 class BookingService {
   BookingService._();
@@ -171,4 +172,22 @@ class BookingService {
       print('Gagal membatalkan booking: $e');
     }
   }
+
+  /// Menghapus booking secara permanen (misal karena ganti metode pembayaran)
+  static Future<void> deleteBooking(String orderId) async {
+    if (!SupabaseService.isInitialized) return;
+    try {
+      await _client
+          .from('bookings')
+          .delete()
+          .eq('order_id', orderId);
+      await BookingUtils.loadGlobalBookingsOnline();
+    } on PostgrestException catch (e) {
+      print('Postgrest error deleting booking: ${e.message}');
+    } catch (e) {
+      print('Gagal menghapus booking: $e');
+    }
+  }
 }
+
+

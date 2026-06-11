@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rensius/services/supabase_service.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/services/supabase_auth_service.dart';
+import '../models/verification_model.dart';
 
 class GlobalVenueData {
   static const String _storageKey = 'rensius_venues';
@@ -125,6 +126,20 @@ class GlobalVenueData {
     }
   }
 
+  static Future<void> deleteVenuesByOwner(String ownerUsername) async {
+    venues.removeWhere((v) => v['ownerUsername'] == ownerUsername);
+    await save();
+
+    if (SupabaseService.isInitialized) {
+      try {
+        await SupabaseService.client.from('venues').delete().eq('owner_username', ownerUsername);
+      } catch (e) {
+        print('Gagal menghapus data venue owner online: $e');
+      }
+    }
+  }
+
+
   static Future<void> updateVenue(String oldName, Map<String, dynamic> updatedVenue) async {
     final index = venues.indexWhere((v) => v['name'] == oldName);
     if (index != -1) {
@@ -155,13 +170,25 @@ class GlobalVenueData {
           'lng': updatedVenue['lng'],
         };
 
+        List<dynamic> response;
         if (oldName != updatedVenue['name']) {
           // Jika nama venue berubah (PK), hapus yang lama dan masukkan yang baru
           await SupabaseService.client.from('venues').delete().eq('name', oldName);
-          await SupabaseService.client.from('venues').upsert(data);
+          response = await SupabaseService.client.from('venues').upsert(data).select();
         } else {
           // Gunakan upsert agar jika baris tidak ada online (misal sehabis drop table), data otomatis terbuat!
-          await SupabaseService.client.from('venues').upsert(data);
+          response = await SupabaseService.client.from('venues').upsert(data).select();
+        }
+
+        if (response.isEmpty) {
+          print('==================================================================');
+          print('PERINGATAN: Gagal sinkronisasi update venue online untuk "$oldName".');
+          print('Response kosong. Hal ini kemungkinan besar disebabkan oleh kebijakan');
+          print('Row Level Security (RLS) pada tabel "venues" di Supabase yang memblokir');
+          print('operasi update/write untuk pengguna non-owner atau publik.');
+          print('Solusi: Silakan buka SQL Editor di dashboard Supabase Anda dan jalankan');
+          print('perintah SQL RLS Policy yang terdapat di SUPABASE_SETUP.md.');
+          print('==================================================================');
         }
       } catch (e) {
         print('Gagal memperbarui data venue online: $e');
@@ -400,5 +427,24 @@ class GlobalVenueData {
 
   static bool isFavorite(String venueName) {
     return favorites.any((v) => v['name'] == venueName);
+  }
+
+  /// Self-Healing: Sync any approved venues from verification requests
+  /// that are not currently in the venues database.
+  static Future<void> syncApprovedVenuesWithVerifications(List<VerificationRequest> requests) async {
+    for (var req in requests) {
+      if (req.type == 'Venue' && req.status == 'Approved' && req.venueData != null) {
+        final Map<String, dynamic> vData = Map<String, dynamic>.from(req.venueData!);
+        final String? venueName = vData['name']?.toString() ?? req.venueName;
+        if (venueName != null && venueName.isNotEmpty) {
+          final bool exists = venues.any((v) => v['name'] == venueName);
+          if (!exists) {
+            vData['status'] = 'Aktif'; // Pastikan status aktif
+            print('Self-Healing: Menambahkan venue approved yang hilang: $venueName');
+            await addVenue(vData);
+          }
+        }
+      }
+    }
   }
 }

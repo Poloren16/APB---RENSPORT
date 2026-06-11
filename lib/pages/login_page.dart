@@ -56,7 +56,7 @@ class _LoginPageState extends State<LoginPage> {
           );
         } on Object catch (_) {
           setState(() {
-            _errorMessage = 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
+            _errorMessage = 'Koneksi terganggu. Periksa koneksi internet Anda dan coba lagi.';
             _isLoading = false;
           });
           return;

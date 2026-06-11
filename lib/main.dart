@@ -25,6 +25,10 @@ void main() async {
   await GlobalAuthData.init();
   await GlobalVenueData.init();
 
+  // Self-Healing: Sync approved venues that are missing in venues table
+  await GlobalVenueData.syncApprovedVenuesWithVerifications(
+      GlobalVerificationData.requests);
+
   // Self-Healing: Sync missing email/phone from registration data
   await GlobalAuthData.syncWithVerificationData(
       GlobalVerificationData.requests);

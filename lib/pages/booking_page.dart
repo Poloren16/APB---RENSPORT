@@ -72,25 +72,43 @@ class _BookingPageState extends State<BookingPage>
       return;
     }
 
-    // Ambil data dari court pertama sebagai basis slot (semua court berbagi jam operasional)
-    final firstCourt = courts.first as Map;
-    final availability = (firstCourt['availability'] as Map?)?[dayName];
-    final priceDay = (firstCourt['priceDay'] as Map?)?[dayName];
+    // Ambil gabungan (union) dari ketersediaan semua court untuk hari ini
+    final Set<String> allSlots = {};
+    int price = 100000;
 
-    if (availability == null || (availability as List).isEmpty) {
+    for (final c in courts) {
+      final cMap = c as Map;
+      final availability = (cMap['availability'] as Map?)?[dayName];
+      if (availability != null) {
+        if (availability is List) {
+          allSlots.addAll(List<String>.from(availability));
+        } else if (availability is Set) {
+          allSlots.addAll(List<String>.from(availability));
+        } else if (availability is Iterable) {
+          allSlots.addAll(List<String>.from(availability));
+        }
+      }
+
+      final priceDay = (cMap['priceDay'] as Map?)?[dayName];
+      if (priceDay != null) {
+        final parsed = int.tryParse(
+          priceDay.toString().replaceAll('.', '').replaceAll(',', ''),
+        );
+        if (parsed != null && parsed > 0 && price == 100000) {
+          price = parsed;
+        }
+      }
+    }
+
+    if (allSlots.isEmpty) {
       // Hari libur / tidak beroperasi
       return;
     }
 
-    final int price = int.tryParse(
-      priceDay?.toString().replaceAll('.', '').replaceAll(',', '') ?? '100000',
-    ) ?? 100000;
     final int originalPrice = (price * 1.25).toInt();
+    final List<String> sortedSlots = allSlots.toList()..sort();
 
-    final List<String> slots = List<String>.from(availability);
-    slots.sort();
-
-    for (final timeStr in slots) {
+    for (final timeStr in sortedSlots) {
       final parts = timeStr.split(':');
       final hour = int.tryParse(parts[0]) ?? 6;
       final nextHour = (hour + 1).toString().padLeft(2, '0');
@@ -136,6 +154,29 @@ class _BookingPageState extends State<BookingPage>
       }
     }
 
+    // Clamp the loaded quantities to stock
+    final services = _allServices;
+    for (final service in services) {
+      final name = service['name']?.toString() ?? 'Layanan';
+      final id = service['id']?.toString() ?? name;
+      final stockRaw = service['stock'];
+      final stock = stockRaw is int ? stockRaw : int.tryParse(stockRaw?.toString() ?? '') ?? 99;
+      final currentQty = _selectedServices[id] ?? _selectedServices[name] ?? 0;
+      if (currentQty > stock) {
+        if (stock > 0) {
+          if (_selectedServices.containsKey(id)) {
+            _selectedServices[id] = stock;
+          }
+          if (_selectedServices.containsKey(name)) {
+            _selectedServices[name] = stock;
+          }
+        } else {
+          _selectedServices.remove(id);
+          _selectedServices.remove(name);
+        }
+      }
+    }
+
     for (final item in matchingCartItems) {
       final String courtsStr = item['courtName']?.toString() ?? '';
       final String timeSlotStr = item['timeSlot']?.toString() ?? '';
@@ -159,6 +200,43 @@ class _BookingPageState extends State<BookingPage>
           }
         }
       }
+    }
+  }
+
+  Future<void> _refreshVenueDataLive() async {
+    await GlobalVenueData.init();
+    if (mounted) {
+      setState(() {
+        _courts.clear();
+        final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
+        if (venueResults.isNotEmpty) {
+          final venue = venueResults.first;
+          final courts = venue['courts'] as List<dynamic>?;
+          if (courts != null && courts.isNotEmpty) {
+            for (var c in courts) {
+              final map = Map<String, dynamic>.from(c as Map);
+              map['name'] = map['name'] ?? 'Lapangan';
+              map['type'] = map['type'] ?? widget.venueType;
+              map['size'] = map['size'] ?? '-';
+              map['courtCategory'] = map['courtCategory'] ?? '-';
+              map['floorType'] = map['floorType'] ?? '-';
+              _courts.add(map);
+            }
+          }
+        }
+        if (_courts.isEmpty) {
+          _courts.addAll([
+            {
+              'name': '${widget.venueName} Court 1',
+              'type': widget.venueType,
+              'size': '-',
+              'courtCategory': '-',
+              'floorType': '-',
+            },
+          ]);
+        }
+        _rebuildSlotsForDate(_selectedDate);
+      });
     }
   }
 
@@ -199,6 +277,8 @@ class _BookingPageState extends State<BookingPage>
 
     // Build initial time slots
     _rebuildSlotsForDate(_selectedDate);
+
+    _refreshVenueDataLive();
 
     _tabController = TabController(length: _tabs.length, vsync: this);
     _tabController.addListener(() {
@@ -892,6 +972,10 @@ class _BookingPageState extends State<BookingPage>
                     // Tombol Keranjang (Samping Kiri)
                     InkWell(
                       onTap: () {
+                        if (_selectedSlots.isEmpty) {
+                          AlertUtils.showToast(context, 'Silakan pilih jadwal booking lapangan terlebih dahulu.');
+                          return;
+                        }
                         final dateStr = BookingUtils.formatDate(_selectedDate);
                         final selectedTimes = _selectedSlots.map((key) {
                           final parts = key.split('_');
@@ -946,7 +1030,13 @@ class _BookingPageState extends State<BookingPage>
                     const SizedBox(width: 12),
                     // Tombol Pesan Sekarang (Samping Kanan)
                     ElevatedButton(
-                      onPressed: () => _showBookingConfirmation(context),
+                      onPressed: () {
+                        if (_selectedSlots.isEmpty) {
+                          AlertUtils.showToast(context, 'Silakan pilih jadwal booking lapangan terlebih dahulu.');
+                          return;
+                        }
+                        _showBookingConfirmation(context);
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         minimumSize: const Size(140, 50),
@@ -1138,7 +1228,26 @@ class _BookingPageState extends State<BookingPage>
         : int.tryParse(priceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
     final unit = service['unit']?.toString() ?? 'unit';
     final stockRaw = service['stock'];
-    final stock = stockRaw is int ? stockRaw : int.tryParse(stockRaw?.toString() ?? '') ?? 99;
+    final baseStock = stockRaw is int ? stockRaw : int.tryParse(stockRaw?.toString() ?? '') ?? 99;
+
+    // Hitung stok tersedia secara dinamis berdasarkan slot tanggal dan jam yang sedang dipilih
+    final selectedTimes = <String>[];
+    for (final key in _selectedSlots) {
+      final parts = key.split('_');
+      final slotIndex = int.tryParse(parts[0]) ?? 0;
+      if (slotIndex < _timeSlots.length) {
+        selectedTimes.add(_timeSlots[slotIndex]['time']?.toString().split(' - ')[0] ?? '');
+      }
+    }
+    final timeRangeStr = selectedTimes.join(', ');
+    final dateStr = BookingUtils.formatDate(_selectedDate);
+    final stock = BookingUtils.getAvailableServiceStock(
+      venueName: widget.venueName,
+      serviceName: name,
+      baseStock: baseStock,
+      dateStr: dateStr,
+      timeRange: timeRangeStr,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1171,8 +1280,8 @@ class _BookingPageState extends State<BookingPage>
               ),
               Text('$currentQty', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               IconButton(
-                onPressed: stock > 0 ? () => setState(() => _selectedServices[id] = currentQty + 1) : null,
-                icon: Icon(Icons.add_circle_outline, color: stock > 0 ? AppColors.primary : Colors.grey),
+                onPressed: stock > 0 && currentQty < stock ? () => setState(() => _selectedServices[id] = currentQty + 1) : null,
+                icon: Icon(Icons.add_circle_outline, color: stock > 0 && currentQty < stock ? AppColors.primary : Colors.grey),
                 iconSize: 22,
               ),
             ],

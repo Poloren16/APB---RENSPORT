@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/verification_model.dart';
 import 'package:rensius/services/supabase_service.dart';
 import 'package:rensius/services/supabase_auth_service.dart';
+import 'package:rensius/data/venue_data.dart';
+
 
 class UserAccount {
   final String username;
@@ -314,6 +316,9 @@ class GlobalAuthData {
   static Future<void> deleteAccount(String username) async {
     accounts.removeWhere((a) => a.username == username);
     await save();
+
+    // Hapus seluruh venue yang dimiliki oleh user tersebut
+    await GlobalVenueData.deleteVenuesByOwner(username);
 
     // Hapus online dari Supabase
     if (SupabaseService.isInitialized) {

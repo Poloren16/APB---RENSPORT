@@ -78,6 +78,17 @@ class CourtSlotsCard extends StatelessWidget {
           children: courts.asMap().entries.map((ce) {
             final courtIdx = ce.key;
             final court = ce.value;
+            final dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+            final dayName = dayNames[selectedDate.weekday - 1];
+            final availability = court['availability'] as Map? ?? {};
+            final rawSlots = availability[dayName];
+            final List<String> courtSlots = rawSlots is List
+                ? List<String>.from(rawSlots)
+                : rawSlots is Set
+                    ? List<String>.from(rawSlots)
+                    : rawSlots is Iterable
+                        ? List<String>.from(rawSlots)
+                        : [];
             return Expanded(
               child: Container(
                 margin: EdgeInsets.only(
@@ -156,86 +167,116 @@ class CourtSlotsCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                    ),
-                    // Time slots inside the card
-                    ...timeSlots.asMap().entries.map((entry) {
-                      final slotIdx = entry.key;
-                      final slot = entry.value;
-                      final slotKey = '${slotIdx}_$courtIdx';
-                      final isSelected = selectedSlots.contains(slotKey);
-                      
-                      // Check global availability
-                      final isAlreadyBooked = BookingUtils.isSlotBooked(
-                        venueName: venueName,
-                        courtName: court['name'],
-                        dateStr: dateStr,
-                        timeSlot: slot['time'],
-                      );
-                      
-                      final isBooked = (slot['booked'] as bool) || isAlreadyBooked;
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                        child: GestureDetector(
-                      onTap: isBooked ? null : () => onSlotSelected(slotKey),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isBooked
-                              ? Colors.grey.shade50
-                              : isSelected
-                                  ? AppColors.primary
-                                  : Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isSelected ? AppColors.primary : Colors.grey.shade200,
-                            width: 1,
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: AppColors.primary.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
-                                  )
-                                ]
-                              : [],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              slot['time'],
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isBooked
-                                      ? Colors.grey.shade400
-                                      : isSelected
-                                          ? Colors.white
-                                          : AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            if (!isBooked) ...[
+                    ),                    // Time slots inside the card
+                    if (courtSlots.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 16),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.event_busy_outlined, color: Colors.grey[400], size: 28),
+                              const SizedBox(height: 8),
                               Text(
-                                formatCurrency(_getSlotPrice(court, selectedDate, slot['time'])),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: isSelected
-                                      ? Colors.white.withOpacity(0.9)
-                                      : AppColors.textPrimary.withOpacity(0.7),
-                                ),
+                                'Tidak ada jadwal',
+                                style: TextStyle(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w500),
+                                textAlign: TextAlign.center,
                               ),
                             ],
-                          ],
+                          ),
                         ),
-                      ),
+                      )
+                    else
+                      ...timeSlots.asMap().entries.map((entry) {
+                        final slotIdx = entry.key;
+                        final slot = entry.value;
+                        final slotKey = '${slotIdx}_$courtIdx';
+                        final isSelected = selectedSlots.contains(slotKey);
+                        
+                        final startHourStr = slot['time'].split(' - ')[0]; // e.g. "16:00"
+                        final bool isAvailableForCourt = courtSlots.contains(startHourStr);
+
+                        // Check global availability
+                        final isAlreadyBooked = BookingUtils.isSlotBooked(
+                          venueName: venueName,
+                          courtName: court['name'],
+                          dateStr: dateStr,
+                          timeSlot: slot['time'],
+                        );
+                        
+                        final isBooked = (slot['booked'] as bool) || isAlreadyBooked || !isAvailableForCourt;
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                          child: GestureDetector(
+                        onTap: isBooked ? null : () => onSlotSelected(slotKey),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isBooked
+                                ? Colors.grey.shade50
+                                : isSelected
+                                    ? AppColors.primary
+                                    : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected ? AppColors.primary : Colors.grey.shade200,
+                              width: 1,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: AppColors.primary.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    )
+                                  ]
+                                : [],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                slot['time'],
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: isBooked
+                                        ? Colors.grey.shade400
+                                        : isSelected
+                                            ? Colors.white
+                                            : AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              if (!isBooked) ...[
+                                Text(
+                                  formatCurrency(_getSlotPrice(court, selectedDate, slot['time'])),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isSelected
+                                        ? Colors.white.withOpacity(0.9)
+                                        : AppColors.textPrimary.withOpacity(0.7),
+                                  ),
+                                ),
+                              ] else if (!isAvailableForCourt) ...[
+                                Text(
+                                  'Tutup',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade400,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                      );
-                    }),
+                          ),
+                        );
+                      }),
                   ],
                 ),
               ),

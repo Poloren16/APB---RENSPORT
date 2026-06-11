@@ -81,7 +81,8 @@ CREATE TABLE public.users (
   date_of_birth text,
   points integer NOT NULL DEFAULT 0,
   cart jsonb DEFAULT '[]'::jsonb NOT NULL,
-  favorites jsonb DEFAULT '[]'::jsonb NOT NULL
+  favorites jsonb DEFAULT '[]'::jsonb NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 
 -- =======================================================
@@ -347,6 +348,116 @@ WITH CHECK (
     AND (SELECT role FROM public.users WHERE id = auth.uid()) IN ('Admin', 'Owner')
   )
 );
+```
+
+4. Klik tombol **"Run"** dan tunggu hingga muncul status hijau sukses.
+
+---
+
+## 5b. Menerapkan RLS Policies untuk Tabel Utama Lainnya
+Apabila Anda membuat tabel melalui dashboard UI Supabase, Row Level Security (RLS) akan aktif secara otomatis. Agar aplikasi dapat melakukan registrasi, verifikasi owner, pengunggahan venue, pemesanan, dan ulasan tanpa pemblokiran izin (*permission errors*), Anda harus menambahkan kebijakan (policies) berikut:
+
+1. Buka kembali menu **SQL Editor** di sidebar kiri.
+2. Klik **"+ New query"** untuk membuat editor baru.
+3. Salin dan tempel skrip SQL policy berikut secara lengkap:
+
+```sql
+-- =======================================================
+-- 1. POLICIES UNTUK TABEL 'users'
+-- =======================================================
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read for users" ON public.users;
+CREATE POLICY "Allow public read for users" 
+ON public.users FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Allow insert for self or admin" ON public.users;
+CREATE POLICY "Allow insert for self or admin" 
+ON public.users FOR INSERT TO public 
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow update for self or admin" ON public.users;
+CREATE POLICY "Allow update for self or admin" 
+ON public.users FOR UPDATE TO public 
+USING (
+  auth.uid() = id 
+  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'Admin'
+)
+WITH CHECK (
+  auth.uid() = id 
+  OR (SELECT role FROM public.users WHERE id = auth.uid()) = 'Admin'
+);
+
+-- =======================================================
+-- 2. POLICIES UNTUK TABEL 'verifications'
+-- =======================================================
+ALTER TABLE public.verifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read for verifications" ON public.verifications;
+CREATE POLICY "Allow public read for verifications" 
+ON public.verifications FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Allow public insert for verifications" ON public.verifications;
+CREATE POLICY "Allow public insert for verifications" 
+ON public.verifications FOR INSERT TO public WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow update/delete for verifications" ON public.verifications;
+CREATE POLICY "Allow update/delete for verifications" 
+ON public.verifications FOR ALL TO public 
+USING (true) WITH CHECK (true);
+
+-- =======================================================
+-- 3. POLICIES UNTUK TABEL 'venues'
+-- =======================================================
+ALTER TABLE public.venues ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read for venues" ON public.venues;
+CREATE POLICY "Allow public read for venues" 
+ON public.venues FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Allow insert for owner or admin" ON public.venues;
+CREATE POLICY "Allow insert for owner or admin" 
+ON public.venues FOR INSERT TO public 
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow update/delete for owner or admin" ON public.venues;
+CREATE POLICY "Allow update/delete for owner or admin" 
+ON public.venues FOR ALL TO public 
+USING (true)
+WITH CHECK (true);
+
+-- =======================================================
+-- 4. POLICIES UNTUK TABEL 'bookings'
+-- =======================================================
+ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read for bookings" ON public.bookings;
+CREATE POLICY "Allow public read for bookings" 
+ON public.bookings FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Allow insert for bookings" ON public.bookings;
+CREATE POLICY "Allow insert for bookings" 
+ON public.bookings FOR INSERT TO public WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow update for bookings" ON public.bookings;
+CREATE POLICY "Allow update for bookings" 
+ON public.bookings FOR UPDATE TO public 
+USING (true) WITH CHECK (true);
+
+-- =======================================================
+-- 5. POLICIES UNTUK TABEL 'reviews'
+-- =======================================================
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read for reviews" ON public.reviews;
+CREATE POLICY "Allow public read for reviews" 
+ON public.reviews FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Allow all for authenticated users on reviews" ON public.reviews;
+CREATE POLICY "Allow all for authenticated users on reviews" 
+ON public.reviews FOR ALL TO public 
+USING (username = (SELECT username FROM public.users WHERE id = auth.uid()))
+WITH CHECK (username = (SELECT username FROM public.users WHERE id = auth.uid()));
 ```
 
 4. Klik tombol **"Run"** dan tunggu hingga muncul status hijau sukses.

@@ -107,20 +107,39 @@ class _VenuePageState extends State<VenuePage> {
     } else if (_selectedCategory == 'Semua') {
       displayedVenues = GlobalVenueData.venues;
     } else {
-      displayedVenues = GlobalVenueData.venues
-          .where((v) => v['type'] == _selectedCategory)
-          .toList();
+      displayedVenues = GlobalVenueData.venues.where((v) {
+        final mainType = (v['type'] ?? '').toString();
+        if (mainType == _selectedCategory) return true;
+        
+        final courts = v['courts'] as List<dynamic>? ?? [];
+        return courts.any((court) {
+          final courtMap = Map<String, dynamic>.from(court as Map);
+          return courtMap['type']?.toString() == _selectedCategory;
+        });
+      }).toList();
     }
 
     // Apply search filter
     if (_searchController.text.isNotEmpty) {
       final query = _searchController.text.toLowerCase();
       displayedVenues = displayedVenues.where((v) {
-        return (v['name'] ?? '').toLowerCase().contains(query) ||
-               (v['location'] ?? '').toLowerCase().contains(query) ||
-               (v['address'] ?? '').toLowerCase().contains(query);
+        final nameMatch = (v['name'] ?? '').toString().toLowerCase().contains(query);
+        final locationMatch = (v['location'] ?? '').toString().toLowerCase().contains(query);
+        final addressMatch = (v['address'] ?? '').toString().toLowerCase().contains(query);
+        
+        final courts = v['courts'] as List<dynamic>? ?? [];
+        final courtSportMatch = courts.any((court) {
+          final courtMap = Map<String, dynamic>.from(court as Map);
+          final courtType = (courtMap['type'] ?? '').toString().toLowerCase();
+          return courtType.contains(query);
+        });
+
+        final venueTypeMatch = (v['type'] ?? '').toString().toLowerCase().contains(query);
+
+        return nameMatch || locationMatch || addressMatch || courtSportMatch || venueTypeMatch;
       }).toList();
     }
+
 
     final double statusBarHeight = MediaQuery.of(context).padding.top;
 
@@ -166,14 +185,27 @@ class _VenuePageState extends State<VenuePage> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
+                        if (Navigator.canPop(context))
+                          GestureDetector(
+                            onTap: () => Navigator.pop(context),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.stadium_rounded, color: Colors.white, size: 24),
                           ),
-                          child: const Icon(Icons.stadium_rounded, color: Colors.white, size: 24),
-                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -784,7 +816,14 @@ class _VenuePageState extends State<VenuePage> {
                 final dayIdx = _selectedDate.weekday - 1; // 1=Mon..7=Sun
                 final activeDay = dayNames[dayIdx];
                 final availability = court['availability'] as Map? ?? {};
-                final slots = availability[activeDay] as List<dynamic>? ?? [];
+                final rawSlots = availability[activeDay];
+                final List<String> slots = rawSlots is List
+                    ? List<String>.from(rawSlots)
+                    : rawSlots is Set
+                        ? List<String>.from(rawSlots)
+                        : rawSlots is Iterable
+                            ? List<String>.from(rawSlots)
+                            : [];
                 if (slots.isEmpty) {
                   return const Text('Tidak ada jadwal', style: TextStyle(color: Colors.grey, fontSize: 11));
                 }

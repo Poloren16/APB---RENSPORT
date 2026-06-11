@@ -707,36 +707,77 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Future<void> _handleStatusChange(VerificationRequest req, String newStatus, {String? reason}) async {
-    // Show a small processing snackbar or loading state if needed
-    // But for this mock, await the save directly
+    // Jika Menyetujui pendaftaran Owner baru, daftarkan secara online terlebih dahulu
+    if (newStatus == 'Approved' && req.type == 'Owner' && req.username != null) {
+      final newOwnerAcc = UserAccount(
+        username: req.username!,
+        password: CryptoUtils.decrypt(req.password ?? '123456'),
+        role: req.type,
+        applicantName: req.applicantName,
+        email: req.email ?? '',
+        phoneNumber: req.phoneNumber ?? '',
+        profileImagePath: null, // Profile image is initially empty
+        ktpImagePath: req.documentUrl, // Save KTP image path to ktpImagePath
+      );
+
+      // Daftarkan langsung ke Supabase Auth secara online
+      if (SupabaseService.isInitialized) {
+        try {
+          // Tampilkan dialog loading pendaftaran
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: AppColors.primary),
+                      SizedBox(width: 20),
+                      Text('Mendaftarkan akun pemilik...', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await SupabaseAuthService.registerEndUser(account: newOwnerAcc);
+          
+          if (mounted) {
+            Navigator.pop(context); // Tutup dialog loading
+          }
+          print('Sukses mendaftarkan Owner "${req.username}" ke Supabase Auth.');
+        } catch (e) {
+          if (mounted) {
+            Navigator.pop(context); // Tutup dialog loading
+          }
+          print('Gagal mendaftarkan Owner ke Supabase Auth saat disetujui: $e');
+          
+          if (mounted) {
+            AlertUtils.showResultDialog(
+              context,
+              isSuccess: false,
+              title: 'Gagal Menyetujui',
+              message: e.toString(),
+              isUserFacing: false, // Biar disanitasi jadi ramah pengguna oleh AlertUtils
+            );
+          }
+          return; // Batalkan proses persetujuan karena pendaftaran online gagal!
+        }
+      }
+      
+      await GlobalAuthData.registerAccount(newOwnerAcc);
+    }
+
+    // Perbarui status online & lokal di tabel verifications
     await GlobalVerificationData.updateRequestStatus(req.id, newStatus, reason: reason);
 
-    // If Approved, create the actual login account / venue
+    // Jika Approved, lakukan proses verifikasi objek
     if (newStatus == 'Approved') {
-      if (req.type == 'Owner' && req.username != null) {
-        final newOwnerAcc = UserAccount(
-          username: req.username!,
-          password: CryptoUtils.decrypt(req.password ?? '123456'),
-          role: req.type,
-          applicantName: req.applicantName,
-          email: req.email ?? '',
-          phoneNumber: req.phoneNumber ?? '',
-          profileImagePath: null, // Profile image is initially empty
-          ktpImagePath: req.documentUrl, // Save KTP image path to ktpImagePath
-        );
-        
-        await GlobalAuthData.registerAccount(newOwnerAcc);
-
-        // Daftarkan langsung ke Supabase Auth secara online
-        if (SupabaseService.isInitialized) {
-          try {
-            await SupabaseAuthService.registerEndUser(account: newOwnerAcc);
-            print('Sukses mendaftarkan Owner "${req.username}" ke Supabase Auth.');
-          } catch (e) {
-            print('Gagal mendaftarkan Owner ke Supabase Auth saat disetujui: $e');
-          }
-        }
-      } else if (req.type == 'Venue' && req.venueData != null) {
+      if (req.type == 'Venue' && req.venueData != null) {
         // Submit approved venue to global database
         final Map<String, dynamic> newVenue = Map<String, dynamic>.from(req.venueData!);
         newVenue['status'] = 'Aktif'; // Mark approved venue as Active
@@ -779,7 +820,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         );
       }
     } 
-    // If Rejected, make sure no account exists (cleanup)
+    // Jika Ditolak, pastikan akun dihapus secara lokal
     else if (newStatus == 'Rejected') {
       if (req.type == 'Owner' && req.username != null) {
         await GlobalAuthData.deleteAccount(req.username!);

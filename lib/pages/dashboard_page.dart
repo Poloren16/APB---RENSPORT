@@ -207,13 +207,41 @@ class _DashboardPageState extends State<DashboardPage> {
     
     final List<Map<String, dynamic>> filteredVenues = allVenues.where((v) {
       final bool isFav = _selectedCategory == 'Favorit' || _selectedCategory == 'Favorite';
-      final bool matchesCategory = _selectedCategory == 'Semua' || 
-                                  (isFav ? GlobalVenueData.isFavorite(v['name'] ?? '') : v['type'] == _selectedCategory);
-      final bool matchesSearch = (v['name'] ?? '').toLowerCase().contains(query) || 
-                                (v['location'] ?? '').toLowerCase().contains(query) ||
-                                (v['type'] ?? '').toLowerCase().contains(query);
+      
+      bool matchesCategory = false;
+      if (_selectedCategory == 'Semua') {
+        matchesCategory = true;
+      } else if (isFav) {
+        matchesCategory = GlobalVenueData.isFavorite(v['name'] ?? '');
+      } else {
+        final mainType = (v['type'] ?? '').toString();
+        if (mainType == _selectedCategory) {
+          matchesCategory = true;
+        } else {
+          final courts = v['courts'] as List<dynamic>? ?? [];
+          matchesCategory = courts.any((court) {
+            final courtMap = Map<String, dynamic>.from(court as Map);
+            return courtMap['type']?.toString() == _selectedCategory;
+          });
+        }
+      }
+
+      final courts = v['courts'] as List<dynamic>? ?? [];
+      final courtSportMatch = courts.any((court) {
+        final courtMap = Map<String, dynamic>.from(court as Map);
+        final courtType = (courtMap['type'] ?? '').toString().toLowerCase();
+        return courtType.contains(query);
+      });
+
+      final bool matchesSearch = (v['name'] ?? '').toString().toLowerCase().contains(query) || 
+                                (v['location'] ?? '').toString().toLowerCase().contains(query) ||
+                                (v['address'] ?? '').toString().toLowerCase().contains(query) ||
+                                (v['type'] ?? '').toString().toLowerCase().contains(query) ||
+                                courtSportMatch;
+
       return matchesCategory && matchesSearch;
     }).toList();
+
 
     // Show top 5 or all if filtered
     final List<Map<String, dynamic>> displayVenues = query.isEmpty && _selectedCategory == 'Semua' 
@@ -508,7 +536,15 @@ class _DashboardPageState extends State<DashboardPage> {
               _buildVenueHeader(venue),
               if (venue['courts'] != null && (venue['courts'] as List).isNotEmpty) ...[
                 const Divider(height: 1),
-                ... (venue['courts'] as List).take(1).map((court) => _buildCourtItem(venue, court)),
+                ... (venue['courts'] as List).map((court) => Column(
+                  children: [
+                    _buildCourtItem(venue, court),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 15),
+                      child: Divider(height: 1),
+                    ),
+                  ],
+                )).toList(),
               ],
               const SizedBox(height: 10),
             ],

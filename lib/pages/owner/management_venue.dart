@@ -184,7 +184,7 @@ class _ManagementVenuePageState extends State<ManagementVenuePage> {
 
   Widget _buildVenueCard(int listIndex, int globalIndex) {
     final venue = _venues[listIndex];
-    final isActive = venue['status'] == 'Active';
+    final isActive = venue['status'] == 'Aktif' || venue['status'] == 'Active';
 
     return Container(
       decoration: BoxDecoration(

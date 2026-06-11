@@ -271,6 +271,27 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       return;
     }
 
+    // Tampilkan dialog loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: AppColors.primary),
+                SizedBox(height: 16),
+                Text('Mengirim data pendaftaran...', style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
     // 1. Create real request and add to global data
     final newRequest = VerificationRequest(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -286,23 +307,41 @@ class _OwnerRegisterPageState extends State<OwnerRegisterPage> {
       submittedAt: DateTime.now(),
     );
 
-    await GlobalVerificationData.addRequest(newRequest);
+    try {
+      await GlobalVerificationData.addRequest(newRequest);
 
-    AlertUtils.showResultDialog(
-      context,
-      isSuccess: true,
-      title: 'Pendaftaran Berhasil',
-      message: 'Data Anda telah dikirim ke Admin. Mohon tunggu verifikasi dalam waktu 24 jam.',
-    );
-    
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
+      if (mounted) {
+        Navigator.pop(context); // Tutup dialog loading
+      }
+
+      AlertUtils.showResultDialog(
         context,
-        MaterialPageRoute(builder: (context) => const OwnerLoginPage()),
-        (route) => false,
+        isSuccess: true,
+        title: 'Pendaftaran Berhasil',
+        message: 'Data Anda telah dikirim ke Admin. Mohon tunggu verifikasi dalam waktu 24 jam.',
       );
-    });
+      
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const OwnerLoginPage()),
+          (route) => false,
+        );
+      });
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Tutup dialog loading
+      }
+      
+      AlertUtils.showResultDialog(
+        context,
+        isSuccess: false,
+        title: 'Pendaftaran Gagal',
+        message: e.toString(),
+        isUserFacing: false, // Biar disanitasi jadi ramah pengguna oleh AlertUtils
+      );
+    }
   }
 
   @override

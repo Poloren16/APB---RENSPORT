@@ -11,6 +11,9 @@ import 'package:rensius/services/review_service.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/utils/booking_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/midtrans_service.dart';
+import '../data/notification_data.dart';
+import '../services/notification_service.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   final String username;
@@ -30,7 +33,7 @@ class BookingHistoryPage extends StatefulWidget {
 }
 
 class _BookingHistoryPageState extends State<BookingHistoryPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   int _selectedTab = 0;
   final TextEditingController _searchController = TextEditingController();
@@ -42,6 +45,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -66,6 +70,109 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     final role = currentUser?.role ?? 'End User';
     
     await BookingService.loadBookings(widget.username, role);
+    
+    // Check pending bookings status in Midtrans and update if paid
+    if (BookingHistoryPage.mockHistory.isNotEmpty) {
+      final List<Map<String, dynamic>> pendingBookings = List<Map<String, dynamic>>.from(
+        BookingHistoryPage.mockHistory.where((b) => b['status'] == 'Menunggu Pembayaran')
+      );
+      
+      for (final pb in pendingBookings) {
+        final orderId = pb['orderId']?.toString() ?? '';
+        final vName = pb['venueName']?.toString() ?? '';
+        if (orderId.isNotEmpty) {
+          try {
+            // Strip suffix like "-1", "-2" if present for Midtrans transaction query
+            String midtransOrderId = orderId;
+            if (midtransOrderId.contains('-')) {
+              midtransOrderId = midtransOrderId.split('-').first;
+            }
+            final status = await MidtransService.checkTransactionStatus(midtransOrderId);
+            if (status == 'settlement' || status == 'capture') {
+              await BookingService.markBookingPaid(orderId, 'Menunggu Jadwal');
+              
+              // Reserve slots locally to immediately reflect in UI
+              final cName = pb['courtName']?.toString() ?? '';
+              final dateStr = pb['date']?.toString() ?? '';
+              final timeStr = pb['time']?.toString() ?? '';
+              if (vName.isNotEmpty && cName.isNotEmpty && dateStr.isNotEmpty && timeStr.isNotEmpty) {
+                final times = timeStr.split(',').map((t) => t.trim());
+                for (final t in times) {
+                  if (t.isNotEmpty) {
+                    BookingUtils.reserveSlot(
+                      venueName: vName,
+                      courtName: cName,
+                      dateStr: dateStr,
+                      timeSlot: t,
+                    );
+                  }
+                }
+              }
+
+              // Award points if not already awarded (1% cashback)
+              final bookingPrice = pb['price'] as int? ?? 0;
+              final pointsEarned = (bookingPrice / 100).floor();
+              if (pointsEarned > 0) {
+                final account = GlobalAuthData.getAccount(widget.username);
+                if (account != null) {
+                  await GlobalAuthData.updateAccount(
+                    widget.username,
+                    newPoints: account.points + pointsEarned,
+                  );
+                }
+              }
+
+              // Save notification to DB and in-memory cache
+              await GlobalNotificationData.addNotification(
+                AppNotification(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  username: widget.username,
+                  title: 'Pembayaran Sukses! 🎉',
+                  message: 'Pembayaran Anda sebesar IDR ${bookingPrice.toString().replaceAllMapped(RegExp(r"(\d)(?=(\d{3})+$)"), (m) => "${m[1]}.")} untuk booking di $vName sukses terverifikasi.',
+                  timestamp: DateTime.now(),
+                  icon: Icons.check_circle_outline,
+                  color: AppColors.accent,
+                )
+              );
+
+              // Trigger local push notification
+              LocalNotificationService.showNotification(
+                id: orderId.hashCode,
+                title: 'Pembayaran Sukses! 🎉',
+                body: 'Pembayaran Anda untuk booking di $vName sukses terverifikasi.',
+              );
+            } else if (status == 'expire' || status == 'cancel' || status == 'deny') {
+              await BookingService.cancelPendingBooking(orderId);
+
+              // Save notification to DB and in-memory cache
+              await GlobalNotificationData.addNotification(
+                AppNotification(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  username: widget.username,
+                  title: 'Pembayaran Gagal/Kadaluwarsa ❌',
+                  message: 'Pembayaran untuk booking di $vName gagal dilakukan atau telah kadaluwarsa. Silakan lakukan pembayaran.',
+                  timestamp: DateTime.now(),
+                  icon: Icons.cancel_outlined,
+                  color: Colors.red,
+                )
+              );
+
+              // Trigger local push notification
+              LocalNotificationService.showNotification(
+                id: orderId.hashCode,
+                title: 'Pembayaran Gagal/Kadaluwarsa ❌',
+                body: 'Pembayaran untuk booking di $vName gagal. Silakan lakukan pembayaran.',
+              );
+            }
+          } catch (e) {
+            print('Gagal cek status transaksi Midtrans $orderId: $e');
+          }
+        }
+      }
+      // Re-load bookings to get updated statuses
+      await BookingService.loadBookings(widget.username, role);
+    }
+
     await BookingUtils.loadGlobalBookingsOnline();
     await ReviewService.loadReviews();
     
@@ -76,10 +183,18 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _countdownRefreshTimer?.cancel();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshBookingsOnline();
+    }
   }
 
   @override
@@ -199,8 +314,10 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  _buildIconButton(Icons.filter_list_rounded, () => _showFilterOptions()),
+                  if (_selectedTab == 0) ...[
+                    const SizedBox(width: 10),
+                    _buildIconButton(Icons.filter_list_rounded, () => _showFilterOptions()),
+                  ],
                 ],
               ),
             ),
@@ -257,7 +374,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
             children: [
               const Text('Filter Berdasarkan Status', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              ...['Semua', 'Pembayaran Berhasil', 'Menunggu Pembayaran', 'Selesai'].map((status) => ListTile(
+              ...['Semua', 'Pembayaran Berhasil', 'Menunggu Pembayaran'].map((status) => ListTile(
                 title: Text(status),
                 trailing: _statusFilter == status ? const Icon(Icons.check, color: AppColors.primary) : null,
                 onTap: () {
@@ -279,45 +396,58 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                             (item['courtName'] ?? '').toLowerCase().contains(query);
       final matchesStatus = _statusFilter == 'Semua' || 
                             (_statusFilter == 'Pembayaran Berhasil' && (item['status'] == 'Menunggu Jadwal' || item['status'] == 'Pembayaran Berhasil')) ||
-                            (_statusFilter == 'Menunggu Pembayaran' && item['status'] == 'Menunggu Pembayaran') ||
-                            (_statusFilter == 'Selesai' && (item['status'] == 'Completed' || item['status'] == 'Selesai'));
+                            (_statusFilter == 'Menunggu Pembayaran' && item['status'] == 'Menunggu Pembayaran');
       return matchesSearch && matchesStatus;
     }).toList();
 
+    Widget body;
     if (filtered.isEmpty) {
-      return EmptyStateWidget(
-        message: _searchController.text.isNotEmpty || _statusFilter != 'Semua' 
-            ? 'Tidak ada pesanan yang sesuai filter.'
-            : 'Anda belum memiliki pesanan aktif.',
-        onActionPressed: () {
-           if (_searchController.text.isNotEmpty || _statusFilter != 'Semua') {
-             setState(() {
-               _searchController.clear();
-               _statusFilter = 'Semua';
-             });
-           } else {
-             if (widget.onNavigateToVenue != null) {
-               widget.onNavigateToVenue!();
-             } else {
-               Navigator.push(
-                 context,
-                 MaterialPageRoute(
-                   builder: (context) => VenuePage(username: widget.username),
-                 ),
-               );
-             }
-           }
+      body = SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          alignment: Alignment.center,
+          child: EmptyStateWidget(
+            message: _searchController.text.isNotEmpty || _statusFilter != 'Semua' 
+                ? 'Tidak ada pesanan yang sesuai filter.'
+                : 'Anda belum memiliki pesanan aktif.',
+            onActionPressed: () {
+               if (_searchController.text.isNotEmpty || _statusFilter != 'Semua') {
+                 setState(() {
+                   _searchController.clear();
+                   _statusFilter = 'Semua';
+                 });
+               } else {
+                 if (widget.onNavigateToVenue != null) {
+                   widget.onNavigateToVenue!();
+                 } else {
+                   Navigator.push(
+                     context,
+                     MaterialPageRoute(
+                       builder: (context) => VenuePage(username: widget.username),
+                     ),
+                   );
+                 }
+               }
+            },
+            actionLabel: _searchController.text.isNotEmpty || _statusFilter != 'Semua' ? 'Reset Filter' : 'Buat Pesanan',
+          ),
+        ),
+      );
+    } else {
+      body = ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: filtered.length,
+        itemBuilder: (context, index) {
+          return _buildHistoryCard(filtered[index], index: index);
         },
-        actionLabel: _searchController.text.isNotEmpty || _statusFilter != 'Semua' ? 'Reset Filter' : 'Buat Pesanan',
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) {
-        return _buildHistoryCard(filtered[index], index: index);
-      },
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _refreshBookingsOnline,
+      child: body,
     );
   }
 
@@ -326,36 +456,45 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     final filtered = BookingHistoryPage.mockPastHistory.where((item) {
       final matchesSearch = (item['venueName'] ?? '').toLowerCase().contains(query) || 
                             (item['courtName'] ?? '').toLowerCase().contains(query);
-      final matchesStatus = _statusFilter == 'Semua' || 
-                            (_statusFilter == 'Pembayaran Berhasil' && (item['status'] == 'Menunggu Jadwal' || item['status'] == 'Pembayaran Berhasil')) ||
-                            (_statusFilter == 'Menunggu Pembayaran' && item['status'] == 'Menunggu Pembayaran') ||
-                            (_statusFilter == 'Selesai' && (item['status'] == 'Completed' || item['status'] == 'Selesai'));
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     }).toList();
 
+    Widget body;
     if (filtered.isEmpty) {
-      return EmptyStateWidget(
-        message: _searchController.text.isNotEmpty || _statusFilter != 'Semua'
-            ? 'Tidak ada riwayat yang sesuai filter.'
-            : 'Anda belum memiliki riwayat transaksi.',
-        onActionPressed: () {
-           if (_searchController.text.isNotEmpty || _statusFilter != 'Semua') {
-             setState(() {
-               _searchController.clear();
-               _statusFilter = 'Semua';
-             });
-           }
+      body = SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          alignment: Alignment.center,
+          child: EmptyStateWidget(
+            message: _searchController.text.isNotEmpty
+                ? 'Tidak ada riwayat yang sesuai pencarian.'
+                : 'Anda belum memiliki riwayat transaksi.',
+            onActionPressed: () {
+               if (_searchController.text.isNotEmpty) {
+                 setState(() {
+                   _searchController.clear();
+                 });
+               }
+            },
+            actionLabel: _searchController.text.isNotEmpty ? 'Reset Pencarian' : null,
+          ),
+        ),
+      );
+    } else {
+      body = ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: filtered.length,
+        itemBuilder: (context, index) {
+          return _buildHistoryCard(filtered[index], isPast: true);
         },
-        actionLabel: _searchController.text.isNotEmpty || _statusFilter != 'Semua' ? 'Reset Filter' : null,
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) {
-        return _buildHistoryCard(filtered[index], isPast: true);
-      },
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _refreshBookingsOnline,
+      child: body,
     );
   }
 
@@ -507,7 +646,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                       ),
                     ),
                     Text(
-                      'IDR ${(item['price'] ?? 0).toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]},')}',
+                      'IDR ${(item['price'] ?? 0).toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

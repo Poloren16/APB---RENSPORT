@@ -45,6 +45,67 @@ class BookingUtils {
     }
   }
 
+  /// Calculates available stock dynamically for a service based on active bookings for the same date and overlapping time slots.
+  static int getAvailableServiceStock({
+    required String venueName,
+    required String serviceName,
+    required int baseStock,
+    required String dateStr,
+    required String timeRange,
+  }) {
+    final all = [...globalBookings, ...BookingHistoryPage.mockHistory];
+    int rentedCount = 0;
+
+    // Normalisasikan slot waktu sewa ke format jam awal (misal "18:00, 22:00" -> ["18:00", "22:00"])
+    final List<String> selectedTimes = timeRange
+        .split(',')
+        .map((t) => t.trim().split(' - ')[0].trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+
+    for (final b in all) {
+      final bVenue = (b['venueName'] ?? '').toString();
+      final bDate = (b['date'] ?? '').toString();
+      final bTime = (b['time'] ?? '').toString();
+      final bStatus = (b['status'] ?? '').toString().toLowerCase();
+
+      // Abaikan booking yang dibatalkan, kadaluwarsa, atau di-refund
+      if (bStatus == 'dibatalkan' || bStatus == 'expired' || bStatus == 'refunded') continue;
+
+      if (bVenue == venueName && bDate == dateStr) {
+        // Cek jika ada bentrokan jam sewa
+        bool hasOverlap = false;
+        for (final t in selectedTimes) {
+          if (bTime.contains(t)) {
+            hasOverlap = true;
+            break;
+          }
+        }
+
+        if (hasOverlap) {
+          // Parse string layanan (misal "bola (x3), raket (x5)")
+          final servicesStr = (b['services'] ?? '').toString();
+          if (servicesStr.isNotEmpty) {
+            final parts = servicesStr.split(',').map((p) => p.trim());
+            for (final p in parts) {
+              final match = RegExp(r'^(.+)\s+\(x(\d+)\)$').firstMatch(p);
+              if (match != null) {
+                final name = match.group(1)?.trim() ?? '';
+                final qty = int.tryParse(match.group(2) ?? '0') ?? 0;
+                if (name == serviceName && qty > 0) {
+                  rentedCount += qty;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    final available = baseStock - rentedCount;
+    return available < 0 ? 0 : available;
+  }
+
   /// Standardizes date to "Hari, Tanggal Bulan Tahun" (e.g., "Senin, 13 April 2026")
   static String formatDate(DateTime date) {
     String day = dayNames[date.weekday - 1];
@@ -146,13 +207,13 @@ class BookingUtils {
       final startDay = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
       periodFiltered = filtered.where((b) {
         final dateStr = b['date']?.toString() ?? '';
-        final dt = _parseDateStr(dateStr);
+        final dt = parseDateStr(dateStr);
         return dt != null && !dt.isBefore(startDay) && dt.isBefore(startDay.add(const Duration(days: 7)));
       }).toList();
     } else if (period == 'Bulan Ini') {
       periodFiltered = filtered.where((b) {
         final dateStr = b['date']?.toString() ?? '';
-        final dt = _parseDateStr(dateStr);
+        final dt = parseDateStr(dateStr);
         return dt != null && dt.year == now.year && dt.month == now.month;
       }).toList();
     } else {
@@ -169,7 +230,7 @@ class BookingUtils {
   }
 
   /// Parse date string "Senin, 13 April 2026" atau "13 April 2026" ke DateTime
-  static DateTime? _parseDateStr(String dateStr) {
+  static DateTime? parseDateStr(String dateStr) {
     try {
       final clean = dateStr.contains(',') ? dateStr.split(',')[1].trim() : dateStr.trim();
       final parts = clean.split(' ');
@@ -209,7 +270,7 @@ class BookingUtils {
           status == 'menunggu jadwal' || status == 'selesai' || status == 'completed';
       if (!isPaid) continue;
 
-      final dt = _parseDateStr(b['date']?.toString() ?? '');
+      final dt = parseDateStr(b['date']?.toString() ?? '');
       if (dt == null) continue;
       final diff = now.difference(dt).inDays;
       if (diff < 0 || diff >= 7) continue; // Hanya 7 hari terakhir

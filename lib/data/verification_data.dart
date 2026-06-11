@@ -98,6 +98,7 @@ class GlobalVerificationData {
         }
       } catch (e) {
         print('Gagal mengunggah dokumen KTP ke Supabase Storage: $e');
+        rethrow;
       }
     }
 
@@ -134,6 +135,7 @@ class GlobalVerificationData {
         await SupabaseService.client.from('verifications').insert(data);
       } catch (e) {
         print('Gagal mengirim verifikasi online: $e');
+        rethrow;
       }
     }
   }

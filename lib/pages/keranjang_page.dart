@@ -21,6 +21,15 @@ class KeranjangPage extends StatefulWidget {
 
 class _KeranjangPageState extends State<KeranjangPage> {
   final Set<int> _selectedItems = {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Muat data venue terbaru dari Supabase agar stok layanan di keranjang akurat
+    GlobalVenueData.init().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
   
   // Gunakan getter dengan pengaman list kosong jika null
   List<Map<String, dynamic>> get _cartItems => GlobalVenueData.cart;
@@ -340,9 +349,12 @@ class _KeranjangPageState extends State<KeranjangPage> {
                                             children: [
                                               const Icon(Icons.add_circle_outline, size: 10, color: Colors.grey),
                                               const SizedBox(width: 4),
-                                              Text(
-                                                '$sName (x${entry.value})', 
-                                                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)
+                                              Expanded(
+                                                child: Text(
+                                                  '$sName (x${entry.value})', 
+                                                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -359,9 +371,13 @@ class _KeranjangPageState extends State<KeranjangPage> {
                                       'Total:', 
                                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)
                                     ),
-                                    Text(
-                                      _formatCurrency(totalPrice),
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.orange),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        _formatCurrency(totalPrice),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.orange),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ],
                                 ),

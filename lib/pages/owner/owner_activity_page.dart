@@ -36,12 +36,40 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
 
   int _calculateOwnerRevenue(String period) {
     final all = _getOwnerTransactions();
-    final total = all.fold(0, (sum, b) => sum + (int.tryParse(b['price'].toString()) ?? 0));
-    if (period == 'Bulan Ini') return (total * 0.8).toInt();
-    if (period == 'Minggu Ini') return (total * 0.3).toInt();
-    if (period == 'Hari Ini') return (total * 0.1).toInt();
-    return total;
+    final now = DateTime.now();
+    final List<Map<String, dynamic>> filtered;
+
+    if (period == 'Hari Ini') {
+      final todayStr = BookingUtils.formatDate(now);
+      filtered = all.where((b) => b['date'] == todayStr).toList();
+    } else if (period == 'Minggu Ini') {
+      // Senin awal minggu ini
+      final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      final startDay = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+      filtered = all.where((b) {
+        final dateStr = b['date']?.toString() ?? '';
+        final dt = BookingUtils.parseDateStr(dateStr);
+        return dt != null && !dt.isBefore(startDay) && dt.isBefore(startDay.add(const Duration(days: 7)));
+      }).toList();
+    } else if (period == 'Bulan Ini') {
+      filtered = all.where((b) {
+        final dateStr = b['date']?.toString() ?? '';
+        final dt = BookingUtils.parseDateStr(dateStr);
+        return dt != null && dt.year == now.year && dt.month == now.month;
+      }).toList();
+    } else {
+      filtered = all;
+    }
+
+    return filtered.fold(0, (sum, b) {
+      final status = (b['status'] ?? '').toString().toLowerCase();
+      final isPaid = status == 'confirmed' || status == 'pembayaran berhasil' ||
+          status == 'menunggu jadwal' || status == 'selesai' || status == 'completed';
+      if (!isPaid) return sum;
+      return sum + (int.tryParse(b['price'].toString()) ?? 0);
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -376,7 +404,13 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final tx = transactions[index];
-        final bool isSuccess = tx['status'] == 'Confirmed' || tx['status'] == 'Pembayaran Berhasil';
+        final String statusStr = (tx['status'] ?? '').toString().toLowerCase();
+        final bool isSuccess = statusStr == 'confirmed' || 
+                               statusStr == 'pembayaran berhasil' || 
+                               statusStr == 'menunggu jadwal' || 
+                               statusStr == 'selesai' || 
+                               statusStr == 'completed';
+        final bool isCancelled = statusStr == 'dibatalkan' || statusStr == 'expired' || statusStr == 'refunded';
         final String venueName = tx['venueName'] ?? '';
         
         return GestureDetector(
@@ -412,12 +446,24 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: isSuccess ? Colors.green.shade50 : Colors.blue.shade50,
+                    color: isSuccess 
+                        ? Colors.green.shade50 
+                        : isCancelled 
+                            ? Colors.red.shade50 
+                            : Colors.blue.shade50,
                     shape: BoxShape.circle
                   ),
                   child: Icon(
-                    isSuccess ? Icons.check_circle_rounded : Icons.access_time_filled_rounded,
-                    color: isSuccess ? Colors.green.shade600 : Colors.blue.shade600,
+                    isSuccess 
+                        ? Icons.check_circle_rounded 
+                        : isCancelled 
+                            ? Icons.cancel_rounded 
+                            : Icons.access_time_filled_rounded,
+                    color: isSuccess 
+                        ? Colors.green.shade600 
+                        : isCancelled 
+                            ? Colors.red.shade600 
+                            : Colors.blue.shade600,
                     size: 20
                   ),
                 ),
@@ -440,12 +486,28 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isSuccess ? Colors.green.shade50 : Colors.blue.shade50,
+                        color: isSuccess 
+                            ? Colors.green.shade50 
+                            : isCancelled 
+                                ? Colors.red.shade50 
+                                : Colors.blue.shade50,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isSuccess ? 'Berhasil' : 'Diproses',
-                        style: TextStyle(fontSize: 10, color: isSuccess ? Colors.green.shade700 : Colors.blue.shade700, fontWeight: FontWeight.bold)
+                        isSuccess 
+                            ? 'Berhasil' 
+                            : isCancelled 
+                                ? 'Batal' 
+                                : 'Diproses',
+                        style: TextStyle(
+                          fontSize: 10, 
+                          color: isSuccess 
+                              ? Colors.green.shade700 
+                              : isCancelled 
+                                  ? Colors.red.shade700 
+                                  : Colors.blue.shade700, 
+                          fontWeight: FontWeight.bold
+                        )
                       ),
                     ),
                   ],

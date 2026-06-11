@@ -52,6 +52,15 @@ class _CourtDetailPageState extends State<CourtDetailPage>
   // _timeGroups sekarang digenerate secara dinamis dari data court
   // Lihat getter _dynamicTimeGroups di bawah
 
+  Future<void> _refreshVenueDataLive() async {
+    await GlobalVenueData.init();
+    if (mounted) {
+      setState(() {
+        _syncSelectedSlotsFromCart();
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +73,8 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     });
     
     _syncSelectedSlotsFromCart();
+
+    _refreshVenueDataLive();
     
     if (widget.initialSelectedSlot != null) {
       String? foundKey;
@@ -112,6 +123,32 @@ class _CourtDetailPageState extends State<CourtDetailPage>
         cartServices.forEach((key, value) {
           _selectedServices[key.toString()] = int.tryParse(value.toString()) ?? 0;
         });
+      }
+    }
+
+    // Clamp the loaded quantities to stock
+    final court = _courtData;
+    final services = court['services'] as List<dynamic>? ?? [];
+    final timeRangeStr = _selectedTimeStrings.join(', ');
+    for (final service in services) {
+      final id = service['id']?.toString() ?? service['name']?.toString() ?? 'service_${service.hashCode}';
+      final name = service['name']?.toString() ?? 'Layanan';
+      final stockRaw = service['stock'];
+      final baseStock = stockRaw is int ? stockRaw : int.tryParse(stockRaw?.toString() ?? '') ?? 99;
+      final stock = BookingUtils.getAvailableServiceStock(
+        venueName: widget.venueName,
+        serviceName: name,
+        baseStock: baseStock,
+        dateStr: dateStr,
+        timeRange: timeRangeStr,
+      );
+      final currentQty = _selectedServices[id] ?? 0;
+      if (currentQty > stock) {
+        if (stock > 0) {
+          _selectedServices[id] = stock;
+        } else {
+          _selectedServices.remove(id);
+        }
       }
     }
 
@@ -1103,7 +1140,17 @@ class _CourtDetailPageState extends State<CourtDetailPage>
     final name = service['name']?.toString() ?? 'Layanan';
     final priceRaw = service['price'];
     final price = priceRaw is int ? priceRaw : int.tryParse(priceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '0') ?? 0;
-    final stock = service['stock'] != null ? (service['stock'] as int) : 99; // unlimited if no stock defined
+    final stockRaw = service['stock'];
+    final baseStock = stockRaw is int ? stockRaw : int.tryParse(stockRaw?.toString() ?? '') ?? 99;
+    final timeRangeStr = _selectedTimeStrings.join(', ');
+    final dateStr = BookingUtils.formatDate(_selectedDate);
+    final stock = BookingUtils.getAvailableServiceStock(
+      venueName: widget.venueName,
+      serviceName: name,
+      baseStock: baseStock,
+      dateStr: dateStr,
+      timeRange: timeRangeStr,
+    );
     final unit = service['unit']?.toString() ?? 'Pcs';
     final currentQty = _selectedServices[id] ?? 0;
     final hasStock = stock > 0;
