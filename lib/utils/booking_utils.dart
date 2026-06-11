@@ -97,7 +97,7 @@ class BookingUtils {
       if (bStatus == 'dibatalkan' || bStatus == 'expired' || bStatus == 'refunded') return false;
 
       bool venueMatch = bVenue == venueName;
-      bool courtMatch = bCourt.contains(courtName);
+      bool courtMatch = bCourt == courtName;  // Exact match, bukan contains
       bool dateMatch = bDate == dateStr;
       bool timeMatch = bTime.contains(startTime);
 
@@ -117,7 +117,7 @@ class BookingUtils {
       if (bStatus == 'dibatalkan' || bStatus == 'expired' || bStatus == 'refunded') return false;
 
       bool venueMatch = bVenue == venueName;
-      bool courtMatch = bCourt.contains(courtName);
+      bool courtMatch = bCourt == courtName;  // Exact match, bukan contains
       bool dateMatch = bDate == dateStr;
       bool timeMatch = bTime.contains(startTime);
 
@@ -134,15 +134,54 @@ class BookingUtils {
     
     if (filtered.isEmpty) return 0;
     
-    // Period logic (Simplified for mock)
-    // In a real app, we would parse b['date'] and check against DateTime.now()
-    int total = filtered.fold(0, (sum, b) => sum + (int.tryParse(b['price'].toString()) ?? 0));
-    
-    if (period == 'Bulan Ini') return (total * 0.8).toInt();
-    if (period == 'Minggu Ini') return (total * 0.3).toInt();
-    if (period == 'Hari Ini') return (total * 0.1).toInt();
-    
-    return total;
+    final now = DateTime.now();
+    final List<Map<String, dynamic>> periodFiltered;
+
+    if (period == 'Hari Ini') {
+      final todayStr = formatDate(now);
+      periodFiltered = filtered.where((b) => b['date'] == todayStr).toList();
+    } else if (period == 'Minggu Ini') {
+      // Senin awal minggu ini
+      final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      final startDay = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+      periodFiltered = filtered.where((b) {
+        final dateStr = b['date']?.toString() ?? '';
+        final dt = _parseDateStr(dateStr);
+        return dt != null && !dt.isBefore(startDay) && dt.isBefore(startDay.add(const Duration(days: 7)));
+      }).toList();
+    } else if (period == 'Bulan Ini') {
+      periodFiltered = filtered.where((b) {
+        final dateStr = b['date']?.toString() ?? '';
+        final dt = _parseDateStr(dateStr);
+        return dt != null && dt.year == now.year && dt.month == now.month;
+      }).toList();
+    } else {
+      periodFiltered = filtered;
+    }
+
+    return periodFiltered.fold(0, (sum, b) {
+      final status = (b['status'] ?? '').toString().toLowerCase();
+      final isPaid = status == 'confirmed' || status == 'pembayaran berhasil' ||
+          status == 'menunggu jadwal' || status == 'selesai' || status == 'completed';
+      if (!isPaid) return sum;
+      return sum + (int.tryParse(b['price'].toString()) ?? 0);
+    });
+  }
+
+  /// Parse date string "Senin, 13 April 2026" atau "13 April 2026" ke DateTime
+  static DateTime? _parseDateStr(String dateStr) {
+    try {
+      final clean = dateStr.contains(',') ? dateStr.split(',')[1].trim() : dateStr.trim();
+      final parts = clean.split(' ');
+      if (parts.length < 3) return null;
+      final day = int.parse(parts[0]);
+      final monthIdx = monthNames.indexWhere((m) => m.toLowerCase() == parts[1].toLowerCase());
+      if (monthIdx < 0) return null;
+      final year = int.parse(parts[2]);
+      return DateTime(year, monthIdx + 1, day);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Returns recent transactions for owner
@@ -153,14 +192,35 @@ class BookingUtils {
         : all.where((b) => b['venueName'] == venueName).toList();
   }
 
-  /// Returns revenue data for the last 7 days for the line chart
+  /// Returns revenue data for the last 7 days for the line chart (real data)
   static List<double> getWeeklyDistribution({String? venueName}) {
-    // In a real app we'd filter by actual dates. 
-    // Here we'll simulate based on venue and total volume.
-    final total = calculateRevenue(venueName: venueName, period: 'Total');
-    if (total == 0) return [0, 0, 0, 0, 0, 0, 0];
-    
-    // Weighted random-looking distribution [Sen -> Min]
-    return [0.4, 0.6, 0.3, 0.8, 0.5, 1.0, 0.7];
+    final all = [...BookingHistoryPage.mockHistory, ...BookingHistoryPage.mockPastHistory];
+    final filtered = (venueName == null || venueName == 'Semua')
+        ? all
+        : all.where((b) => b['venueName'] == venueName).toList();
+
+    // Hitung pendapatan per hari (Senin=0 ... Minggu=6) untuk 7 hari terakhir
+    final now = DateTime.now();
+    final List<int> revenuePerDay = List.filled(7, 0);
+
+    for (final b in filtered) {
+      final status = (b['status'] ?? '').toString().toLowerCase();
+      final isPaid = status == 'confirmed' || status == 'pembayaran berhasil' ||
+          status == 'menunggu jadwal' || status == 'selesai' || status == 'completed';
+      if (!isPaid) continue;
+
+      final dt = _parseDateStr(b['date']?.toString() ?? '');
+      if (dt == null) continue;
+      final diff = now.difference(dt).inDays;
+      if (diff < 0 || diff >= 7) continue; // Hanya 7 hari terakhir
+      // weekday: Mon=1..Sun=7, jadikan index 0..6
+      final idx = dt.weekday - 1;
+      revenuePerDay[idx] += int.tryParse(b['price'].toString()) ?? 0;
+    }
+
+    final maxRevenue = revenuePerDay.fold(0, (a, b) => a > b ? a : b);
+    if (maxRevenue == 0) return [0, 0, 0, 0, 0, 0, 0];
+    // Normalisasi ke 0.0-1.0
+    return revenuePerDay.map((r) => r / maxRevenue).toList();
   }
 }

@@ -510,6 +510,8 @@ class _PaymentPageState extends State<PaymentPage> {
     required int price,
     Map<String, int>? services,
   }) {
+    final timeDisplay = _groupHoursToRanges(_parseStartHours(timeRange));
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -522,43 +524,67 @@ class _PaymentPageState extends State<PaymentPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header lapangan dengan gradient dan icon
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.03),
+              gradient: LinearGradient(
+                colors: [AppColors.primary.withValues(alpha: 0.08), AppColors.primary.withValues(alpha: 0.02)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            child: Text(
-              courtName,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.sports_tennis_rounded, size: 14, color: AppColors.primary),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    courtName,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                ),
+              ],
             ),
           ),
+          // Grid info detail: 2 kolom
           Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildInfoRow(icon: Icons.calendar_today_rounded, label: date),
-                const SizedBox(height: 10),
-                _buildInfoRow(
-                  icon: Icons.access_time_filled_rounded,
-                  label: _groupHoursToRanges(_parseStartHours(timeRange)),
+                Row(
+                  children: [
+                    Expanded(child: _buildDetailCell(Icons.calendar_today_rounded, 'Tanggal', _cleanDate(date))),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildDetailCell(Icons.access_time_filled_rounded, 'Jam', timeDisplay.isEmpty ? '-' : timeDisplay)),
+                  ],
                 ),
-                
                 if (services != null && services.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    child: Divider(height: 1),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.room_service_rounded, size: 14, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      const Text('Layanan Tambahan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                    ],
                   ),
-                  const Text('Layanan Tambahan:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                   const SizedBox(height: 8),
                   ...services.entries.map((entry) {
                     final venueResults = GlobalVenueData.venues.where((v) => v['name'] == venueName);
                     final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
                     final courts = venue['courts'] as List<dynamic>? ?? [];
-                    
-                    // Kumpulkan semua layanan tambahan dari semua lapangan di venue ini
                     final seen = <String>{};
                     final sList = <Map<String, dynamic>>[];
                     for (final c in courts) {
@@ -568,28 +594,27 @@ class _PaymentPageState extends State<PaymentPage> {
                         final name = sMap['name']?.toString() ?? '';
                         final sId = sMap['id']?.toString() ?? name;
                         sMap['id'] = sId;
-                        if (name.isNotEmpty && !seen.contains(name)) {
-                          seen.add(name);
-                          sList.add(sMap);
-                        }
+                        if (name.isNotEmpty && !seen.contains(name)) { seen.add(name); sList.add(sMap); }
                       }
                     }
-
                     final sRes = sList.where((s) => s['id'] == entry.key || s['name'] == entry.key);
                     if (sRes.isEmpty) return const SizedBox.shrink();
                     final s = sRes.first;
                     final sPriceRaw = s['price'];
-                    final sPrice = sPriceRaw is int 
-                        ? sPriceRaw 
-                        : int.tryParse(sPriceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
-
+                    final sPrice = sPriceRaw is int ? sPriceRaw : int.tryParse(sPriceRaw?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('${s['name']} (x${entry.value})', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
-                          Text(_formatCurrency(sPrice * entry.value), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                          Row(
+                            children: [
+                              Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
+                              const SizedBox(width: 6),
+                              Text('${s['name']} (x${entry.value})', style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                            ],
+                          ),
+                          Text(_formatCurrency(sPrice * entry.value), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
                         ],
                       ),
                     );
@@ -603,20 +628,45 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  Widget _buildInfoRow({required IconData icon, required String label}) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: AppColors.primary.withValues(alpha: 0.7)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            label, 
-            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
+  /// Cell 1 kolom: icon + label kecil + nilai bold
+  Widget _buildDetailCell(IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primary.withValues(alpha: 0.8)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Text(value, style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+
+  /// Bersihkan format tanggal: "Senin, 2 Juni 2026" → "2 Juni 2026"
+  String _cleanDate(String date) {
+    if (date.contains(',')) {
+      final parts = date.split(',');
+      return parts.length > 1 ? parts[1].trim() : date;
+    }
+    return date;
+  }
+
+
 
   Widget _buildAddServiceButton() {
     return SizedBox(

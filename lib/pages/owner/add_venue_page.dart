@@ -1432,7 +1432,7 @@ class _AddVenuePageState extends State<AddVenuePage> {
                       IconButton(
                         onPressed: () {
                           setState(() {
-                            services.add({'name': '', 'price': '', 'unit': 'Pasang'});
+                            services.add({'name': '', 'price': '', 'unit': 'Pasang', 'stock': ''});
                             _courts[index]['services'] = services;
                           });
                         },
@@ -1445,31 +1445,70 @@ class _AddVenuePageState extends State<AddVenuePage> {
                     final sVal = sEntry.value;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            flex: 3,
-                            child: _buildLabelOnlyTextField('Nama Layanan', (val) => sVal['name'] = val, initial: sVal['name'], isDense: true),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: _buildLabelOnlyTextField('Nama Layanan', (val) => sVal['name'] = val, initial: sVal['name'], isDense: true),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                flex: 2,
+                                child: _buildLabelOnlyTextField('Harga', (val) => sVal['price'] = val, initial: sVal['price'].toString(), isDense: true, isNumber: true, prefix: 'Rp'),
+                              ),
+                              const SizedBox(width: 4),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                  onPressed: () => setState(() => services.removeAt(sIdx)),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 2,
-                            child: _buildLabelOnlyTextField('Harga', (val) => sVal['price'] = val, initial: sVal['price'].toString(), isDense: true, isNumber: true, prefix: 'Rp'),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: _buildLabelOnlyTextField(
+                                  'Stok (kosong = tidak terbatas)',
+                                  (val) => sVal['stock'] = val,
+                                  initial: sVal['stock']?.toString() ?? '',
+                                  isDense: true,
+                                  isNumber: true,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                flex: 2,
+                                child: DropdownButtonFormField<String> (
+                                  value: (sVal['unit']?.toString().isNotEmpty == true) ? sVal['unit'].toString() : 'Pasang',
+                                  decoration: const InputDecoration(
+                                    labelText: 'Satuan',
+                                    border: OutlineInputBorder(),
+                                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                  items: ['Pasang', 'Buah', 'Set', 'Lembar', 'Botol', 'Pcs']
+                                      .map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 13))))
+                                      .toList(),
+                                  onChanged: (val) => setState(() => sVal['unit'] = val ?? 'Pasang'),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 4),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                              onPressed: () => setState(() => services.removeAt(sIdx)),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                            ),
-                          ),
+                          const Divider(height: 20),
                         ],
                       ),
                     );

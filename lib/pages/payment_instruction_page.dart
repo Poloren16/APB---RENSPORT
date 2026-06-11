@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
@@ -57,11 +58,147 @@ class PaymentInstructionPage extends StatefulWidget {
 class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
   bool _isCheckingStatus = false;
   late String _vaNumber;
+  late DateTime _paymentDeadline;
+  Duration _remainingTime = Duration.zero;
+  Timer? _countdownTimer;
+  bool _isPendingBookingCreated = false;
 
   @override
   void initState() {
     super.initState();
     _vaNumber = '88062${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    // Midtrans default payment deadline: 24 jam
+    _paymentDeadline = DateTime.now().add(const Duration(hours: 24));
+    _remainingTime = _paymentDeadline.difference(DateTime.now());
+    _startCountdown();
+    _createPendingBooking();
+  }
+
+  void _startCountdown() {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final remaining = _paymentDeadline.difference(DateTime.now());
+      if (remaining.isNegative || remaining == Duration.zero) {
+        _countdownTimer?.cancel();
+        setState(() => _remainingTime = Duration.zero);
+        _onPaymentExpired();
+      } else {
+        setState(() => _remainingTime = remaining);
+      }
+    });
+  }
+
+  void _onPaymentExpired() {
+    // Kumpulkan semua orderId yang perlu dibatalkan
+    final orderIds = widget.items.isNotEmpty
+        ? List.generate(widget.items.length, (i) => '${widget.orderId}-${i + 1}')
+        : [widget.orderId];
+
+    // Pindahkan semua booking terkait dari active → past dengan status Dibatalkan
+    for (final oid in orderIds) {
+      final idx = BookingHistoryPage.mockHistory.indexWhere((b) => b['orderId'] == oid);
+      if (idx >= 0) {
+        final cancelled = Map<String, dynamic>.from(BookingHistoryPage.mockHistory[idx]);
+        BookingHistoryPage.mockHistory.removeAt(idx);
+        cancelled['status'] = 'Dibatalkan';
+        BookingHistoryPage.mockPastHistory.insert(0, cancelled);
+      }
+      // Cancel di Supabase juga
+      BookingService.cancelPendingBooking(oid);
+    }
+
+    if (mounted) {
+      AlertUtils.showResultDialog(
+        context,
+        isSuccess: false,
+        title: 'Waktu Pembayaran Habis',
+        message: 'Batas waktu pembayaran telah habis. Pesanan Anda otomatis dibatalkan. Silakan buat pesanan baru.',
+        onConfirm: () {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DashboardPage(username: widget.username, role: widget.role, initialIndex: 2),
+            ),
+            (route) => false,
+          );
+        },
+      );
+    }
+  }
+
+  String _formatCountdown(Duration d) {
+    final h = d.inHours.toString().padLeft(2, '0');
+    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$h:$m:$s';
+  }
+
+  /// Buat booking sementara dengan status "Menunggu Pembayaran" segera setelah halaman ini dibuka
+  Future<void> _createPendingBooking() async {
+    if (_isPendingBookingCreated) return;
+    _isPendingBookingCreated = true;
+
+    String? formattedServicesStr;
+    if (widget.selectedServices.isNotEmpty) {
+      formattedServicesStr = _buildServicesString(widget.venueName, widget.selectedServices);
+    }
+
+    if (widget.items.isNotEmpty) {
+      // Multi-item: buat pending booking per item
+      for (int i = 0; i < widget.items.length; i++) {
+        final item = widget.items[i];
+        final itemOrderId = '${widget.orderId}-${i + 1}';
+        final itemServices = item['services'] as Map<String, dynamic>? ?? {};
+        final sStr = itemServices.isEmpty ? null : _buildServicesString(item['venueName']?.toString() ?? widget.venueName, itemServices.map((k, v) => MapEntry(k, v as int)));
+        final pendingBooking = {
+          'orderId': itemOrderId,
+          'username': widget.username,
+          'venueName': item['venueName'] ?? widget.venueName,
+          'courtName': item['courtName'] ?? widget.courtName,
+          'date': item['date'] ?? widget.date,
+          'time': item['timeSlot'] ?? widget.timeRange,
+          'price': item['price'] as int? ?? 0,
+          'paymentMethod': widget.paymentMethodName,
+          'status': 'Menunggu Pembayaran',
+          'services': sStr,
+          'paymentDeadline': _paymentDeadline,
+          'redirectUrl': widget.redirectUrl,
+        };
+        await BookingService.createBooking(pendingBooking);
+        // Guard: cegah duplikasi di memory list
+        final alreadyInList = BookingHistoryPage.mockHistory.any((b) => b['orderId'] == itemOrderId);
+        if (!alreadyInList) {
+          BookingHistoryPage.mockHistory.insert(0, pendingBooking);
+        }
+      }
+    } else {
+      final pendingBooking = {
+        'orderId': widget.orderId,
+        'username': widget.username,
+        'venueName': widget.venueName,
+        'courtName': widget.courtName,
+        'date': widget.date,
+        'time': widget.timeRange,
+        'price': widget.amount,
+        'paymentMethod': widget.paymentMethodName,
+        'status': 'Menunggu Pembayaran',
+        'services': formattedServicesStr,
+        'paymentDeadline': _paymentDeadline,
+        'redirectUrl': widget.redirectUrl,
+      };
+      await BookingService.createBooking(pendingBooking);
+      // Guard: cegah duplikasi di memory list
+      final alreadyInList = BookingHistoryPage.mockHistory.any((b) => b['orderId'] == widget.orderId);
+      if (!alreadyInList) {
+        BookingHistoryPage.mockHistory.insert(0, pendingBooking);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
   }
 
   String _formatPrice(int price) {
@@ -109,6 +246,34 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
     return DateTime.now();
   }
 
+  /// Helper: build formatted services string from selectedServices map
+  String _buildServicesString(String venueName, Map<String, int> services) {
+    if (services.isEmpty) return '';
+    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == venueName);
+    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
+    final courts = venue['courts'] as List<dynamic>? ?? [];
+    final seenSvc = <String>{};
+    final sList = <Map<String, dynamic>>[];
+    for (final c in courts) {
+      final courtServices = c['services'] as List<dynamic>? ?? [];
+      for (final s in courtServices) {
+        final sMap = Map<String, dynamic>.from(s as Map);
+        final name = sMap['name']?.toString() ?? '';
+        final sId = sMap['id']?.toString() ?? name;
+        sMap['id'] = sId;
+        if (name.isNotEmpty && !seenSvc.contains(name)) {
+          seenSvc.add(name);
+          sList.add(sMap);
+        }
+      }
+    }
+    return services.entries.map((e) {
+      final sRes = sList.where((s) => s['id'] == e.key || s['name'] == e.key);
+      if (sRes.isEmpty) return 'Layanan (x${e.value})';
+      return '${sRes.first['name']} (x${e.value})';
+    }).join(', ');
+  }
+
   void _checkPaymentStatus() async {
     setState(() => _isCheckingStatus = true);
     
@@ -119,98 +284,24 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
       setState(() => _isCheckingStatus = false);
 
       if (status == 'settlement' || status == 'capture') {
-        final List<Map<String, dynamic>> bookingsToRegister = [];
+        // Stop countdown
+        _countdownTimer?.cancel();
 
-        if (widget.items.isNotEmpty) {
-          // Multi-item cart checkout: split each cart item into its own individual booking row
-          for (int i = 0; i < widget.items.length; i++) {
-            final item = widget.items[i];
-            final itemServices = item['services'] as Map<String, dynamic>? ?? {};
-            
-            final formattedServicesStr = itemServices.isEmpty 
-                ? null 
-                : itemServices.entries.map((e) {
-                    final venueResults = GlobalVenueData.venues.where((v) => v['name'] == (item['venueName'] ?? widget.venueName));
-                    final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-                    final courts = venue['courts'] as List<dynamic>? ?? [];
-                    final seenSvc = <String>{};
-                    final sList = <Map<String, dynamic>>[];
-                    for (final c in courts) {
-                      final courtServices = c['services'] as List<dynamic>? ?? [];
-                      for (final s in courtServices) {
-                        final sMap = Map<String, dynamic>.from(s as Map);
-                        final name = sMap['name']?.toString() ?? '';
-                        final sId = sMap['id']?.toString() ?? name;
-                        sMap['id'] = sId;
-                        if (name.isNotEmpty && !seenSvc.contains(name)) {
-                          seenSvc.add(name);
-                          sList.add(sMap);
-                        }
-                      }
-                    }
-                    final serviceResults = sList.where((s) => s['id'] == e.key || s['name'] == e.key);
-                    if (serviceResults.isEmpty) return 'Unknown Service';
-                    final service = serviceResults.first;
-                    return '${service['name']} (x${e.value})';
-                  }).join(', ');
+        // Update semua pending booking yang sudah dibuat di initState → status "Menunggu Jadwal"
+        final orderIds = widget.items.isNotEmpty
+            ? List.generate(widget.items.length, (i) => '${widget.orderId}-${i + 1}')
+            : [widget.orderId];
 
-            bookingsToRegister.add({
-              'orderId': '${widget.orderId}-${i + 1}', // Unique order ID with index suffix
-              'username': widget.username,
-              'venueName': item['venueName'] ?? widget.venueName,
-              'courtName': item['courtName'] ?? widget.courtName,
-              'date': item['date'] ?? widget.date,
-              'time': item['timeSlot'] ?? widget.timeRange,
-              'price': item['price'] as int? ?? 0,
-              'paymentMethod': widget.paymentMethodName,
-              'status': 'Menunggu Jadwal',
-              'services': formattedServicesStr,
-            });
+        for (final oid in orderIds) {
+          // Update di in-memory
+          final idx = BookingHistoryPage.mockHistory.indexWhere((b) => b['orderId'] == oid);
+          if (idx >= 0) {
+            BookingHistoryPage.mockHistory[idx]['status'] = 'Menunggu Jadwal';
+            BookingHistoryPage.mockHistory[idx]['paymentDeadline'] = null;
+            BookingHistoryPage.mockHistory[idx]['redirectUrl'] = null;
           }
-        } else {
-          // Direct booking or single checkout: single booking row
-          final newBooking = {
-            'orderId': widget.orderId,
-            'username': widget.username,
-            'venueName': widget.venueName,
-            'courtName': widget.courtName,
-            'date': widget.date,
-            'time': widget.timeRange,
-            'price': widget.amount,
-            'paymentMethod': widget.paymentMethodName,
-            'status': 'Menunggu Jadwal',
-            'services': widget.selectedServices.isEmpty ? null : widget.selectedServices.entries.map((e) {
-              final venueResults = GlobalVenueData.venues.where((v) => v['name'] == widget.venueName);
-              final venue = venueResults.isNotEmpty ? venueResults.first : <String, dynamic>{};
-              final courts = venue['courts'] as List<dynamic>? ?? [];
-              final seenSvc = <String>{};
-              final sList = <Map<String, dynamic>>[];
-              for (final c in courts) {
-                final courtServices = c['services'] as List<dynamic>? ?? [];
-                for (final s in courtServices) {
-                  final sMap = Map<String, dynamic>.from(s as Map);
-                  final name = sMap['name']?.toString() ?? '';
-                  final sId = sMap['id']?.toString() ?? name;
-                  sMap['id'] = sId;
-                  if (name.isNotEmpty && !seenSvc.contains(name)) {
-                    seenSvc.add(name);
-                    sList.add(sMap);
-                  }
-                }
-              }
-              final serviceResults = sList.where((s) => s['id'] == e.key || s['name'] == e.key);
-              if (serviceResults.isEmpty) return 'Unknown Service';
-              final service = serviceResults.first;
-              return '${service['name']} (x${e.value})';
-            }).join(', '),
-          };
-          bookingsToRegister.add(newBooking);
-        }
-
-        // Simpan seluruh booking baru secara online ke Supabase dan insert ke riwayat lokal
-        for (var b in bookingsToRegister) {
-          await BookingService.createBooking(b);
-          BookingHistoryPage.mockHistory.insert(0, b);
+          // Update di Supabase
+          await BookingService.markBookingPaid(oid, 'Menunggu Jadwal');
         }
 
         // Perform atomic slot reservation
@@ -238,7 +329,6 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
             ? widget.timeRange.split(' - ')[0] 
             : widget.timeRange.split(' ')[0];
 
-        // Notify End User - Confirmation
         await GlobalNotificationData.addNotification(
           AppNotification(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -253,7 +343,6 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
 
         final bookingStart = _getBookingStartDateTime();
 
-        // Notify End User - Less than 1 Hour Reminder
         await GlobalNotificationData.addNotification(
           AppNotification(
             id: '${DateTime.now().millisecondsSinceEpoch}_rem1h',
@@ -266,7 +355,6 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
           )
         );
 
-        // Notify End User - 15 Minute Reminder
         await GlobalNotificationData.addNotification(
           AppNotification(
             id: '${DateTime.now().millisecondsSinceEpoch}_rem15m',
@@ -279,7 +367,6 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
           )
         );
 
-        // Notify Admin
         await GlobalNotificationData.addNotification(
           AppNotification(
             id: '${DateTime.now().millisecondsSinceEpoch}_admin',
@@ -292,15 +379,12 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
           )
         );
 
-        // Memicu Notifikasi Eksternal HP (Native System Push Notification)
-        // 1. Untuk End User
         LocalNotificationService.showNotification(
           id: widget.orderId.hashCode + 1,
           title: 'Pembayaran Sukses! 🎉',
           body: 'Anda berhasil membayar ${_formatPrice(widget.amount)} untuk booking di ${widget.venueName}.',
         );
 
-        // 2. Untuk Owner / Admin
         LocalNotificationService.showNotification(
           id: widget.orderId.hashCode + 2,
           title: 'Pemesanan Baru Masuk! 💰',
@@ -333,11 +417,24 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
           isSuccess: false,
         );
       } else {
+        // expire / cancel / deny → batalkan pending booking
+        _countdownTimer?.cancel();
+        for (final oid in widget.items.isNotEmpty
+            ? List.generate(widget.items.length, (i) => '${widget.orderId}-${i + 1}')
+            : [widget.orderId]) {
+          final idx = BookingHistoryPage.mockHistory.indexWhere((b) => b['orderId'] == oid);
+          if (idx >= 0) {
+            final cancelled = BookingHistoryPage.mockHistory.removeAt(idx);
+            cancelled['status'] = 'Dibatalkan';
+            BookingHistoryPage.mockPastHistory.insert(0, cancelled);
+          }
+          await BookingService.cancelPendingBooking(oid);
+        }
         AlertUtils.showResultDialog(
           context,
           isSuccess: false,
           title: 'Pembayaran Gagal',
-          message: 'Transaksi Anda berstatus "$status". Silakan coba buat pesanan baru.',
+          message: 'Transaksi Anda berstatus "$status". Pesanan dibatalkan. Silakan buat pesanan baru.',
         );
       }
     } catch (e) {
@@ -350,6 +447,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -415,7 +513,9 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
                         Icon(Icons.timer_outlined, size: 14, color: Colors.orange.shade800),
                         const SizedBox(width: 6),
                         Text(
-                          'Menunggu pembayaran',
+                          _remainingTime == Duration.zero
+                              ? 'Waktu Habis'
+                              : '⏱ Batas: ${_formatCountdown(_remainingTime)}',
                           style: TextStyle(color: Colors.orange.shade800, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ],
@@ -440,13 +540,13 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.primary.withOpacity(0.1)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
+                  const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Pesanan Anda akan dibatalkan otomatis jika Anda tidak menyelesaikan pembayaran dalam waktu 30 menit.',
+                      'Pesanan Anda akan otomatis dibatalkan jika tidak menyelesaikan pembayaran dalam 24 jam. Pantau status di menu Aktivitas.',
                       style: TextStyle(color: AppColors.primary, fontSize: 12, height: 1.4),
                     ),
                   ),

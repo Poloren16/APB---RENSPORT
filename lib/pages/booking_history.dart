@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../models/review_model.dart';
@@ -9,6 +10,7 @@ import 'package:rensius/services/booking_service.dart';
 import 'package:rensius/services/review_service.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/utils/booking_utils.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class BookingHistoryPage extends StatefulWidget {
   final String username;
@@ -35,6 +37,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
   String _statusFilter = 'Semua';
 
   bool _isLoadingBookings = false;
+  Timer? _countdownRefreshTimer;
 
   @override
   void initState() {
@@ -49,6 +52,10 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
     });
     _searchController.addListener(() => setState(() {}));
     _refreshBookingsOnline();
+    // Refresh setiap detik agar countdown berjalan di kartu Aktivitas
+    _countdownRefreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _refreshBookingsOnline() async {
@@ -69,6 +76,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
 
   @override
   void dispose() {
+    _countdownRefreshTimer?.cancel();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -394,7 +402,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                       decoration: BoxDecoration(
                         color: (item['status'] ?? '') == 'Completed' || (item['status'] ?? '') == 'Selesai'
                             ? Colors.grey.shade100
-                            : Colors.green.shade50,
+                            : (item['status'] ?? '') == 'Menunggu Pembayaran'
+                                ? Colors.orange.shade50
+                                : Colors.green.shade50,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -403,7 +413,9 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                           fontSize: 12,
                           color: (item['status'] ?? '') == 'Completed' || (item['status'] ?? '') == 'Selesai'
                               ? Colors.grey.shade600
-                              : Colors.green.shade600,
+                              : (item['status'] ?? '') == 'Menunggu Pembayaran'
+                                  ? Colors.orange.shade700
+                                  : Colors.green.shade600,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -505,75 +517,184 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                   ],
                 ),
                 if (!isPast && index != null) ...[
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ReceiptPage(booking: item),
+                  const SizedBox(height: 12),
+                  // Khusus status Menunggu Pembayaran: tampilkan countdown + tombol Bayar/Batalkan
+                  if ((item['status'] ?? '') == 'Menunggu Pembayaran') ...[
+                    Builder(builder: (context) {
+                      final deadlineRaw = item['paymentDeadline'];
+                      String countdownText = '';
+                      if (deadlineRaw != null) {
+                        final deadline = deadlineRaw is DateTime
+                            ? deadlineRaw
+                            : DateTime.tryParse(deadlineRaw.toString());
+                        if (deadline != null) {
+                          final remaining = deadline.difference(DateTime.now());
+                          if (remaining.isNegative) {
+                            countdownText = 'Waktu Habis';
+                          } else {
+                            final h = remaining.inHours.toString().padLeft(2, '0');
+                            final m = (remaining.inMinutes % 60).toString().padLeft(2, '0');
+                            final s = (remaining.inSeconds % 60).toString().padLeft(2, '0');
+                            countdownText = 'Bayar dalam: $h:$m:$s';
+                          }
+                        }
+                      }
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.timer_outlined, size: 14, color: Colors.orange.shade700),
+                            const SizedBox(width: 6),
+                            Text(
+                              countdownText.isEmpty ? 'Menunggu Pembayaran' : countdownText,
+                              style: TextStyle(fontSize: 12, color: Colors.orange.shade700, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final url = item['redirectUrl']?.toString() ?? '';
+                              if (url.isEmpty) {
+                                AlertUtils.showToast(context, 'Link pembayaran tidak tersedia.', isSuccess: false, isUserFacing: true);
+                                return;
+                              }
+                              final uri = Uri.parse(url);
+                              try {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              } catch (_) {
+                                AlertUtils.showToast(context, 'Tidak dapat membuka portal pembayaran.', isSuccess: false, isUserFacing: true);
+                              }
+                            },
+                            icon: const Icon(Icons.open_in_browser_rounded, size: 16),
+                            label: const Text('Bayar Sekarang'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary, width: 1.2),
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              AlertUtils.showConfirmationDialog(
+                                context,
+                                title: 'Batalkan Pesanan?',
+                                message: 'Apakah Anda yakin ingin membatalkan pesanan ini?',
+                                onConfirm: () async {
+                                  final oid = item['orderId']?.toString() ?? '';
+                                  setState(() {
+                                    final idx = BookingHistoryPage.mockHistory.indexWhere((b) => b['orderId'] == oid);
+                                    if (idx >= 0) {
+                                      final cancelled = BookingHistoryPage.mockHistory.removeAt(idx);
+                                      cancelled['status'] = 'Dibatalkan';
+                                      BookingHistoryPage.mockPastHistory.insert(0, cancelled);
+                                    }
+                                  });
+                                  if (oid.isNotEmpty) {
+                                    await BookingService.cancelPendingBooking(oid);
+                                  }
+                                  AlertUtils.showToast(context, 'Pesanan berhasil dibatalkan.', isUserFacing: true);
+                                },
+                              );
+                            },
+                            icon: const Icon(Icons.cancel_outlined, size: 16),
+                            label: const Text('Batalkan'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red, width: 1.2),
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    // Status lain (Menunggu Jadwal, dll): tombol E-Kuitansi + Selesaikan
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ReceiptPage(booking: item),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                            label: const Text('E-Kuitansi'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary, width: 1.2),
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                            );
-                          },
-                          icon: const Icon(Icons.receipt_long_rounded, size: 16),
-                          label: const Text('E-Kuitansi'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary, width: 1.2),
-                            padding: const EdgeInsets.symmetric(vertical: 11),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            AlertUtils.showConfirmationDialog(
-                              context,
-                              title: 'Selesaikan Pemesanan?',
-                              message: 'Apakah Anda yakin ingin menyelesaikan pemesanan ini dan memindahkannya ke riwayat transaksi?',
-                              onConfirm: () async {
-                                final finished = BookingHistoryPage.mockHistory[index];
-                                final orderId = finished['orderId']?.toString() ?? '';
-                                
-                                setState(() {
-                                  BookingHistoryPage.mockHistory.removeAt(index);
-                                  finished['status'] = 'Completed';
-                                  BookingHistoryPage.mockPastHistory.insert(0, finished);
-                                });
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              AlertUtils.showConfirmationDialog(
+                                context,
+                                title: 'Selesaikan Pemesanan?',
+                                message: 'Apakah Anda yakin ingin menyelesaikan pemesanan ini dan memindahkannya ke riwayat transaksi?',
+                                onConfirm: () async {
+                                  final finished = BookingHistoryPage.mockHistory[index];
+                                  final orderId = finished['orderId']?.toString() ?? '';
+                                  
+                                  setState(() {
+                                    BookingHistoryPage.mockHistory.removeAt(index);
+                                    finished['status'] = 'Completed';
+                                    BookingHistoryPage.mockPastHistory.insert(0, finished);
+                                  });
 
-                                if (orderId.isNotEmpty) {
-                                  await BookingService.updateBookingStatus(orderId, 'Completed');
-                                }
+                                  if (orderId.isNotEmpty) {
+                                    await BookingService.updateBookingStatus(orderId, 'Completed');
+                                  }
 
-                                AlertUtils.showToast(
-                                  context,
-                                  'Pemesanan selesai & dipindahkan ke riwayat!',
-                                );
-                              },
-                            );
-                          },
-                          icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
-                          label: const Text('Selesaikan'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 11),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                                  AlertUtils.showToast(
+                                    context,
+                                    'Pemesanan selesai & dipindahkan ke riwayat!',
+                                  );
+                                },
+                              );
+                            },
+                            icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                            label: const Text('Selesaikan'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ] else if (isPast) ...[
                   const SizedBox(height: 16),
                   Builder(

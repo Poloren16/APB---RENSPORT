@@ -121,6 +121,8 @@ CREATE TABLE public.bookings (
   payment_method text NOT NULL,
   status text NOT NULL,
   services text,
+  payment_deadline timestamp with time zone,
+  redirect_url text,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -402,3 +404,24 @@ Sekarang project Anda sudah siap dijalankan dengan backend Supabase mandiri. Iku
    ```
 
 Aplikasi Anda kini berjalan secara 100% online, tersinkronisasi, dan aman menggunakan server Supabase pribadi Anda sendiri! Selamat mencoba dan happy coding! 🚀
+
+---
+
+## 8. Migrasi Database (untuk Database yang Sudah Ada)
+
+Jika Anda sudah membuat tabel sebelumnya dan perlu menambahkan kolom baru, jalankan query berikut di **SQL Editor** Supabase Anda:
+
+### Migrasi: Tambah kolom `payment_deadline` dan `redirect_url` ke tabel `bookings`
+*(Fitur: Menampilkan status "Menunggu Pembayaran" di Aktivitas dengan countdown timer)*
+
+```sql
+-- Tambah kolom payment_deadline (waktu kadaluarsa pembayaran dari Midtrans)
+ALTER TABLE public.bookings
+  ADD COLUMN IF NOT EXISTS payment_deadline timestamp with time zone;
+
+-- Tambah kolom redirect_url (link portal pembayaran Midtrans Snap)
+ALTER TABLE public.bookings
+  ADD COLUMN IF NOT EXISTS redirect_url text;
+```
+
+> **Catatan:** Kolom ini bersifat opsional (nullable). Booking lama tidak akan terdampak, dan kolom ini hanya akan terisi pada booking baru dengan status `Menunggu Pembayaran`.

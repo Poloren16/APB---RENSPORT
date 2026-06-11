@@ -16,6 +16,7 @@ import '../models/review_model.dart';
 import '../data/chat_data.dart';
 import '../data/notification_data.dart';
 import '../data/venue_data.dart';
+import '../data/auth_data.dart';
 import 'package:rensius/services/booking_service.dart';
 import 'package:rensius/services/review_service.dart';
 import '../widgets/empty_state_widget.dart';
@@ -53,6 +54,10 @@ class _DashboardPageState extends State<DashboardPage> {
     BookingService.loadBookings(widget.username, widget.role);
     BookingUtils.loadGlobalBookingsOnline();
     ReviewService.loadReviews();
+    // Sinkronisasi venue dari Supabase agar venue owner lain selalu tampil terbaru
+    GlobalVenueData.init().then((_) { if (mounted) setState(() {}); });
+    // Sinkronisasi akun dari Supabase agar list akun selalu up-to-date
+    GlobalAuthData.init().then((_) { if (mounted) setState(() {}); });
 
     // Memuat notifikasi awal dan memperbaruinya setiap 10 detik secara berkala
     GlobalNotificationData.loadNotifications(widget.username, widget.role).then((_) {
@@ -99,6 +104,10 @@ class _DashboardPageState extends State<DashboardPage> {
       if (index == 0) {
         _selectedCategory = 'Semua';
         _searchController.clear();
+      }
+      // Re-sync venue saat user buka tab Venue agar tampil terbaru
+      if (index == 1) {
+        GlobalVenueData.init().then((_) { if (mounted) setState(() {}); });
       }
     });
   }

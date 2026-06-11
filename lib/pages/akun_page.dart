@@ -10,6 +10,8 @@ import 'pengaturan_keamanan_page.dart';
 import 'favorite_venues_page.dart';
 import '../data/auth_data.dart';
 import '../data/venue_data.dart';
+import '../services/supabase_auth_service.dart';
+import '../pages/booking_history.dart';
 
 class AkunPage extends StatefulWidget {
   final String username;
@@ -376,8 +378,15 @@ class _AkunPageState extends State<AkunPage> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          GlobalVenueData.cart = []; // Bersihkan keranjang saat logout
+                        onPressed: () async {
+                          // Bersihkan semua state global saat logout
+                          GlobalVenueData.cart = [];
+                          GlobalAuthData.currentUser = null;
+                          BookingHistoryPage.mockHistory.clear();
+                          BookingHistoryPage.mockPastHistory.clear();
+                          // Sign out dari Supabase Auth (hapus session)
+                          await SupabaseAuthService.signOut();
+                          if (!context.mounted) return;
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(builder: (context) => const LoginPage()),

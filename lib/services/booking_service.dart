@@ -34,6 +34,8 @@ class BookingService {
           'status': row['status'] ?? 'Menunggu Jadwal',
           'services': row['services'],
           'createdAt': row['created_at'],
+          'paymentDeadline': row['payment_deadline'],
+          'redirectUrl': row['redirect_url'],
         });
       }
 
@@ -102,6 +104,8 @@ class BookingService {
         'payment_method': booking['paymentMethod'],
         'status': booking['status'],
         'services': booking['services'],
+        if (booking['paymentDeadline'] != null) 'payment_deadline': booking['paymentDeadline'].toString(),
+        if (booking['redirectUrl'] != null) 'redirect_url': booking['redirectUrl'],
       };
       await _client.from('bookings').upsert(payload);
       
@@ -129,6 +133,42 @@ class BookingService {
       print('Postgrest error updating booking status: ${e.message}');
     } catch (e) {
       print('Gagal memperbarui status booking: $e');
+    }
+  }
+
+  /// Memperbarui status sekaligus menghapus payment_deadline (setelah bayar)
+  static Future<void> markBookingPaid(String orderId, String newStatus) async {
+    if (!SupabaseService.isInitialized) return;
+    try {
+      await _client
+          .from('bookings')
+          .update({
+            'status': newStatus,
+            'payment_deadline': null,
+            'redirect_url': null,
+          })
+          .eq('order_id', orderId);
+      await BookingUtils.loadGlobalBookingsOnline();
+    } on PostgrestException catch (e) {
+      print('Postgrest error marking booking paid: ${e.message}');
+    } catch (e) {
+      print('Gagal mark booking paid: $e');
+    }
+  }
+
+  /// Menghapus/membatalkan booking pending yang sudah expire
+  static Future<void> cancelPendingBooking(String orderId) async {
+    if (!SupabaseService.isInitialized) return;
+    try {
+      await _client
+          .from('bookings')
+          .update({'status': 'Dibatalkan', 'payment_deadline': null, 'redirect_url': null})
+          .eq('order_id', orderId);
+      await BookingUtils.loadGlobalBookingsOnline();
+    } on PostgrestException catch (e) {
+      print('Postgrest error cancelling booking: ${e.message}');
+    } catch (e) {
+      print('Gagal membatalkan booking: $e');
     }
   }
 }

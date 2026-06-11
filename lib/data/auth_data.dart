@@ -165,9 +165,10 @@ class GlobalAuthData {
           ));
         }
 
-        // Gabungkan data online ke lokal cache dan hapus akun lokal yang sudah tidak ada online
-        final onlineUsernames = onlineAccounts.map((a) => a.username).toSet();
-        accounts.removeWhere((a) => a.role != 'Admin' && !onlineUsernames.contains(a.username));
+        // Gabungkan data online ke lokal cache.
+        // CATATAN: Jangan hapus akun lokal yang tidak ada online!
+        // Akun owner bisa hilang dari public.users (misal dihapus manual) tapi masih ada di auth.users,
+        // sehingga login tetap valid. Penghapusan akun hanya dilakukan eksplisit lewat deleteAccount().
 
         for (var onlineAcc in onlineAccounts) {
           final idx = accounts.indexWhere((a) => a.username == onlineAcc.username);
@@ -199,6 +200,26 @@ class GlobalAuthData {
             accounts.add(onlineAcc);
           }
         }
+        
+        // Self-healing: jika ada akun lokal (owner/user) yang tidak ada di public.users,
+        // otomatis re-insert kembali rownya agar login tidak broken.
+        // CATATAN: Hanya jalankan jika ada session Supabase aktif, karena saveUserProfile
+        // membutuhkan auth.currentUser != null.
+        final hasSession = SupabaseAuthService.currentUser != null;
+        if (hasSession) {
+          final onlineUsernames = onlineAccounts.map((a) => a.username).toSet();
+          for (final localAcc in accounts) {
+            if (localAcc.role != 'Admin' && !onlineUsernames.contains(localAcc.username)) {
+              try {
+                await SupabaseAuthService.saveUserProfile(localAcc);
+                print('Self-healing: re-insert profil ${localAcc.username} ke public.users');
+              } catch (e) {
+                print('Self-healing gagal untuk ${localAcc.username}: $e');
+              }
+            }
+          }
+        }
+
         await save();
       } catch (e) {
         print('Gagal sinkronisasi online akun: $e');

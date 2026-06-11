@@ -32,6 +32,8 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   @override
   void initState() {
     super.initState();
+    // Sync data venue terbaru saat owner login
+    GlobalVenueData.init();
     BookingService.loadBookings(widget.username, widget.role);
     BookingUtils.loadGlobalBookingsOnline();
   }
@@ -199,10 +201,16 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     final todayStr = BookingUtils.formatDate(DateTime.now());
     final todayBookingsCount = ownerBookings.where((b) => b['date'] == todayStr).length;
 
-    // 2. Pendapatan
+    // 2. Pendapatan — hitung semua status yang sudah bayar
     final totalRevenue = ownerBookings.fold(0, (sum, b) {
-      final isSuccess = b['status'] == 'Confirmed' || b['status'] == 'Pembayaran Berhasil' || b['status'] == 'Selesai' || b['status'] == 'Completed';
-      if (!isSuccess) return sum;
+      final status = (b['status'] ?? '').toString().toLowerCase();
+      // Termasuk: sudah bayar (menunggu jadwal) dan yang sudah selesai
+      final isPaid = status == 'confirmed' ||
+          status == 'pembayaran berhasil' ||
+          status == 'menunggu jadwal' ||
+          status == 'selesai' ||
+          status == 'completed';
+      if (!isPaid) return sum;
       return sum + (int.tryParse(b['price'].toString()) ?? 0);
     });
 
