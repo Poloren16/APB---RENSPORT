@@ -661,12 +661,26 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                   if ((item['status'] ?? '') == 'Menunggu Pembayaran') ...[
                     Builder(builder: (context) {
                       final deadlineRaw = item['paymentDeadline'];
+                      final createdAtRaw = item['createdAt'];
                       String countdownText = '';
-                      if (deadlineRaw != null) {
-                        final deadline = deadlineRaw is DateTime
+                      DateTime? deadline;
+
+                      if (createdAtRaw != null) {
+                        final createdAt = createdAtRaw is DateTime
+                            ? createdAtRaw
+                            : DateTime.tryParse(createdAtRaw.toString());
+                        if (createdAt != null) {
+                          deadline = createdAt.add(const Duration(hours: 24));
+                        }
+                      }
+
+                      if (deadline == null && deadlineRaw != null) {
+                        deadline = deadlineRaw is DateTime
                             ? deadlineRaw
                             : DateTime.tryParse(deadlineRaw.toString());
-                        if (deadline != null) {
+                      }
+
+                      if (deadline != null) {
                           final remaining = deadline.difference(DateTime.now());
                           if (remaining.isNegative) {
                             countdownText = 'Waktu Habis';
