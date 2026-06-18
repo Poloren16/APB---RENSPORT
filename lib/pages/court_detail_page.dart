@@ -1020,6 +1020,21 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                 ? () {
                     final dateStr = BookingUtils.formatDate(_selectedDate);
                     final selectedTimes = _selectedTimeStrings;
+                    final individualSlots = _selectedSlots.map((key) {
+                      final parts = key.split('_');
+                      final g = int.tryParse(parts[0]) ?? 0;
+                      final s = int.tryParse(parts[1]) ?? 0;
+                      return {
+                        'court': widget.courtName,
+                        'time': () {
+                          final groups = _dynamicTimeGroups;
+                          if (g < groups.length && s < groups[g].slots.length) {
+                            return groups[g].slots[s].time;
+                          }
+                          return '';
+                        }(),
+                      };
+                    }).toList();
                     GlobalVenueData.addToCart({
                       'venueName': widget.venueName,
                       'courtName': widget.courtName,
@@ -1027,6 +1042,7 @@ class _CourtDetailPageState extends State<CourtDetailPage>
                       'timeSlot': '${selectedTimes.length} Slot: ${selectedTimes.join(', ')}',
                       'price': _totalPrice,
                       'services': Map<String, int>.from(_selectedServices),
+                      'individualSlots': individualSlots,
                     });
                     AlertUtils.showToast(
                       context,
