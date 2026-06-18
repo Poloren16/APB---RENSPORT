@@ -10,6 +10,7 @@ import 'package:rensius/services/supabase_service.dart';
 import 'package:rensius/services/supabase_auth_service.dart';
 import 'package:rensius/services/booking_service.dart';
 import 'package:rensius/utils/booking_utils.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 
 class LoginPage extends StatefulWidget {
@@ -54,12 +55,43 @@ class _LoginPageState extends State<LoginPage> {
             email: localAccount.email,
             password: password,
           );
+        } on AuthException catch (e) {
+          // Self-healing: Jika password lokal cocok tapi belum terdaftar di Supabase Auth
+          if (localAccount.password == password && 
+              (e.message.contains('Invalid login credentials') || e.message.contains('invalid_credentials'))) {
+            try {
+              // Daftarkan ulang ke Supabase Auth secara otomatis
+              await SupabaseAuthService.registerEndUser(account: localAccount);
+              // Coba masuk kembali
+              await SupabaseAuthService.signInWithEmail(
+                email: localAccount.email,
+                password: password,
+              );
+            } catch (signUpErr) {
+              setState(() {
+                _errorMessage = 'Koneksi terganggu. Silakan coba beberapa saat lagi.';
+                _isLoading = false;
+              });
+              return;
+            }
+          } else {
+            setState(() {
+              _errorMessage = 'Nama pengguna atau kata sandi salah.';
+              _isLoading = false;
+            });
+            return;
+          }
         } on Object catch (_) {
-          setState(() {
-            _errorMessage = 'Koneksi terganggu. Periksa koneksi internet Anda dan coba lagi.';
-            _isLoading = false;
-          });
-          return;
+          // Fallback lokal: Jika password lokal cocok, tetap izinkan masuk secara lokal jika ada kendala koneksi
+          if (localAccount.password == password) {
+            // Offline fallback - lanjutkan login lokal
+          } else {
+            setState(() {
+              _errorMessage = 'Koneksi terganggu. Periksa koneksi internet Anda dan coba lagi.';
+              _isLoading = false;
+            });
+            return;
+          }
         }
       }
 
