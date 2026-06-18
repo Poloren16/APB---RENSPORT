@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'package:rensius/data/venue_data.dart';
 import '../models/review_model.dart';
 import '../utils/alert_utils.dart';
 import 'package:rensius/pages/receipt_page.dart';
@@ -1452,15 +1454,55 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.sports_tennis_rounded,
-                    color: AppColors.primary,
-                    size: 24,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Builder(builder: (context) {
+                      final firstVenueName = items.isNotEmpty ? (items.first['venueName']?.toString() ?? '') : '';
+                      String imgPath = '';
+                      if (firstVenueName.isNotEmpty) {
+                        try {
+                          final match = GlobalVenueData.venues.firstWhere(
+                            (v) => v['name'].toString().toLowerCase() == firstVenueName.toLowerCase()
+                          );
+                          imgPath = match['image']?.toString() ?? '';
+                        } catch (_) {}
+                      }
+
+                      if (imgPath.isNotEmpty) {
+                        final isRemote = imgPath.startsWith('http://') || imgPath.startsWith('https://');
+                        final isAsset = imgPath.startsWith('assets/');
+                        if (isRemote) {
+                          return Image.network(
+                            imgPath,
+                            width: 48, height: 48, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.sports_tennis_rounded, color: AppColors.primary, size: 24),
+                          );
+                        } else if (isAsset) {
+                          return Image.asset(
+                            imgPath,
+                            width: 48, height: 48, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.sports_tennis_rounded, color: AppColors.primary, size: 24),
+                          );
+                        } else {
+                          return Image.file(
+                            File(imgPath),
+                            width: 48, height: 48, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.sports_tennis_rounded, color: AppColors.primary, size: 24),
+                          );
+                        }
+                      }
+                      return const Icon(
+                        Icons.sports_tennis_rounded,
+                        color: AppColors.primary,
+                        size: 24,
+                      );
+                    }),
                   ),
                 ),
                 const SizedBox(width: 14),
