@@ -24,11 +24,10 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
-  int _activeTab = 0; // 0: Overview, 1: Owner Verification, 2: Venue Verification
+  int _activeTab = 0; // 0: Overview, 1: Owner Management, 2: Venue Verification
   
   // Pagination State
   final int _itemsPerPage = 5;
-  int _userPage = 0;
   int _ownerPage = 0;
   int _ownerSubTab = 0; // 0: Verification, 1: Database
 
@@ -91,7 +90,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       color: AppColors.primary,
       child: Row(
         children: [
-          _buildHeaderStat('Total Akun', '${GlobalAuthData.accounts.where((a) => a.role != 'Admin').length}', Icons.people_alt),
+          _buildHeaderStat('Total Owner', '${GlobalAuthData.accounts.where((a) => a.role == 'Owner').length}', Icons.people_alt),
           const SizedBox(width: 16),
           _buildHeaderStat('Menunggu', '${GlobalVerificationData.requests.where((r) => r.status == 'Pending').length}', Icons.pending_actions),
           const SizedBox(width: 16),
@@ -132,11 +131,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           children: [
             _buildTabItem(0, 'Ringkasan', Icons.dashboard_outlined),
             const SizedBox(width: 12),
-            _buildTabItem(1, 'Manajemen User', Icons.people_outline_rounded),
+            _buildTabItem(1, 'Manajemen Owner', Icons.business_center_outlined),
             const SizedBox(width: 12),
-            _buildTabItem(2, 'Manajemen Owner', Icons.business_center_outlined),
-            const SizedBox(width: 12),
-            _buildTabItem(3, 'Verifikasi Venue', Icons.stadium_outlined),
+            _buildTabItem(2, 'Verifikasi Venue', Icons.stadium_outlined),
           ],
         ),
       ),
@@ -185,10 +182,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       case 0:
         return _buildOverview();
       case 1:
-        return _buildAccountManagement('End User');
-      case 2:
         return _buildOwnerManagementWithToggle();
-      case 3:
+      case 2:
         return _buildVerificationList('Venue');
       default:
         return Container();
@@ -862,7 +857,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     final allForRole = GlobalAuthData.accounts.where((a) => a.role == role).toList();
     
     // Pagination logic
-    final int currentPage = role == 'End User' ? _userPage : _ownerPage;
+    final int currentPage = _ownerPage;
     final int startIndex = currentPage * _itemsPerPage;
     final int endIndex = (startIndex + _itemsPerPage < allForRole.length) 
         ? startIndex + _itemsPerPage 
@@ -967,7 +962,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           IconButton(
             icon: const Icon(Icons.chevron_left),
             onPressed: currentPage > 0 
-                ? () => setState(() => role == 'End User' ? _userPage-- : _ownerPage--)
+                ? () => setState(() => _ownerPage--)
                 : null,
           ),
           Container(
@@ -978,7 +973,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           IconButton(
             icon: const Icon(Icons.chevron_right),
             onPressed: currentPage < totalPages - 1 
-                ? () => setState(() => role == 'End User' ? _userPage++ : _ownerPage++)
+                ? () => setState(() => _ownerPage++)
                 : null,
           ),
         ],

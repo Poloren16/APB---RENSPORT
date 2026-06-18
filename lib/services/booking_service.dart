@@ -105,7 +105,10 @@ class BookingService {
         'payment_method': booking['paymentMethod'],
         'status': booking['status'],
         'services': booking['services'],
-        if (booking['paymentDeadline'] != null) 'payment_deadline': booking['paymentDeadline'].toString(),
+        if (booking['paymentDeadline'] != null)
+          'payment_deadline': booking['paymentDeadline'] is DateTime
+              ? (booking['paymentDeadline'] as DateTime).toUtc().toIso8601String()
+              : (DateTime.tryParse(booking['paymentDeadline'].toString())?.toUtc().toIso8601String() ?? booking['paymentDeadline'].toString()),
         if (booking['redirectUrl'] != null) 'redirect_url': booking['redirectUrl'],
       };
       await _client.from('bookings').upsert(payload);

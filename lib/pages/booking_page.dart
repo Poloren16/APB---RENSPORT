@@ -764,10 +764,13 @@ class _BookingPageState extends State<BookingPage>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Column(
-        children: [
-          Expanded(
-            child: CustomScrollView(
+      body: SafeArea(
+        top: true,
+        bottom: false,
+        child: Column(
+          children: [
+            Expanded(
+              child: CustomScrollView(
               slivers: [
                 VenueHeaderSlivers(
                   username: widget.username,
@@ -1054,8 +1057,9 @@ class _BookingPageState extends State<BookingPage>
             ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildPlayerReviewsSection() {
     var venueReviews = Review.mockReviews.where((r) => r.venueName == widget.venueName).toList();
