@@ -691,7 +691,6 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                             countdownText = 'Bayar dalam: $h:$m:$s';
                           }
                         }
-                      }
                       return Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
