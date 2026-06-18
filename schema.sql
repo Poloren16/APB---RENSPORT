@@ -88,6 +88,7 @@ CREATE TABLE public.bookings (
   services text,
   payment_deadline timestamp with time zone,
   redirect_url text,
+  used_points integer NOT NULL DEFAULT 0,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

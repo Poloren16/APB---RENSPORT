@@ -3,7 +3,6 @@ import 'package:rensius/services/supabase_service.dart';
 import 'package:rensius/data/auth_data.dart';
 import 'package:rensius/pages/booking_history.dart';
 import 'package:rensius/utils/booking_utils.dart';
-import 'package:rensius/data/venue_data.dart';
 
 class BookingService {
   BookingService._();
@@ -37,6 +36,7 @@ class BookingService {
           'createdAt': row['created_at'],
           'paymentDeadline': row['payment_deadline'],
           'redirectUrl': row['redirect_url'],
+          'usedPoints': row['used_points'] ?? 0,
         });
       }
 
@@ -110,6 +110,7 @@ class BookingService {
               ? (booking['paymentDeadline'] as DateTime).toUtc().toIso8601String()
               : (DateTime.tryParse(booking['paymentDeadline'].toString())?.toUtc().toIso8601String() ?? booking['paymentDeadline'].toString()),
         if (booking['redirectUrl'] != null) 'redirect_url': booking['redirectUrl'],
+        'used_points': booking['usedPoints'] ?? 0,
       };
       await _client.from('bookings').upsert(payload);
       
@@ -141,22 +142,29 @@ class BookingService {
   }
 
   /// Memperbarui status sekaligus menghapus payment_deadline (setelah bayar)
-  static Future<void> markBookingPaid(String orderId, String newStatus) async {
-    if (!SupabaseService.isInitialized) return;
+  /// Mengembalikan true jika berhasil memperbarui dari 'Menunggu Pembayaran' ke status baru
+  static Future<bool> markBookingPaid(String orderId, String newStatus) async {
+    if (!SupabaseService.isInitialized) return false;
     try {
-      await _client
+      final response = await _client
           .from('bookings')
           .update({
             'status': newStatus,
             'payment_deadline': null,
             'redirect_url': null,
           })
-          .eq('order_id', orderId);
+          .eq('order_id', orderId)
+          .eq('status', 'Menunggu Pembayaran')
+          .select();
+      
       await BookingUtils.loadGlobalBookingsOnline();
+      return response.isNotEmpty;
     } on PostgrestException catch (e) {
       print('Postgrest error marking booking paid: ${e.message}');
+      return false;
     } catch (e) {
       print('Gagal mark booking paid: $e');
+      return false;
     }
   }
 

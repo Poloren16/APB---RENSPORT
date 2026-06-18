@@ -173,7 +173,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
             }
             final status = await MidtransService.checkTransactionStatus(midtransOrderId);
             if (status == 'settlement' || status == 'capture') {
-              await BookingService.markBookingPaid(orderId, 'Menunggu Jadwal');
+              final wasUpdated = await BookingService.markBookingPaid(orderId, 'Menunggu Jadwal');
               
               // Reserve slots locally to immediately reflect in UI
               final cName = pb['courtName']?.toString() ?? '';
@@ -193,38 +193,41 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                 }
               }
 
-              // Award points if not already awarded (1% cashback)
-              final bookingPrice = pb['price'] as int? ?? 0;
-              final pointsEarned = (bookingPrice / 100).floor();
-              if (pointsEarned > 0) {
-                final account = GlobalAuthData.getAccount(widget.username);
-                if (account != null) {
-                  await GlobalAuthData.updateAccount(
-                    widget.username,
-                    newPoints: account.points + pointsEarned,
-                  );
+              if (wasUpdated) {
+                // Award points if not already awarded (1% cashback) and deduct used points
+                final bookingPrice = pb['price'] as int? ?? 0;
+                final pointsEarned = (bookingPrice / 100).floor();
+                final usedPoints = pb['usedPoints'] as int? ?? 0;
+                if (pointsEarned > 0 || usedPoints > 0) {
+                  final account = GlobalAuthData.getAccount(widget.username);
+                  if (account != null) {
+                    await GlobalAuthData.updateAccount(
+                      widget.username,
+                      newPoints: account.points + pointsEarned - usedPoints,
+                    );
+                  }
                 }
-              }
 
-              // Save notification to DB and in-memory cache
-              await GlobalNotificationData.addNotification(
-                AppNotification(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  username: widget.username,
+                // Save notification to DB and in-memory cache
+                await GlobalNotificationData.addNotification(
+                  AppNotification(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    username: widget.username,
+                    title: 'Pembayaran Sukses! 🎉',
+                    message: 'Pembayaran Anda sebesar IDR ${bookingPrice.toString().replaceAllMapped(RegExp(r"(\d)(?=(\d{3})+$)"), (m) => "${m[1]}.")} untuk booking di $vName sukses terverifikasi.',
+                    timestamp: DateTime.now(),
+                    icon: Icons.check_circle_outline,
+                    color: AppColors.accent,
+                  )
+                );
+
+                // Trigger local push notification
+                LocalNotificationService.showNotification(
+                  id: orderId.hashCode,
                   title: 'Pembayaran Sukses! 🎉',
-                  message: 'Pembayaran Anda sebesar IDR ${bookingPrice.toString().replaceAllMapped(RegExp(r"(\d)(?=(\d{3})+$)"), (m) => "${m[1]}.")} untuk booking di $vName sukses terverifikasi.',
-                  timestamp: DateTime.now(),
-                  icon: Icons.check_circle_outline,
-                  color: AppColors.accent,
-                )
-              );
-
-              // Trigger local push notification
-              LocalNotificationService.showNotification(
-                id: orderId.hashCode,
-                title: 'Pembayaran Sukses! 🎉',
-                body: 'Pembayaran Anda untuk booking di $vName sukses terverifikasi.',
-              );
+                  body: 'Pembayaran Anda untuk booking di $vName sukses terverifikasi.',
+                );
+              }
             } else if (status == 'expire' || status == 'cancel' || status == 'deny') {
               await BookingService.cancelPendingBooking(orderId);
 

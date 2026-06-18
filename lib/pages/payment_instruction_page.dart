@@ -176,6 +176,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
           'services': sPayload,
           'paymentDeadline': _paymentDeadline,
           'redirectUrl': widget.redirectUrl,
+          'usedPoints': i == 0 ? widget.usedPoints : 0,
         };
         await BookingService.createBooking(pendingBooking);
         // Guard: cegah duplikasi di memory list
@@ -209,6 +210,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         'services': sPayload,
         'paymentDeadline': _paymentDeadline,
         'redirectUrl': widget.redirectUrl,
+        'usedPoints': widget.usedPoints,
       };
       await BookingService.createBooking(pendingBooking);
       // Guard: cegah duplikasi di memory list
@@ -318,11 +320,14 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         // Stop countdown
         _countdownTimer?.cancel();
 
+        final pointsEarned = (widget.amount / 100).floor();
+
         // Update semua pending booking yang sudah dibuat di initState → status "Menunggu Jadwal"
         final orderIds = widget.items.isNotEmpty
             ? List.generate(widget.items.length, (i) => '${widget.orderId}-${i + 1}')
             : [widget.orderId];
 
+        bool anyUpdated = false;
         for (final oid in orderIds) {
           // Update di in-memory
           final idx = BookingHistoryPage.mockHistory.indexWhere((b) => b['orderId'] == oid);
@@ -332,7 +337,10 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
             BookingHistoryPage.mockHistory[idx]['redirectUrl'] = null;
           }
           // Update di Supabase
-          await BookingService.markBookingPaid(oid, 'Menunggu Jadwal');
+          final updated = await BookingService.markBookingPaid(oid, 'Menunggu Jadwal');
+          if (updated) {
+            anyUpdated = true;
+          }
         }
 
         // Perform atomic slot reservation
@@ -346,13 +354,14 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         }
 
         // Award Points (1% cashback)
-        final pointsEarned = (widget.amount / 100).floor();
-        final account = GlobalAuthData.getAccount(widget.username);
-        if (account != null) {
-          await GlobalAuthData.updateAccount(
-            widget.username,
-            newPoints: account.points + pointsEarned - widget.usedPoints,
-          );
+        if (anyUpdated) {
+          final account = GlobalAuthData.getAccount(widget.username);
+          if (account != null) {
+            await GlobalAuthData.updateAccount(
+              widget.username,
+              newPoints: account.points + pointsEarned - widget.usedPoints,
+            );
+          }
         }
 
         // Notify End User
