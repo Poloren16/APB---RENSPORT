@@ -81,6 +81,21 @@ class MergedSlot {
   }
 
   String getDynamicStatus() {
+    final firstBooking = parentBookings.first;
+    final baseOid = _BookingHistoryPageState._getBaseOrderId(firstBooking['orderId']?.toString() ?? '');
+    final overrideKey = '$baseOid|$courtName|$date|$startHour';
+    if (_BookingHistoryPageState._manuallyCompletedSlots.contains(overrideKey)) {
+      return 'Selesai';
+    }
+
+    final hasSelesaiStatus = parentBookings.any((b) {
+      final s = b['status']?.toString().toLowerCase();
+      return s == 'selesai' || s == 'completed';
+    });
+    if (hasSelesaiStatus) {
+      return 'Selesai';
+    }
+
     final dateVal = BookingUtils.parseDateStr(date);
     if (dateVal != null) {
       final now = DateTime.now();
@@ -101,6 +116,8 @@ class MergedSlot {
 
 class _BookingHistoryPageState extends State<BookingHistoryPage>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  static final Set<String> _manuallyCompletedSlots = {};
+
   late TabController _tabController;
   int _selectedTab = 0;
   final TextEditingController _searchController = TextEditingController();
@@ -929,7 +946,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isOngoing ? AppColors.primary.withValues(alpha: 0.1) : Colors.green.shade50,
+                    color: isOngoing ? Colors.orange.shade50 : Colors.amber.shade50,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -938,8 +955,8 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                         Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade700,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -949,7 +966,7 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                         status,
                         style: TextStyle(
                           fontSize: 12,
-                          color: isOngoing ? AppColors.primary : Colors.green.shade700,
+                          color: isOngoing ? Colors.orange.shade700 : Colors.amber.shade800,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -986,58 +1003,56 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
             const SizedBox(height: 12),
             Row(
               children: [
+                const Icon(Icons.calendar_today, size: 14, color: AppColors.textSecondary),
+                const SizedBox(width: 6),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.calendar_today, size: 14, color: AppColors.textSecondary),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              item.date,
-                              style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(Icons.access_time, size: 14, color: AppColors.textSecondary),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              item.timeRangeStr,
-                              style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                  child: Text(
+                    item.date,
+                    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
                   ),
                 ),
-                if (item.parentBookings.isNotEmpty)
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ReceiptPage(booking: item.parentBookings.first),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.receipt_long_rounded, size: 14),
-                    label: const Text('Kuitansi'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary, width: 1.2),
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
               ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.access_time, size: 14, color: AppColors.textSecondary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    item.timeRangeStr,
+                    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  final firstBooking = item.parentBookings.first;
+                  final baseOid = _getBaseOrderId(firstBooking['orderId']?.toString() ?? '');
+                  final key = '$baseOid|${item.courtName}|${item.date}|${item.startHour}';
+                  
+                  setState(() {
+                    _manuallyCompletedSlots.add(key);
+                  });
+                  
+                  AlertUtils.showToast(context, 'Jadwal berhasil diselesaikan!', isUserFacing: true);
+                },
+                icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                label: const Text('Selesaikan Jadwal'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
             ),
           ],
         ),
@@ -1160,55 +1175,28 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                 final existingReview = Review.findUserReview(widget.username, item.venueName);
                 final hasReviewed = existingReview != null;
                 
-                return Row(
-                  children: [
-                    if (item.parentBookings.isNotEmpty) ...[
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ReceiptPage(booking: item.parentBookings.first),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.receipt_long_rounded, size: 16),
-                          label: const Text('Kuitansi'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textSecondary,
-                            side: BorderSide(color: Colors.grey.shade300, width: 1.2),
-                            padding: const EdgeInsets.symmetric(vertical: 11),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Expanded(
-                      flex: 2,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          final dummyItem = {
-                            'venueName': item.venueName,
-                            'courtName': item.courtName,
-                          };
-                          _showReviewDialog(context, dummyItem, existingReview: existingReview);
-                        },
-                        icon: Icon(
-                          hasReviewed ? Icons.edit_note_rounded : Icons.star_outline_rounded,
-                          size: 18,
-                        ),
-                        label: Text(hasReviewed ? 'Edit Ulasan' : 'Beri Ulasan'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary, width: 1.2),
-                          padding: const EdgeInsets.symmetric(vertical: 11),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                      ),
+                return SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final dummyItem = {
+                        'venueName': item.venueName,
+                        'courtName': item.courtName,
+                      };
+                      _showReviewDialog(context, dummyItem, existingReview: existingReview);
+                    },
+                    icon: Icon(
+                      hasReviewed ? Icons.edit_note_rounded : Icons.star_outline_rounded,
+                      size: 18,
                     ),
-                  ],
+                    label: Text(hasReviewed ? 'Edit Ulasan' : 'Beri Ulasan'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary, width: 1.2),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
                 );
               }
             ),
@@ -1216,6 +1204,181 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
         ),
       ),
     );
+  }
+
+  static String _getBaseOrderId(String orderId) {
+    if (orderId.contains('-')) {
+      final parts = orderId.split('-');
+      if (int.tryParse(parts.last) != null) {
+        return parts.sublist(0, parts.length - 1).join('-');
+      }
+    }
+    return orderId;
+  }
+
+  Map<String, dynamic> _createConsolidatedBookingForBaseOrderId(String baseOrderId) {
+    final allBookings = [
+      ...BookingHistoryPage.mockHistory,
+      ...BookingHistoryPage.mockPastHistory
+    ];
+    
+    final items = allBookings.where((b) {
+      final oid = b['orderId']?.toString() ?? '';
+      return _getBaseOrderId(oid) == baseOrderId;
+    }).toList();
+    
+    if (items.isEmpty) {
+      return {};
+    }
+    
+    // Group values
+    final int price = items.fold<int>(0, (sum, b) => sum + (int.tryParse(b['price'].toString()) ?? 0));
+    final String status = items.first['status']?.toString() ?? 'Sudah Bayar';
+    final String paymentMethod = items.first['paymentMethod']?.toString() ?? 'Virtual Account';
+    
+    // Venues, courts, dates
+    final venues = items.map((e) => e['venueName']?.toString() ?? '').where((s) => s.isNotEmpty).toSet().toList();
+    final courts = items.map((e) => e['courtName']?.toString() ?? '').where((s) => s.isNotEmpty).toSet().toList();
+    final dates = items.map((e) => e['date']?.toString() ?? '').where((s) => s.isNotEmpty).toSet().toList();
+    
+    final venueName = venues.join(', ');
+    final courtName = courts.join(', ');
+    final date = dates.join(', ');
+    
+    // Extract times
+    final List<String> allSlots = [];
+    for (final item in items) {
+      final tVal = item['time'];
+      if (tVal != null) {
+        String t = tVal.toString().trim();
+        if (t.contains('Slot:')) {
+          t = t.split('Slot:').last.trim();
+        } else if (t.contains('Slot Waktu:')) {
+          t = t.split('Slot Waktu:').last.trim();
+        }
+        final slots = t.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty);
+        allSlots.addAll(slots);
+      }
+    }
+    final uniqueSlots = allSlots.toSet().toList();
+    final time = uniqueSlots.join(', ');
+    
+    // Services
+    final List<String> allServices = [];
+    for (final item in items) {
+      final sVal = item['services'];
+      if (sVal != null) {
+        if (sVal is List) {
+          allServices.addAll(sVal.map((e) => e.toString().trim()));
+        } else {
+          String s = sVal.toString().trim();
+          if (s.contains('|slots:')) {
+            s = s.split('|slots:')[0].trim();
+          }
+          if (s.isNotEmpty && s != '-') {
+            allServices.addAll(s.split(',').map((e) => e.trim()));
+          }
+        }
+      }
+    }
+    final uniqueServices = allServices.toSet().toList();
+
+    // Decompose items if any bookings contain merged slots in their |slots: payload
+    final List<Map<String, dynamic>> decomposedItems = [];
+    for (final item in items) {
+      final servicesStr = item['services']?.toString() ?? '';
+      if (servicesStr.contains('|slots:')) {
+        try {
+          final jsonStr = servicesStr.split('|slots:')[1].trim();
+          final List<dynamic> decoded = jsonDecode(jsonStr);
+          final parsedSlots = decoded.map((e) => Map<String, String>.from(e as Map)).toList();
+          
+          final Map<String, List<Map<String, String>>> slotsByCourt = {};
+          for (final s in parsedSlots) {
+            final c = s['court'] ?? 'Lapangan';
+            slotsByCourt.putIfAbsent(c, () => []).add(s);
+          }
+          
+          int totalHours = 0;
+          final Map<String, List<MergedSlot>> mergedSlotsByCourt = {};
+          
+          slotsByCourt.forEach((courtName, cSlots) {
+            final List<SplitSlot> splitList = cSlots.map((s) {
+              final range = parseTimeRange(s['time'] ?? '');
+              return SplitSlot(
+                parentBooking: item,
+                venueName: item['venueName'] ?? 'Venue',
+                courtName: courtName,
+                date: item['date'] ?? '',
+                startHour: range.startHour,
+                endHour: range.endHour,
+              );
+            }).toList();
+            
+            final mergedList = mergeSlots(splitList);
+            mergedSlotsByCourt[courtName] = mergedList;
+            
+            for (final m in mergedList) {
+              totalHours += (m.endHour - m.startHour);
+            }
+          });
+          
+          final totalPrice = int.tryParse(item['price']?.toString() ?? '0') ?? 0;
+          final servicesText = servicesStr.split('|slots:')[0].trim();
+          
+          final List<Map<String, dynamic>> courtItems = [];
+          mergedSlotsByCourt.forEach((courtName, mergedList) {
+            for (final m in mergedList) {
+              final hours = m.endHour - m.startHour;
+              int itemPrice = 0;
+              if (totalHours > 0) {
+                itemPrice = (totalPrice * hours) ~/ totalHours;
+              }
+              
+              courtItems.add({
+                'courtName': courtName,
+                'venueName': item['venueName'] ?? 'Venue',
+                'date': item['date'] ?? '',
+                'time': m.timeRangeStr,
+                'price': itemPrice,
+                'services': '',
+              });
+            }
+          });
+          
+          if (courtItems.isNotEmpty) {
+            final sumPrices = courtItems.fold<int>(0, (sum, ci) => sum + (ci['price'] as int));
+            final diff = totalPrice - sumPrices;
+            if (diff != 0) {
+              courtItems.last['price'] = (courtItems.last['price'] as int) + diff;
+            }
+            if (servicesText.isNotEmpty && servicesText != '-') {
+              courtItems.first['services'] = servicesText;
+            }
+          }
+          
+          decomposedItems.addAll(courtItems);
+        } catch (e) {
+          print('Error decomposing consolidated items: $e');
+          decomposedItems.add(item);
+        }
+      } else {
+        decomposedItems.add(item);
+      }
+    }
+    
+    return {
+      'orderId': baseOrderId,
+      'price': price,
+      'status': status,
+      'paymentMethod': paymentMethod,
+      'venueName': venueName,
+      'courtName': courtName,
+      'date': date,
+      'time': time,
+      'services': uniqueServices,
+      'items': decomposedItems,
+    };
   }
 
   Widget _buildGroupedTransactionCard(Map<String, dynamic> group) {
@@ -1283,105 +1446,60 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
             ),
             const SizedBox(height: 12),
             
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: items.length,
-              separatorBuilder: (context, index) => const Divider(height: 20),
-              itemBuilder: (context, idx) {
-                final item = items[idx];
-                final isPaidItem = status == 'Sudah Bayar';
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item['courtName'] ?? 'Lapangan',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item['venueName'] ?? 'Venue',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 12, color: AppColors.textSecondary),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  item['date'] ?? '-',
-                                  style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(Icons.access_time, size: 12, color: AppColors.textSecondary),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  item['time'] ?? '-',
-                                  style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'IDR ${(item['price'] ?? 0).toString().replaceAllMapped(RegExp(r"(\d)(?=(\d{3})+$)"), (m) => "${m[1]}.")}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.sports_tennis_rounded,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        items.map((e) => e['venueName']?.toString() ?? '').where((s) => s.isNotEmpty).toSet().join(', '),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
-                        if (isPaidItem) ...[
-                          const SizedBox(height: 6),
-                          InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ReceiptPage(booking: item),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'E-Kuitansi',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                );
-              },
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${items.length} Lapangan • ${items.map((e) => e['courtName']?.toString() ?? '').where((s) => s.isNotEmpty).toSet().join(', ')}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary.withValues(alpha: 0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        items.map((e) => e['date']?.toString() ?? '').where((s) => s.isNotEmpty).toSet().join(', '),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             
             const SizedBox(height: 16),
@@ -1532,6 +1650,32 @@ class _BookingHistoryPageState extends State<BookingHistoryPage>
                     ),
                   ),
                 ],
+              ),
+            ],
+            if (status == 'Sudah Bayar') ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    final baseOid = group['orderId']?.toString() ?? '';
+                    final consolidated = _createConsolidatedBookingForBaseOrderId(baseOid);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ReceiptPage(booking: consolidated),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                  label: const Text('E-Kuitansi Pembayaran'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary, width: 1.2),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
               ),
             ],
           ],

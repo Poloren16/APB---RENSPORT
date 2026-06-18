@@ -119,30 +119,35 @@ class ReceiptPage extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.all(24),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildInfoRow(
-                              'Venue',
-                              booking['venueName']?.toString() ?? '-',
-                              isBold: true,
-                            ),
-                            _buildInfoRow(
-                              'Lapangan',
-                              booking['courtName']?.toString() ?? '-',
-                            ),
-                            _buildInfoRow(
-                              'Tanggal Pemesanan',
-                              booking['date']?.toString() ?? '-',
-                            ),
-                            _buildChipInfoRow(
-                              'Waktu Sewa',
-                              timeSlots.isNotEmpty ? timeSlots : ['-'],
-                            ),
-                            if (services.isNotEmpty)
-                              _buildChipInfoRow(
-                                'Layanan Tambahan',
-                                services,
-                                icon: Icons.add_circle_outline_rounded,
+                            if (booking['items'] != null && (booking['items'] as List).isNotEmpty) ...[
+                              _buildDetailedItemsList(booking['items'] as List),
+                            ] else ...[
+                              _buildInfoRow(
+                                'Venue',
+                                booking['venueName']?.toString() ?? '-',
+                                isBold: true,
                               ),
+                              _buildInfoRow(
+                                'Lapangan',
+                                booking['courtName']?.toString() ?? '-',
+                              ),
+                              _buildInfoRow(
+                                'Tanggal Pemesanan',
+                                booking['date']?.toString() ?? '-',
+                              ),
+                              _buildChipInfoRow(
+                                'Waktu Sewa',
+                                timeSlots.isNotEmpty ? timeSlots : ['-'],
+                              ),
+                              if (services.isNotEmpty)
+                                _buildChipInfoRow(
+                                  'Layanan Tambahan',
+                                  services,
+                                  icon: Icons.add_circle_outline_rounded,
+                                ),
+                            ],
                             const SizedBox(height: 16),
                             const Divider(height: 1),
                             const SizedBox(height: 16),
@@ -248,6 +253,137 @@ class ReceiptPage extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailedItemsList(List<dynamic> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Rincian Pesanan',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          separatorBuilder: (context, index) => const Divider(height: 24, thickness: 0.8),
+          itemBuilder: (context, idx) {
+            final item = items[idx];
+            final priceVal = item['price'] ?? 0;
+            final formattedPrice = 'IDR ${priceVal.toString().replaceAllMapped(RegExp(r"(\d)(?=(\d{3})+$)"), (m) => "${m[1]}.")}';
+            
+            // Parse services for this specific item if present
+            final itemServices = _parseServices(item['services']);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item['courtName'] ?? 'Lapangan',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item['venueName'] ?? 'Venue',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      formattedPrice,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 12, color: AppColors.textSecondary.withValues(alpha: 0.7)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        item['date'] ?? '-',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.access_time_rounded, size: 12, color: AppColors.textSecondary.withValues(alpha: 0.7)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        item['time'] ?? '-',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (itemServices.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: itemServices.map((service) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          service,
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 

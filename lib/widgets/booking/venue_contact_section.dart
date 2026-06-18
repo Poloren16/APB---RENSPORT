@@ -107,7 +107,6 @@ class _VenueContactSectionState extends State<VenueContactSection> {
     required String address,
     required String types,
     required int price,
-    required String distance,
     required String imagePath,
   }) {
     return GestureDetector(
@@ -217,13 +216,6 @@ class _VenueContactSectionState extends State<VenueContactSection> {
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary,
                       ),
-                    ),
-                    Text(
-                      distance,
-                      style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -428,7 +420,6 @@ class _VenueContactSectionState extends State<VenueContactSection> {
                           address: venue['location'] ?? 'Unknown',
                           types: venue['type'] ?? 'Sports',
                           price: priceVal,
-                          distance: '3 km',
                           imagePath: imgPath),
                     );
                   },
