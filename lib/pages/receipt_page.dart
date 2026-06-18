@@ -302,18 +302,24 @@ class ReceiptPage extends StatelessWidget {
 
     if (value is List) {
       return value
-          .map((service) => service.toString().trim())
+          .map((service) {
+            final str = service.toString();
+            return str.contains('|slots:') ? str.split('|slots:')[0].trim() : str.trim();
+          })
           .where((service) => service.isNotEmpty && service != '-')
           .toList();
     }
 
-    final raw = value.toString().trim();
+    String raw = value.toString().trim();
+    if (raw.contains('|slots:')) {
+      raw = raw.split('|slots:')[0].trim();
+    }
     if (raw.isEmpty || raw == '-') return [];
 
     return raw
         .split(',')
         .map((service) => service.trim())
-        .where((service) => service.isNotEmpty)
+        .where((service) => service.isNotEmpty && service != '-')
         .toList();
   }
 

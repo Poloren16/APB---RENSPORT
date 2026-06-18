@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
@@ -150,6 +151,18 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         final itemOrderId = '${widget.orderId}-${i + 1}';
         final itemServices = item['services'] as Map<String, dynamic>? ?? {};
         final sStr = itemServices.isEmpty ? null : _buildServicesString(item['venueName']?.toString() ?? widget.venueName, itemServices.map((k, v) => MapEntry(k, v as int)));
+        
+        final List<Map<String, String>> itemSlots = item['individualSlots'] != null
+            ? (item['individualSlots'] as List).map((e) => Map<String, String>.from(e as Map)).toList()
+            : [
+                {
+                  'court': item['courtName']?.toString() ?? widget.courtName,
+                  'time': item['timeSlot']?.toString() ?? widget.timeRange,
+                }
+              ];
+        final String slotsJson = jsonEncode(itemSlots);
+        final String sPayload = "${sStr ?? ''} |slots:$slotsJson";
+
         final pendingBooking = {
           'orderId': itemOrderId,
           'username': widget.username,
@@ -160,7 +173,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
           'price': item['price'] as int? ?? 0,
           'paymentMethod': widget.paymentMethodName,
           'status': 'Menunggu Pembayaran',
-          'services': sStr,
+          'services': sPayload,
           'paymentDeadline': _paymentDeadline,
           'redirectUrl': widget.redirectUrl,
         };
@@ -172,6 +185,17 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         }
       }
     } else {
+      final List<Map<String, String>> slots = widget.individualSlots.isNotEmpty
+          ? widget.individualSlots
+          : [
+              {
+                'court': widget.courtName,
+                'time': widget.timeRange,
+              }
+            ];
+      final String slotsJson = jsonEncode(slots);
+      final String sPayload = "${formattedServicesStr ?? ''} |slots:$slotsJson";
+
       final pendingBooking = {
         'orderId': widget.orderId,
         'username': widget.username,
@@ -182,7 +206,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
         'price': widget.amount,
         'paymentMethod': widget.paymentMethodName,
         'status': 'Menunggu Pembayaran',
-        'services': formattedServicesStr,
+        'services': sPayload,
         'paymentDeadline': _paymentDeadline,
         'redirectUrl': widget.redirectUrl,
       };

@@ -181,7 +181,7 @@ class _DashboardPageState extends State<DashboardPage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.sports_basketball_outlined),
             activeIcon: Icon(Icons.sports_basketball),
-            label: 'Aktivitas',
+            label: 'Riwayat',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
