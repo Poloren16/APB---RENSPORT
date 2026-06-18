@@ -575,7 +575,7 @@ class _PaymentInstructionPageState extends State<PaymentInstructionPage> {
                         Text(
                           _remainingTime == Duration.zero
                               ? 'Waktu Habis'
-                              : '⏱ Batas: ${_formatCountdown(_remainingTime)}',
+                              : 'Batas: ${_formatCountdown(_remainingTime)}',
                           style: TextStyle(color: Colors.orange.shade800, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ],
