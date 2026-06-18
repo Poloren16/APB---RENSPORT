@@ -336,52 +336,62 @@ class _OwnerActivityPageState extends State<OwnerActivityPage> {
     
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Detail Pendapatan Harian', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (transactions.isEmpty) 
-               const EmptyStateWidget(
-                message: 'Tidak ada rincian data tersedia',
-                subMessage: 'Transaksi akan muncul di sini setelah ada pesanan masuk.',
-              )
-            else
-              ...transactions.map((tx) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+      builder: (context) => SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Detail Pendapatan Harian', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (transactions.isEmpty) 
+                 const EmptyStateWidget(
+                  message: 'Tidak ada rincian data tersedia',
+                  subMessage: 'Transaksi akan muncul di sini setelah ada pesanan masuk.',
+                )
+              else
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: transactions.map((tx) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+                              child: const Icon(Icons.calendar_today, size: 16, color: AppColors.primary),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(tx['courtName'] ?? 'Lapangan', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                  Text(tx['date'] ?? '-', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                ],
+                              ),
+                            ),
+                            Text(_formatCurrency(int.tryParse(tx['price'].toString()) ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                          ],
+                        ),
+                      )).toList(),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(tx['courtName'] ?? 'Lapangan', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          Text(tx['date'] ?? '-', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                        ],
-                      ),
-                    ),
-                    Text(_formatCurrency(int.tryParse(tx['price'].toString()) ?? 0), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                  ],
+                  ),
                 ),
-              )).toList(),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

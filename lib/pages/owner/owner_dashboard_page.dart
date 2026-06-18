@@ -356,7 +356,12 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 if (rawServices is List) {
                   servicesList = rawServices.map((e) => e.toString()).toList();
                 } else if (rawServices is String && rawServices.isNotEmpty) {
-                  servicesList = rawServices.split(',').map((e) => e.trim()).toList();
+                  final String cleanServices = rawServices.contains('|slots:')
+                      ? rawServices.split('|slots:')[0].trim()
+                      : rawServices.trim();
+                  if (cleanServices.isNotEmpty) {
+                    servicesList = cleanServices.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+                  }
                 }
               }
 

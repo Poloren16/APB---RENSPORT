@@ -262,15 +262,19 @@ class BookingUtils {
         : all.where((b) => b['venueName'] == venueName).toList();
   }
 
-  /// Returns revenue data for the last 7 days for the line chart (real data)
+  /// Returns revenue data for the current week (Monday to Sunday) for the line chart (real data)
   static List<double> getWeeklyDistribution({String? venueName}) {
     final all = [...BookingHistoryPage.mockHistory, ...BookingHistoryPage.mockPastHistory];
     final filtered = (venueName == null || venueName == 'Semua')
         ? all
         : all.where((b) => b['venueName'] == venueName).toList();
 
-    // Hitung pendapatan per hari (Senin=0 ... Minggu=6) untuk 7 hari terakhir
+    // Hitung pendapatan per hari (Senin=0 ... Minggu=6) untuk minggu berjalan ini
     final now = DateTime.now();
+    // Cari Senin dari minggu ini pukul 00:00:00
+    final startOfWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+    final endOfWeek = startOfWeek.add(const Duration(days: 7)); // Batas akhir: Senin depan 00:00:00
+    
     final List<int> revenuePerDay = List.filled(7, 0);
 
     for (final b in filtered) {
@@ -281,8 +285,10 @@ class BookingUtils {
 
       final dt = parseDateStr(b['date']?.toString() ?? '');
       if (dt == null) continue;
-      final diff = now.difference(dt).inDays;
-      if (diff < 0 || diff >= 7) continue; // Hanya 7 hari terakhir
+
+      // Cek apakah tanggal booking masuk dalam rentang Senin s.d. Minggu minggu ini
+      if (dt.isBefore(startOfWeek) || !dt.isBefore(endOfWeek)) continue;
+
       // weekday: Mon=1..Sun=7, jadikan index 0..6
       final idx = dt.weekday - 1;
       revenuePerDay[idx] += int.tryParse(b['price'].toString()) ?? 0;
