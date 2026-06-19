@@ -125,5 +125,3 @@ Berikut adalah beberapa tampilan utama dari aplikasi **RENSIUS**:
 | Dashboard Admin | Verifikasi Owner | Aktivasi Lapangan Baru |
 | :---: | :---: | :---: |
 | ![Dashboard Admin](screenshots/admin_dashboard.png) | ![Verifikasi](screenshots/admin_verification.png) | ![Aktivasi](screenshots/admin_activation.png) |
-
-> *Catatan: Letakkan file tangkapan layar (screenshot) aplikasi Anda di dalam folder `screenshots/` dengan nama file yang sesuai agar tampil di atas.*
