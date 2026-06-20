@@ -2,6 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:rensius/services/supabase_service.dart';
 
 class AppNotification {
+  static final Map<int, IconData> _iconsByCodePoint = {
+    Icons.access_time_filled_rounded.codePoint: Icons.access_time_filled_rounded,
+    Icons.cancel.codePoint: Icons.cancel,
+    Icons.cancel_outlined.codePoint: Icons.cancel_outlined,
+    Icons.check_circle.codePoint: Icons.check_circle,
+    Icons.check_circle_outline.codePoint: Icons.check_circle_outline,
+    Icons.notifications.codePoint: Icons.notifications,
+    Icons.notifications_active_rounded.codePoint: Icons.notifications_active_rounded,
+    Icons.receipt_long.codePoint: Icons.receipt_long,
+    Icons.stadium.codePoint: Icons.stadium,
+  };
+
   final String id;
   final String username;
   final String title;
@@ -31,10 +43,7 @@ class AppNotification {
       timestamp: map['created_at'] != null
           ? DateTime.parse(map['created_at'].toString()).toLocal()
           : DateTime.now(),
-      icon: IconData(
-        (map['icon_code'] as int?) ?? Icons.notifications.codePoint,
-        fontFamily: 'MaterialIcons',
-      ),
+      icon: _iconsByCodePoint[map['icon_code'] as int?] ?? Icons.notifications,
       color: Color((map['color_value'] as int?) ?? Colors.blue.value),
       isRead: map['is_read'] == true,
     );

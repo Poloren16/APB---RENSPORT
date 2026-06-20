@@ -11,8 +11,7 @@
 
     <application
         android:label="Rensius"
-        android:icon="@mipmap/ic_launcher"
-        android:debuggable="false">
+        android:icon="@mipmap/ic_launcher">
 
         <activity
             android:name="com.example.rensius.MainActivity"
