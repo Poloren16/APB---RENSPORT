@@ -20,9 +20,9 @@ class VenuePage extends StatefulWidget {
   final DateTime? initialDate;
 
   const VenuePage({
-    super.key, 
-    this.username = 'User', 
-    this.role = 'End User', 
+    super.key,
+    this.username = 'User',
+    this.role = 'End User',
     this.initialShowFavorites = false,
     this.initialCategory,
     this.initialDate,
@@ -37,21 +37,12 @@ class _VenuePageState extends State<VenuePage> {
   late String _selectedCategory;
   final TextEditingController _searchController = TextEditingController();
 
-  static const List<CategoryItem> _categories = [
-    CategoryItem('Semua'),
-    CategoryItem('Favorit', Icons.bookmark_outline),
-    CategoryItem('Mini Soccer', Icons.sports_soccer),
-    CategoryItem('Sepak Bola', Icons.sports_soccer),
-    CategoryItem('Badminton', Icons.sports_tennis),
-    CategoryItem('Tennis', Icons.sports_tennis),
-    CategoryItem('Futsal', Icons.sports_soccer),
-  ];
-
   @override
   void initState() {
     super.initState();
     _selectedDate = widget.initialDate ?? DateTime.now();
-    _selectedCategory = widget.initialCategory ?? (widget.initialShowFavorites ? 'Favorit' : 'Semua');
+    _selectedCategory = widget.initialCategory ??
+        (widget.initialShowFavorites ? 'Favorit' : 'Semua');
     _searchController.addListener(() => setState(() {}));
   }
 
@@ -64,8 +55,18 @@ class _VenuePageState extends State<VenuePage> {
   static String _monthName(int month) {
     const names = [
       '',
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     return names[month];
   }
@@ -98,23 +99,29 @@ class _VenuePageState extends State<VenuePage> {
 
   @override
   Widget build(BuildContext context) {
-    bool isShowingFavorites = _selectedCategory == 'Favorit' || _selectedCategory == 'Favorite';
-    
+    final categories = buildVenueCategoryItems(GlobalVenueData.venues);
+    final selectedCategory =
+        normalizeCategoryLabel(categories, _selectedCategory);
+    bool isShowingFavorites = selectedCategory == 'Favorit';
+
     // Logic to determine which venues to show
     List<Map<String, dynamic>> displayedVenues;
     if (isShowingFavorites) {
       displayedVenues = GlobalVenueData.favorites;
-    } else if (_selectedCategory == 'Semua') {
+    } else if (selectedCategory == 'Semua') {
       displayedVenues = GlobalVenueData.venues;
     } else {
       displayedVenues = GlobalVenueData.venues.where((v) {
         final mainType = (v['type'] ?? '').toString();
-        if (mainType == _selectedCategory) return true;
-        
+        if (sportCategoryMatches(mainType, selectedCategory)) return true;
+
         final courts = v['courts'] as List<dynamic>? ?? [];
         return courts.any((court) {
           final courtMap = Map<String, dynamic>.from(court as Map);
-          return courtMap['type']?.toString() == _selectedCategory;
+          return sportCategoryMatches(
+            courtMap['type']?.toString() ?? '',
+            selectedCategory,
+          );
         });
       }).toList();
     }
@@ -123,10 +130,13 @@ class _VenuePageState extends State<VenuePage> {
     if (_searchController.text.isNotEmpty) {
       final query = _searchController.text.toLowerCase();
       displayedVenues = displayedVenues.where((v) {
-        final nameMatch = (v['name'] ?? '').toString().toLowerCase().contains(query);
-        final locationMatch = (v['location'] ?? '').toString().toLowerCase().contains(query);
-        final addressMatch = (v['address'] ?? '').toString().toLowerCase().contains(query);
-        
+        final nameMatch =
+            (v['name'] ?? '').toString().toLowerCase().contains(query);
+        final locationMatch =
+            (v['location'] ?? '').toString().toLowerCase().contains(query);
+        final addressMatch =
+            (v['address'] ?? '').toString().toLowerCase().contains(query);
+
         final courts = v['courts'] as List<dynamic>? ?? [];
         final courtSportMatch = courts.any((court) {
           final courtMap = Map<String, dynamic>.from(court as Map);
@@ -134,12 +144,16 @@ class _VenuePageState extends State<VenuePage> {
           return courtType.contains(query);
         });
 
-        final venueTypeMatch = (v['type'] ?? '').toString().toLowerCase().contains(query);
+        final venueTypeMatch =
+            (v['type'] ?? '').toString().toLowerCase().contains(query);
 
-        return nameMatch || locationMatch || addressMatch || courtSportMatch || venueTypeMatch;
+        return nameMatch ||
+            locationMatch ||
+            addressMatch ||
+            courtSportMatch ||
+            venueTypeMatch;
       }).toList();
     }
-
 
     final double statusBarHeight = MediaQuery.of(context).padding.top;
 
@@ -194,7 +208,10 @@ class _VenuePageState extends State<VenuePage> {
                                 color: Colors.white.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
+                              child: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: Colors.white,
+                                  size: 22),
                             ),
                           )
                         else
@@ -204,7 +221,8 @@ class _VenuePageState extends State<VenuePage> {
                               color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.stadium_rounded, color: Colors.white, size: 24),
+                            child: const Icon(Icons.stadium_rounded,
+                                color: Colors.white, size: 24),
                           ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -213,7 +231,9 @@ class _VenuePageState extends State<VenuePage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                isShowingFavorites ? 'Venue Favorit' : 'Temukan Venue',
+                                isShowingFavorites
+                                    ? 'Venue Favorit'
+                                    : 'Temukan Venue',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
@@ -223,8 +243,8 @@ class _VenuePageState extends State<VenuePage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                isShowingFavorites 
-                                    ? 'Daftar lapangan pilihan Anda' 
+                                isShowingFavorites
+                                    ? 'Daftar lapangan pilihan Anda'
                                     : 'Pilih lapangan dan mulai bermain!',
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.75),
@@ -246,7 +266,8 @@ class _VenuePageState extends State<VenuePage> {
                                 ),
                               ),
                             );
-                            setState(() {}); // Refresh lencana merah notifikasi saat kembali dari keranjang!
+                            setState(
+                                () {}); // Refresh lencana merah notifikasi saat kembali dari keranjang!
                           },
                           child: Stack(
                             clipBehavior: Clip.none,
@@ -256,9 +277,13 @@ class _VenuePageState extends State<VenuePage> {
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.15),
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+                                  border: Border.all(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.1),
+                                      width: 1),
                                 ),
-                                child: const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 20),
+                                child: const Icon(Icons.shopping_cart_outlined,
+                                    color: Colors.white, size: 20),
                               ),
                               if (GlobalVenueData.cart.isNotEmpty)
                                 Positioned(
@@ -267,16 +292,18 @@ class _VenuePageState extends State<VenuePage> {
                                   child: Container(
                                     padding: const EdgeInsets.all(5),
                                     decoration: BoxDecoration(
-                                      color: Colors.redAccent,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: const Color(0xFF152FD6), width: 1.5),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.1),
-                                          blurRadius: 4,
-                                        )
-                                      ]
-                                    ),
+                                        color: Colors.redAccent,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                            color: const Color(0xFF152FD6),
+                                            width: 1.5),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.1),
+                                            blurRadius: 4,
+                                          )
+                                        ]),
                                     constraints: const BoxConstraints(
                                       minWidth: 10,
                                       minHeight: 10,
@@ -315,17 +342,21 @@ class _VenuePageState extends State<VenuePage> {
                         controller: _searchController,
                         decoration: InputDecoration(
                           hintText: 'Cari Venue',
-                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                          prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
-                          suffixIcon: _searchController.text.isNotEmpty 
+                          hintStyle: TextStyle(
+                              color: Colors.grey.shade400, fontSize: 14),
+                          prefixIcon: const Icon(Icons.search_rounded,
+                              color: AppColors.primary, size: 22),
+                          suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 20, color: Colors.grey), 
+                                  icon: const Icon(Icons.clear,
+                                      size: 20, color: Colors.grey),
                                   onPressed: () => _searchController.clear(),
-                                ) 
+                                )
                               : null,
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 0),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
@@ -340,120 +371,144 @@ class _VenuePageState extends State<VenuePage> {
                   ),
                 ],
               ),
-    
+
               const SizedBox(height: 38),
-  
-            // Categories Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: VenueCategoryChips(
-                categories: _categories,
-                selectedCategory: _selectedCategory,
-                onCategorySelected: (cat) => setState(() => _selectedCategory = cat),
+
+              // Categories Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: VenueCategoryChips(
+                  categories: categories,
+                  selectedCategory: selectedCategory,
+                  onCategorySelected: (cat) =>
+                      setState(() => _selectedCategory = cat),
+                ),
               ),
-            ),
-  
-            const SizedBox(height: 20),
-  
-            // Date Picker Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      GestureDetector(
-                        onTap: _selectDateViaCalendar,
-                        child: Row(
-                          children: [
-                            Icon(Icons.calendar_month, color: Colors.grey[600]),
-                            const SizedBox(width: 8),
-                            Text(
-                              _monthName(_selectedDate.month),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
-                          ],
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => setState(() => _selectedDate = DateTime.now()),
-                        child: const Text(
-                          'Reset & Mulai Ulang',
-                          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 15),
-                  VenueDatePicker(
-                    selectedDate: _selectedDate,
-                    onDateSelected: (date) => setState(() => _selectedDate = date),
-                  ),
-                ],
-              ),
-            ),
-  
-            const SizedBox(height: 25),
-  
-            // Venue Card Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: TextSpan(
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+
+              const SizedBox(height: 20),
+
+              // Date Picker Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        TextSpan(text: isShowingFavorites ? 'Favorit ' : 'Rekomendasi '),
-                        TextSpan(text: 'Venue', style: const TextStyle(color: AppColors.primary)),
+                        GestureDetector(
+                          onTap: _selectDateViaCalendar,
+                          child: Row(
+                            children: [
+                              Icon(Icons.calendar_month,
+                                  color: Colors.grey[600]),
+                              const SizedBox(width: 8),
+                              Text(
+                                _monthName(_selectedDate.month),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              Icon(Icons.keyboard_arrow_down,
+                                  color: Colors.grey[600]),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () =>
+                              setState(() => _selectedDate = DateTime.now()),
+                          child: const Text(
+                            'Reset & Mulai Ulang',
+                            style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w500),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    isShowingFavorites 
-                        ? 'Daftar venue yang telah kamu tandai!' 
-                        : 'Temukan venue terbaik untuk bermain!',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  ),
-                  const SizedBox(height: 20),
-                  if (displayedVenues.isEmpty)
-                    isShowingFavorites 
-                      ? EmptyStateWidget(
-                          message: 'Belum ada venue favorit',
-                          subMessage: 'Tandai venue favoritmu untuk menemukannya di sini dengan mudah!',
-                          onActionPressed: () => setState(() => _selectedCategory = 'Semua'),
-                          actionLabel: 'Cari Venue',
-                          actionIcon: Icons.search_rounded,
-                        )
-                        : Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 40),
-                            child: EmptyStateWidget(
-                              message: 'Tidak ada venue ditemukan untuk kategori ini.',
-                              actionLabel: _selectedCategory != 'Semua' ? 'Tampilkan Semua' : null,
-                              onActionPressed: () => setState(() => _selectedCategory = 'Semua'),
-                            ),
-                          )
-                  else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: displayedVenues.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 20),
-                      itemBuilder: (context, index) => _buildDetailedVenueCard(displayedVenues[index]),
+                    const SizedBox(height: 15),
+                    VenueDatePicker(
+                      selectedDate: _selectedDate,
+                      onDateSelected: (date) =>
+                          setState(() => _selectedDate = date),
                     ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            
-            const SizedBox(height: 30),
-          ],
+
+              const SizedBox(height: 25),
+
+              // Venue Card Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black),
+                        children: [
+                          TextSpan(
+                              text: isShowingFavorites
+                                  ? 'Favorit '
+                                  : 'Rekomendasi '),
+                          TextSpan(
+                              text: 'Venue',
+                              style: const TextStyle(color: AppColors.primary)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isShowingFavorites
+                          ? 'Daftar venue yang telah kamu tandai!'
+                          : 'Temukan venue terbaik untuk bermain!',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    ),
+                    const SizedBox(height: 20),
+                    if (displayedVenues.isEmpty)
+                      isShowingFavorites
+                          ? EmptyStateWidget(
+                              message: 'Belum ada venue favorit',
+                              subMessage:
+                                  'Tandai venue favoritmu untuk menemukannya di sini dengan mudah!',
+                              onActionPressed: () =>
+                                  setState(() => _selectedCategory = 'Semua'),
+                              actionLabel: 'Cari Venue',
+                              actionIcon: Icons.search_rounded,
+                            )
+                          : Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
+                              child: EmptyStateWidget(
+                                message:
+                                    'Tidak ada venue ditemukan untuk kategori ini.',
+                                actionLabel: selectedCategory != 'Semua'
+                                    ? 'Tampilkan Semua'
+                                    : null,
+                                onActionPressed: () =>
+                                    setState(() => _selectedCategory = 'Semua'),
+                              ),
+                            )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: displayedVenues.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 20),
+                        itemBuilder: (context, index) =>
+                            _buildDetailedVenueCard(displayedVenues[index]),
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 30),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -461,12 +516,21 @@ class _VenuePageState extends State<VenuePage> {
   String _getPriceDisplay(Map<String, dynamic> venue) {
     final courts = venue['courts'] as List<dynamic>? ?? [];
     final prices = <int>[];
-    final dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    final dayNames = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu'
+    ];
     for (final c in courts) {
       final cMap = Map<String, dynamic>.from(c as Map);
       final priceModeDay = cMap['priceModeDay'] as Map? ?? {};
       for (final dayName in dayNames) {
-        final priceMode = priceModeDay[dayName] ?? cMap['priceMode'] ?? 'perDay';
+        final priceMode =
+            priceModeDay[dayName] ?? cMap['priceMode'] ?? 'perDay';
         if (priceMode == 'perSlot') {
           final pricePerSlot = cMap['pricePerSlot'] as Map? ?? {};
           pricePerSlot.forEach((k, val) {
@@ -492,13 +556,16 @@ class _VenuePageState extends State<VenuePage> {
     if (prices.isEmpty) {
       final priceVal = venue['price'];
       if (priceVal == null) return 'Hubungi Pengelola';
-      if (priceVal is int) return 'Rp ${priceVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}/jam';
+      if (priceVal is int) {
+        return 'Rp ${priceVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}/jam';
+      }
       return priceVal.toString();
     }
     prices.sort();
     final min = prices.first;
     final max = prices.last;
-    String fmt(int n) => 'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
+    String fmt(int n) =>
+        'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
     return min == max ? '${fmt(min)}/jam' : '${fmt(min)} - ${fmt(max)}/jam';
   }
 
@@ -538,14 +605,17 @@ class _VenuePageState extends State<VenuePage> {
                         username: widget.username,
                         venueName: venueName,
                         venueType: venue['type'] ?? 'Olahraga',
-                        venueAddress: venue['address'] ?? venue['location'] ?? '',
+                        venueAddress:
+                            venue['address'] ?? venue['location'] ?? '',
                         venueHours: venue['hours'] ?? '06:00 - 22:00',
                       ),
                     ),
                   );
-                  setState(() {}); // Refresh red notification badge upon returning!
+                  setState(
+                      () {}); // Refresh red notification badge upon returning!
                 },
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
                 child: Padding(
                   padding: const EdgeInsets.all(15),
                   child: Row(
@@ -556,40 +626,59 @@ class _VenuePageState extends State<VenuePage> {
                         child: Builder(builder: (context) {
                           final imgPath = venue['image']?.toString() ?? '';
                           if (imgPath.isNotEmpty) {
-                            final isRemote = imgPath.startsWith('http://') || imgPath.startsWith('https://');
+                            final isRemote = imgPath.startsWith('http://') ||
+                                imgPath.startsWith('https://');
                             final isAsset = imgPath.startsWith('assets/');
                             if (isRemote) {
                               return Image.network(
                                 imgPath,
-                                width: 120, height: 120, fit: BoxFit.cover,
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Container(
-                                  width: 120, height: 120, color: Colors.grey[300],
-                                  child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                                  width: 120,
+                                  height: 120,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.image,
+                                      size: 50, color: Colors.grey),
                                 ),
                               );
                             } else if (isAsset) {
                               return Image.asset(
                                 imgPath,
-                                width: 120, height: 120, fit: BoxFit.cover,
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Container(
-                                  width: 120, height: 120, color: Colors.grey[300],
-                                  child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                                  width: 120,
+                                  height: 120,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.image,
+                                      size: 50, color: Colors.grey),
                                 ),
                               );
                             } else {
                               return Image.file(
                                 File(imgPath),
-                                width: 120, height: 120, fit: BoxFit.cover,
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Container(
-                                  width: 120, height: 120, color: Colors.grey[300],
-                                  child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                                  width: 120,
+                                  height: 120,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.image,
+                                      size: 50, color: Colors.grey),
                                 ),
                               );
                             }
                           }
                           return Container(
-                            width: 120, height: 120, color: Colors.grey[300],
-                            child: const Icon(Icons.stadium, size: 50, color: Colors.grey),
+                            width: 120,
+                            height: 120,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.stadium,
+                                size: 50, color: Colors.grey),
                           );
                         }),
                       ),
@@ -600,17 +689,20 @@ class _VenuePageState extends State<VenuePage> {
                           children: [
                             Text(
                               venueName,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                const Icon(Icons.star_rounded, size: 16, color: Colors.orange),
+                                const Icon(Icons.star_rounded,
+                                    size: 16, color: Colors.orange),
                                 const SizedBox(width: 4),
                                 Text(
-                                  Review.getAverageRating(venueName).toStringAsFixed(1),
+                                  Review.getAverageRating(venueName)
+                                      .toStringAsFixed(1),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
@@ -620,19 +712,22 @@ class _VenuePageState extends State<VenuePage> {
                                 const SizedBox(width: 4),
                                 Text(
                                   '(${Review.mockReviews.where((r) => r.venueName == venueName).length})',
-                                  style: TextStyle(color: Colors.grey[500], fontSize: 10),
+                                  style: TextStyle(
+                                      color: Colors.grey[500], fontSize: 10),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
+                                Icon(Icons.location_on,
+                                    size: 14, color: Colors.grey[400]),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
                                     venue['address'] ?? venue['location'] ?? '',
-                                    style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                    style: const TextStyle(
+                                        color: Colors.grey, fontSize: 11),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -641,22 +736,27 @@ class _VenuePageState extends State<VenuePage> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Icon(Icons.apartment, size: 14, color: Colors.grey[400]),
+                                Icon(Icons.apartment,
+                                    size: 14, color: Colors.grey[400]),
                                 const SizedBox(width: 4),
                                 Text(
-                                  venue['location']?.split(',').last.trim() ?? 'Kota',
-                                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                  venue['location']?.split(',').last.trim() ??
+                                      'Kota',
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 11),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Icon(_getSportIcon(venue['type'] ?? 'Olahraga'), size: 14, color: Colors.grey[400]),
+                                Icon(_getSportIcon(venue['type'] ?? 'Olahraga'),
+                                    size: 14, color: Colors.grey[400]),
                                 const SizedBox(width: 4),
                                 Text(
                                   venue['type'] ?? 'Olahraga',
-                                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 11),
                                 ),
                               ],
                             ),
@@ -681,20 +781,20 @@ class _VenuePageState extends State<VenuePage> {
                   ),
                 ),
               ),
-              
+
               if (courts.isNotEmpty) ...[
                 const Divider(height: 1),
                 ...courts.map((court) => Column(
-                  children: [
-                    _buildCourtItem(venueName, court, venue),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 15),
-                      child: Divider(height: 1),
-                    ),
-                  ],
-                )).toList(),
+                      children: [
+                        _buildCourtItem(venueName, court, venue),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 15),
+                          child: Divider(height: 1),
+                        ),
+                      ],
+                    )),
               ],
-              
+
               const SizedBox(height: 10),
             ],
           ),
@@ -703,7 +803,8 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  void _goToCourtDetail(String venueName, Map<String, dynamic> court, {String? initialSlot}) async {
+  void _goToCourtDetail(String venueName, Map<String, dynamic> court,
+      {String? initialSlot}) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -728,24 +829,31 @@ class _VenuePageState extends State<VenuePage> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Builder(builder: (context) {
-        final isRemote = courtImg.startsWith('http://') || courtImg.startsWith('https://');
+        final isRemote =
+            courtImg.startsWith('http://') || courtImg.startsWith('https://');
         final isAsset = courtImg.startsWith('assets/');
         if (isRemote) {
           return Image.network(
             courtImg,
-            width: 60, height: 60, fit: BoxFit.cover,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           );
         } else if (isAsset) {
           return Image.asset(
             courtImg,
-            width: 60, height: 60, fit: BoxFit.cover,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           );
         } else {
           return Image.file(
             File(courtImg),
-            width: 60, height: 60, fit: BoxFit.cover,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           );
         }
@@ -753,7 +861,8 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildCourtItem(String venueName, Map<String, dynamic> court, Map<String, dynamic> venue) {
+  Widget _buildCourtItem(String venueName, Map<String, dynamic> court,
+      Map<String, dynamic> venue) {
     final String courtName = court['name'] ?? 'Unknown Court';
     final String sportType = court['type'] ?? 'Tenis';
     final String courtImg = court['image']?.toString() ?? '';
@@ -778,24 +887,34 @@ class _VenuePageState extends State<VenuePage> {
                     children: [
                       Text(
                         courtName,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(_getSportIcon(sportType), size: 14, color: Colors.grey[400]),
+                          Icon(_getSportIcon(sportType),
+                              size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
-                          Text(sportType, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                          Text(sportType,
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 11)),
                           const SizedBox(width: 10),
-                          Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
+                          Icon(Icons.grid_on,
+                              size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
-                          Text(court['size'] ?? 'Standar', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                          Text(court['size'] ?? 'Standar',
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 11)),
                         ],
                       ),
                       const SizedBox(height: 4),
                       const Text(
                         'Selengkapnya >',
-                        style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -812,7 +931,15 @@ class _VenuePageState extends State<VenuePage> {
               scrollDirection: Axis.horizontal,
               child: Builder(builder: (context) {
                 // Ambil hari aktif dari nama hari sesuai tanggal yang dipilih
-                const dayNames = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+                const dayNames = [
+                  'Senin',
+                  'Selasa',
+                  'Rabu',
+                  'Kamis',
+                  'Jumat',
+                  'Sabtu',
+                  'Minggu'
+                ];
                 final dayIdx = _selectedDate.weekday - 1; // 1=Mon..7=Sun
                 final activeDay = dayNames[dayIdx];
                 final availability = court['availability'] as Map? ?? {};
@@ -825,13 +952,15 @@ class _VenuePageState extends State<VenuePage> {
                             ? List<String>.from(rawSlots)
                             : [];
                 if (slots.isEmpty) {
-                  return const Text('Tidak ada jadwal', style: TextStyle(color: Colors.grey, fontSize: 11));
+                  return const Text('Tidak ada jadwal',
+                      style: TextStyle(color: Colors.grey, fontSize: 11));
                 }
                 final sortedSlots = List<String>.from(slots)..sort();
                 return Row(
-                  children: sortedSlots.map((time) =>
-                    _buildTimeSlot(venueName, court, time, isAvailable: true)
-                  ).toList(),
+                  children: sortedSlots
+                      .map((time) => _buildTimeSlot(venueName, court, time,
+                          isAvailable: true))
+                      .toList(),
                 );
               }),
             ),
@@ -841,7 +970,9 @@ class _VenuePageState extends State<VenuePage> {
     );
   }
 
-  Widget _buildTimeSlot(String venueName, Map<String, dynamic> court, String time, {required bool isAvailable}) {
+  Widget _buildTimeSlot(
+      String venueName, Map<String, dynamic> court, String time,
+      {required bool isAvailable}) {
     final courtName = court['name'] ?? 'Lapangan';
     final dateStr = BookingUtils.formatDate(_selectedDate);
     final isBooked = BookingUtils.isSlotBooked(
@@ -870,7 +1001,8 @@ class _VenuePageState extends State<VenuePage> {
           color: effectiveAvailable ? Colors.white : Colors.grey[50],
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: effectiveAvailable ? AppColors.primary : Colors.grey.shade300,
+            color:
+                effectiveAvailable ? AppColors.primary : Colors.grey.shade300,
             width: 1,
           ),
         ),
@@ -879,7 +1011,8 @@ class _VenuePageState extends State<VenuePage> {
           style: TextStyle(
             color: effectiveAvailable ? AppColors.primary : Colors.grey[400],
             fontSize: 12,
-            fontWeight: effectiveAvailable ? FontWeight.w600 : FontWeight.normal,
+            fontWeight:
+                effectiveAvailable ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
       ),
