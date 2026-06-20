@@ -117,9 +117,13 @@ Berikut adalah beberapa tampilan utama dari aplikasi **RENSIUS**:
 | ![Pembayaran](screenshots/payment.png) | ![Midtrans](screenshots/midtrans_gateway.png) | ![Sukses](screenshots/payment_success.png) | ![Riwayat](screenshots/booking_history.png) |
 
 ### Alur Pengelola Venue (Owner Flow)
-| Registrasi Akun Owner | Tambah Venue (Form Utama) | Tambah Venue (Detail Lapangan) | Beranda Dashboard & Venue Owner | Grafik Finansial & Laporan | Halaman Chat Pelanggan |
-| :---: | :---: | :---: | :---: | :---: | :---: |
-| ![Registrasi](screenshots/owner_register.png) | ![Tambah Venue 1](screenshots/owner_add_venue_1.png) | ![Tambah Venue 2](screenshots/owner_add_venue_2.png) | ![Dashboard Owner](screenshots/owner_dashboard.png) | ![Grafik Laporan](screenshots/owner_reports.png) | ![Chat Owner](screenshots/owner_chat.png) |
+| Registrasi Akun Owner | Tambah Venue (Form Utama) | Tambah Venue (Detail Lapangan) |
+| :---: | :---: | :---: |
+| ![Registrasi](screenshots/owner_register.png) | ![Tambah Venue 1](screenshots/owner_add_venue_1.png) | ![Tambah Venue 2](screenshots/owner_add_venue_2.png) |
+
+| Beranda Dashboard & Venue Owner | Grafik Finansial & Laporan | Halaman Chat Pelanggan |
+| :---: | :---: | :---: |
+| ![Dashboard Owner](screenshots/owner_dashboard.png) | ![Grafik Laporan](screenshots/owner_reports.png) | ![Chat Owner](screenshots/owner_chat.png) |
 
 ### Alur Administrator (Admin Flow)
 | Dashboard Admin | Verifikasi Owner | Aktivasi Lapangan Baru |
