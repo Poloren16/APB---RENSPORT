@@ -63,5 +63,6 @@ jobs:
         with:
           artifacts: build/app/outputs/flutter-apk/app-release.apk
           artifactErrorsFailBuild: true
-          generateReleaseNotes: true
+          body: |
+            - Fix release APK build
           token: ${{ secrets.GITHUB_TOKEN }}
