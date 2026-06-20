@@ -49,23 +49,29 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
     _selectedIndex = widget.initialIndex;
     _searchController.addListener(() => setState(() {}));
-    
+
     // Auto-refresh data bookings online
     BookingService.loadBookings(widget.username, widget.role);
     BookingUtils.loadGlobalBookingsOnline();
     ReviewService.loadReviews();
     // Sinkronisasi venue dari Supabase agar venue owner lain selalu tampil terbaru
-    GlobalVenueData.init().then((_) { if (mounted) setState(() {}); });
+    GlobalVenueData.init().then((_) {
+      if (mounted) setState(() {});
+    });
     // Sinkronisasi akun dari Supabase agar list akun selalu up-to-date
-    GlobalAuthData.init().then((_) { if (mounted) setState(() {}); });
+    GlobalAuthData.init().then((_) {
+      if (mounted) setState(() {});
+    });
 
     // Memuat notifikasi awal dan memperbaruinya setiap 10 detik secara berkala
-    GlobalNotificationData.loadNotifications(widget.username, widget.role).then((_) {
+    GlobalNotificationData.loadNotifications(widget.username, widget.role)
+        .then((_) {
       if (mounted) setState(() {});
     });
     _notificationTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (mounted) {
-        GlobalNotificationData.loadNotifications(widget.username, widget.role).then((_) {
+        GlobalNotificationData.loadNotifications(widget.username, widget.role)
+            .then((_) {
           if (mounted) setState(() {});
         });
       }
@@ -79,21 +85,21 @@ class _DashboardPageState extends State<DashboardPage> {
     super.dispose();
   }
 
-  static const List<CategoryItem> _categories = [
-    CategoryItem('Semua'),
-    CategoryItem('Favorit', Icons.bookmark_outline),
-    CategoryItem('Mini Soccer', Icons.sports_soccer),
-    CategoryItem('Sepak Bola', Icons.sports_soccer),
-    CategoryItem('Badminton', Icons.sports_tennis),
-    CategoryItem('Tennis', Icons.sports_tennis),
-    CategoryItem('Futsal', Icons.sports_soccer_outlined),
-  ];
-
   static String _monthName(int month) {
     const names = [
       '',
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     return names[month];
   }
@@ -107,15 +113,10 @@ class _DashboardPageState extends State<DashboardPage> {
       }
       // Re-sync venue saat user buka tab Venue agar tampil terbaru
       if (index == 1) {
-        GlobalVenueData.init().then((_) { if (mounted) setState(() {}); });
+        GlobalVenueData.init().then((_) {
+          if (mounted) setState(() {});
+        });
       }
-    });
-  }
-
-  void _navigateToVenueWithCategory(String category) {
-    setState(() {
-      _selectedCategory = category;
-      _selectedIndex = 1;
     });
   }
 
@@ -147,12 +148,15 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final categories = buildVenueCategoryItems(GlobalVenueData.venues);
+    final selectedCategory =
+        normalizeCategoryLabel(categories, _selectedCategory);
     final List<Widget> pages = [
       _buildHomeContent(),
       VenuePage(
-        username: widget.username, 
-        role: widget.role, 
-        initialCategory: _selectedCategory == 'Favorit' ? 'Favorite' : _selectedCategory,
+        username: widget.username,
+        role: widget.role,
+        initialCategory: selectedCategory,
         initialDate: _selectedDate,
       ),
       BookingHistoryPage(
@@ -193,7 +197,8 @@ class _DashboardPageState extends State<DashboardPage> {
         selectedItemColor: AppColors.primary,
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        selectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         onTap: _onItemTapped,
       ),
@@ -203,25 +208,31 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildHomeContent() {
     // Determine filtered venues
     final List<Map<String, dynamic>> allVenues = GlobalVenueData.venues;
+    final categories = buildVenueCategoryItems(allVenues);
+    final selectedCategory =
+        normalizeCategoryLabel(categories, _selectedCategory);
     final String query = _searchController.text.toLowerCase();
-    
+
     final List<Map<String, dynamic>> filteredVenues = allVenues.where((v) {
-      final bool isFav = _selectedCategory == 'Favorit' || _selectedCategory == 'Favorite';
-      
+      final bool isFav = selectedCategory == 'Favorit';
+
       bool matchesCategory = false;
-      if (_selectedCategory == 'Semua') {
+      if (selectedCategory == 'Semua') {
         matchesCategory = true;
       } else if (isFav) {
         matchesCategory = GlobalVenueData.isFavorite(v['name'] ?? '');
       } else {
         final mainType = (v['type'] ?? '').toString();
-        if (mainType == _selectedCategory) {
+        if (sportCategoryMatches(mainType, selectedCategory)) {
           matchesCategory = true;
         } else {
           final courts = v['courts'] as List<dynamic>? ?? [];
           matchesCategory = courts.any((court) {
             final courtMap = Map<String, dynamic>.from(court as Map);
-            return courtMap['type']?.toString() == _selectedCategory;
+            return sportCategoryMatches(
+              courtMap['type']?.toString() ?? '',
+              selectedCategory,
+            );
           });
         }
       }
@@ -233,20 +244,21 @@ class _DashboardPageState extends State<DashboardPage> {
         return courtType.contains(query);
       });
 
-      final bool matchesSearch = (v['name'] ?? '').toString().toLowerCase().contains(query) || 
-                                (v['location'] ?? '').toString().toLowerCase().contains(query) ||
-                                (v['address'] ?? '').toString().toLowerCase().contains(query) ||
-                                (v['type'] ?? '').toString().toLowerCase().contains(query) ||
-                                courtSportMatch;
+      final bool matchesSearch =
+          (v['name'] ?? '').toString().toLowerCase().contains(query) ||
+              (v['location'] ?? '').toString().toLowerCase().contains(query) ||
+              (v['address'] ?? '').toString().toLowerCase().contains(query) ||
+              (v['type'] ?? '').toString().toLowerCase().contains(query) ||
+              courtSportMatch;
 
       return matchesCategory && matchesSearch;
     }).toList();
 
-
     // Show top 5 or all if filtered
-    final List<Map<String, dynamic>> displayVenues = query.isEmpty && _selectedCategory == 'Semua' 
-        ? filteredVenues.take(5).toList() 
-        : filteredVenues;
+    final List<Map<String, dynamic>> displayVenues =
+        query.isEmpty && selectedCategory == 'Semua'
+            ? filteredVenues.take(5).toList()
+            : filteredVenues;
 
     final bool hasNoResults = filteredVenues.isEmpty;
 
@@ -257,178 +269,213 @@ class _DashboardPageState extends State<DashboardPage> {
           children: [
             Padding(
               padding: const EdgeInsets.all(20.0),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 24,
-                  backgroundColor: AppColors.primary,
-                  child: Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Halo, ${widget.username}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    ],
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 24,
+                    backgroundColor: AppColors.primary,
+                    child: Text('G',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
-                ),
-                Stack(
-                  children: [
-                    _buildCircleIcon(Icons.notifications_outlined, () async {
-                      await Navigator.push(context, MaterialPageRoute(builder: (context) => NotifikasiPage(username: widget.username, role: widget.role)));
-                      setState(() {});
-                    }),
-                    if (GlobalNotificationData.getUnreadCount(widget.username, widget.role) > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            GlobalNotificationData.getUnreadCount(widget.username, widget.role).toString(),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Halo, ${widget.username}',
                             style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 8),
-                Stack(
-                  children: [
-                    _buildCircleIcon(Icons.chat_bubble_outline, () async {
-                      await Navigator.push(context, MaterialPageRoute(builder: (context) => ChatPage(username: widget.username, role: widget.role)));
-                      setState(() {});
-                    }),
-                    if (GlobalChatData.getTotalUnreadCount(widget.username, widget.role) > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            GlobalChatData.getTotalUnreadCount(widget.username, widget.role).toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Search & Filter
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSearchBar(),
-                const SizedBox(height: 20),
-                VenueCategoryChips(
-                  categories: _categories,
-                  selectedCategory: _selectedCategory,
-                  onCategorySelected: (cat) {
-                    setState(() => _selectedCategory = cat);
-                  },
-                ),
-                const SizedBox(height: 20),
-                _buildDateSelector(),
-                const SizedBox(height: 15),
-                VenueDatePicker(
-                  selectedDate: _selectedDate,
-                  onDateSelected: (date) => setState(() => _selectedDate = date),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 25),
-
-          // Recommendations
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
-                    children: [
-                      TextSpan(
-                        text: (_selectedCategory == 'Favorit' || _selectedCategory == 'Favorite')
-                            ? 'Venue '
-                            : 'Rekomendasi ',
-                      ),
-                      TextSpan(
-                        text: (_selectedCategory == 'Favorit' || _selectedCategory == 'Favorite')
-                            ? 'Favorit'
-                            : 'Venue',
-                        style: const TextStyle(color: AppColors.primary),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text('Temukan venue terbaik untuk bermain!', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                const SizedBox(height: 20),
-                if (hasNoResults)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: EmptyStateWidget(
-                      message: 'Tidak ada venue yang sesuai dengan filter atau pencarian Anda.',
-                      actionLabel: query.isNotEmpty || _selectedCategory != 'Semua' ? 'Reset Filter' : null,
-                      onActionPressed: () {
-                        setState(() {
-                          _searchController.clear();
-                          _selectedCategory = 'Semua';
-                        });
-                      },
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                      ],
                     ),
-                  )
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: displayVenues.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 20),
-                    itemBuilder: (context, index) {
-                      return _buildVenueCard(displayVenues[index]);
+                  ),
+                  Stack(
+                    children: [
+                      _buildCircleIcon(Icons.notifications_outlined, () async {
+                        await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => NotifikasiPage(
+                                    username: widget.username,
+                                    role: widget.role)));
+                        setState(() {});
+                      }),
+                      if (GlobalNotificationData.getUnreadCount(
+                              widget.username, widget.role) >
+                          0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              GlobalNotificationData.getUnreadCount(
+                                      widget.username, widget.role)
+                                  .toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  Stack(
+                    children: [
+                      _buildCircleIcon(Icons.chat_bubble_outline, () async {
+                        await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ChatPage(
+                                    username: widget.username,
+                                    role: widget.role)));
+                        setState(() {});
+                      }),
+                      if (GlobalChatData.getTotalUnreadCount(
+                              widget.username, widget.role) >
+                          0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              GlobalChatData.getTotalUnreadCount(
+                                      widget.username, widget.role)
+                                  .toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Search & Filter
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSearchBar(),
+                  const SizedBox(height: 20),
+                  VenueCategoryChips(
+                    categories: categories,
+                    selectedCategory: selectedCategory,
+                    onCategorySelected: (cat) {
+                      setState(() => _selectedCategory = cat);
                     },
                   ),
-                const SizedBox(height: 20),
-              ],
+                  const SizedBox(height: 20),
+                  _buildDateSelector(),
+                  const SizedBox(height: 15),
+                  VenueDatePicker(
+                    selectedDate: _selectedDate,
+                    onDateSelected: (date) =>
+                        setState(() => _selectedDate = date),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 25),
+
+            // Recommendations
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black),
+                      children: [
+                        TextSpan(
+                          text: selectedCategory == 'Favorit'
+                              ? 'Venue '
+                              : 'Rekomendasi ',
+                        ),
+                        TextSpan(
+                          text: selectedCategory == 'Favorit'
+                              ? 'Favorit'
+                              : 'Venue',
+                          style: const TextStyle(color: AppColors.primary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Temukan venue terbaik untuk bermain!',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                  const SizedBox(height: 20),
+                  if (hasNoResults)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: EmptyStateWidget(
+                        message:
+                            'Tidak ada venue yang sesuai dengan filter atau pencarian Anda.',
+                        actionLabel:
+                            query.isNotEmpty || selectedCategory != 'Semua'
+                                ? 'Reset Filter'
+                                : null,
+                        onActionPressed: () {
+                          setState(() {
+                            _searchController.clear();
+                            _selectedCategory = 'Semua';
+                          });
+                        },
+                      ),
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: displayVenues.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 20),
+                      itemBuilder: (context, index) {
+                        return _buildVenueCard(displayVenues[index]);
+                      },
+                    ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 
   Widget _buildCircleIcon(IconData icon, VoidCallback onTap) {
     return Container(
-      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-      child: IconButton(icon: Icon(icon, color: AppColors.primary), onPressed: onTap),
+      decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          shape: BoxShape.circle),
+      child: IconButton(
+          icon: Icon(icon, color: AppColors.primary), onPressed: onTap),
     );
   }
 
@@ -438,12 +485,16 @@ class _DashboardPageState extends State<DashboardPage> {
       decoration: InputDecoration(
         hintText: 'Cari Venue',
         prefixIcon: const Icon(Icons.search),
-        suffixIcon: _searchController.text.isNotEmpty 
-            ? IconButton(icon: const Icon(Icons.clear, size: 20), onPressed: () => _searchController.clear()) 
+        suffixIcon: _searchController.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 20),
+                onPressed: () => _searchController.clear())
             : null,
         filled: true,
         fillColor: Colors.grey[100],
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide.none),
       ),
     );
   }
@@ -458,7 +509,9 @@ class _DashboardPageState extends State<DashboardPage> {
             children: [
               Icon(Icons.calendar_month, color: Colors.grey[600]),
               const SizedBox(width: 8),
-              Text(_monthName(_selectedDate.month), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(_monthName(_selectedDate.month),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
               Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
             ],
           ),
@@ -469,7 +522,9 @@ class _DashboardPageState extends State<DashboardPage> {
             _selectedCategory = 'Semua';
             _searchController.clear();
           }),
-          child: const Text('Reset & Ulang', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
+          child: const Text('Reset & Ulang',
+              style: TextStyle(
+                  color: AppColors.primary, fontWeight: FontWeight.w500)),
         ),
       ],
     );
@@ -478,12 +533,21 @@ class _DashboardPageState extends State<DashboardPage> {
   String _getDashboardPriceDisplay(Map<String, dynamic> venue) {
     final courts = venue['courts'] as List<dynamic>? ?? [];
     final prices = <int>[];
-    final dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    final dayNames = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu'
+    ];
     for (final c in courts) {
       final cMap = Map<String, dynamic>.from(c as Map);
       final priceModeDay = cMap['priceModeDay'] as Map? ?? {};
       for (final dayName in dayNames) {
-        final priceMode = priceModeDay[dayName] ?? cMap['priceMode'] ?? 'perDay';
+        final priceMode =
+            priceModeDay[dayName] ?? cMap['priceMode'] ?? 'perDay';
         if (priceMode == 'perSlot') {
           final pricePerSlot = cMap['pricePerSlot'] as Map? ?? {};
           pricePerSlot.forEach((k, val) {
@@ -509,13 +573,16 @@ class _DashboardPageState extends State<DashboardPage> {
     if (prices.isEmpty) {
       final priceVal = venue['price'];
       if (priceVal == null) return 'Hubungi Pengelola';
-      if (priceVal is int) return 'Rp ${priceVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}/jam';
+      if (priceVal is int) {
+        return 'Rp ${priceVal.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}/jam';
+      }
       return priceVal.toString();
     }
     prices.sort();
     final min = prices.first;
     final max = prices.last;
-    String fmt(int n) => 'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
+    String fmt(int n) =>
+        'Rp ${n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
     return min == max ? '${fmt(min)}/jam' : '${fmt(min)} - ${fmt(max)}/jam';
   }
 
@@ -523,28 +590,36 @@ class _DashboardPageState extends State<DashboardPage> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 5))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5))
+        ],
       ),
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(20)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildVenueHeader(venue),
-              if (venue['courts'] != null && (venue['courts'] as List).isNotEmpty) ...[
+              if (venue['courts'] != null &&
+                  (venue['courts'] as List).isNotEmpty) ...[
                 const Divider(height: 1),
-                ... (venue['courts'] as List).map((court) => Column(
-                  children: [
-                    _buildCourtItem(venue, court),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 15),
-                      child: Divider(height: 1),
-                    ),
-                  ],
-                )).toList(),
+                ...(venue['courts'] as List).map((court) => Column(
+                      children: [
+                        _buildCourtItem(venue, court),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 15),
+                          child: Divider(height: 1),
+                        ),
+                      ],
+                    )),
               ],
               const SizedBox(height: 10),
             ],
@@ -580,41 +655,60 @@ class _DashboardPageState extends State<DashboardPage> {
               borderRadius: BorderRadius.circular(15),
               child: Builder(builder: (context) {
                 final imgPath = venue['image']?.toString() ?? '';
-                 if (imgPath.isNotEmpty) {
-                   final isRemote = imgPath.startsWith('http://') || imgPath.startsWith('https://');
-                   final isAsset = imgPath.startsWith('assets/');
-                   if (isRemote) {
-                     return Image.network(
-                       imgPath,
-                       width: 100, height: 100, fit: BoxFit.cover,
-                       errorBuilder: (_, __, ___) => Container(
-                         width: 100, height: 100, color: Colors.grey[300],
-                         child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                       ),
-                     );
-                   } else if (isAsset) {
-                     return Image.asset(
-                       imgPath,
-                       width: 100, height: 100, fit: BoxFit.cover,
-                       errorBuilder: (_, __, ___) => Container(
-                         width: 100, height: 100, color: Colors.grey[300],
-                         child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                       ),
-                     );
-                   } else {
-                     return Image.file(
-                       File(imgPath),
-                       width: 100, height: 100, fit: BoxFit.cover,
-                       errorBuilder: (_, __, ___) => Container(
-                         width: 100, height: 100, color: Colors.grey[300],
-                         child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                       ),
-                     );
-                   }
-                 }
+                if (imgPath.isNotEmpty) {
+                  final isRemote = imgPath.startsWith('http://') ||
+                      imgPath.startsWith('https://');
+                  final isAsset = imgPath.startsWith('assets/');
+                  if (isRemote) {
+                    return Image.network(
+                      imgPath,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 100,
+                        height: 100,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image,
+                            size: 50, color: Colors.grey),
+                      ),
+                    );
+                  } else if (isAsset) {
+                    return Image.asset(
+                      imgPath,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 100,
+                        height: 100,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image,
+                            size: 50, color: Colors.grey),
+                      ),
+                    );
+                  } else {
+                    return Image.file(
+                      File(imgPath),
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 100,
+                        height: 100,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image,
+                            size: 50, color: Colors.grey),
+                      ),
+                    );
+                  }
+                }
                 return Container(
-                  width: 100, height: 100, color: Colors.grey[300],
-                  child: const Icon(Icons.stadium, size: 50, color: Colors.grey),
+                  width: 100,
+                  height: 100,
+                  color: Colors.grey[300],
+                  child:
+                      const Icon(Icons.stadium, size: 50, color: Colors.grey),
                 );
               }),
             ),
@@ -623,23 +717,30 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(venue['name'] ?? 'Venue', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text(venue['name'] ?? 'Venue',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
                   _buildVenueStats(venue['name']),
                   const SizedBox(height: 4),
-                  _buildIconText(Icons.location_on, venue['location'] ?? 'Tidak Diketahui'),
+                  _buildIconText(Icons.location_on,
+                      venue['location'] ?? 'Tidak Diketahui'),
                   const SizedBox(height: 4),
-                  _buildIconText(_getSportIcon(venue['type'] ?? 'Umum'), venue['type'] ?? 'Umum'),
+                  _buildIconText(_getSportIcon(venue['type'] ?? 'Umum'),
+                      venue['type'] ?? 'Umum'),
                   const SizedBox(height: 8),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text(_getDashboardPriceDisplay(venue),
-                        style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14),
-                        maxLines: 1,
+                    child: Text(
+                      _getDashboardPriceDisplay(venue),
+                      style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14),
+                      maxLines: 1,
                     ),
                   ),
                 ],
@@ -656,9 +757,15 @@ class _DashboardPageState extends State<DashboardPage> {
       children: [
         const Icon(Icons.star_rounded, size: 16, color: Colors.orange),
         const SizedBox(width: 4),
-        Text(Review.getAverageRating(venueName ?? '').toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
+        Text(Review.getAverageRating(venueName ?? '').toStringAsFixed(1),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: AppColors.textPrimary)),
         const SizedBox(width: 4),
-        Text('(${Review.mockReviews.where((r) => r.venueName == venueName).length} ulasan)', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+        Text(
+            '(${Review.mockReviews.where((r) => r.venueName == venueName).length} ulasan)',
+            style: TextStyle(color: Colors.grey[500], fontSize: 11)),
       ],
     );
   }
@@ -691,13 +798,16 @@ class _DashboardPageState extends State<DashboardPage> {
       children: [
         Icon(icon, size: 14, color: Colors.grey[400]),
         const SizedBox(width: 4),
-        Expanded(child: Text(text, style: const TextStyle(color: Colors.grey, fontSize: 12), overflow: TextOverflow.ellipsis)),
+        Expanded(
+            child: Text(text,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                overflow: TextOverflow.ellipsis)),
       ],
     );
   }
 
-
-  Widget _buildCourtItem(Map<String, dynamic> venue, Map<String, dynamic> court) {
+  Widget _buildCourtItem(
+      Map<String, dynamic> venue, Map<String, dynamic> court) {
     final String courtName = court['name'] ?? 'Lapangan';
     final String courtImg = court['image']?.toString() ?? '';
     final bool hasImg = courtImg.isNotEmpty;
@@ -730,11 +840,16 @@ class _DashboardPageState extends State<DashboardPage> {
                   _buildSmallImage(courtImg),
                   const SizedBox(width: 12),
                 ],
-                Expanded(child: _buildCourtInfo(courtName, court['type'] ?? venue['type'] ?? 'Umum', court['size'] ?? 'Standar')),
+                Expanded(
+                    child: _buildCourtInfo(
+                        courtName,
+                        court['type'] ?? venue['type'] ?? 'Umum',
+                        court['size'] ?? 'Standar')),
               ],
             ),
             const SizedBox(height: 12),
-            const Text('Pilih jadwal booking:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const Text('Pilih jadwal booking:',
+                style: TextStyle(fontSize: 11, color: Colors.grey)),
             const SizedBox(height: 8),
             _buildTimeSlotsRow(venue['name'] ?? '', courtName),
           ],
@@ -747,24 +862,31 @@ class _DashboardPageState extends State<DashboardPage> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Builder(builder: (context) {
-        final isRemote = courtImg.startsWith('http://') || courtImg.startsWith('https://');
+        final isRemote =
+            courtImg.startsWith('http://') || courtImg.startsWith('https://');
         final isAsset = courtImg.startsWith('assets/');
         if (isRemote) {
           return Image.network(
             courtImg,
-            width: 60, height: 60, fit: BoxFit.cover,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           );
         } else if (isAsset) {
           return Image.asset(
             courtImg,
-            width: 60, height: 60, fit: BoxFit.cover,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           );
         } else {
           return Image.file(
             File(courtImg),
-            width: 60, height: 60, fit: BoxFit.cover,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           );
         }
@@ -776,31 +898,47 @@ class _DashboardPageState extends State<DashboardPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(name,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 4),
         Row(
           children: [
             Icon(_getSportIcon(type), size: 14, color: Colors.grey[400]),
             const SizedBox(width: 4),
-            Text(type, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+            Text(type,
+                style: const TextStyle(color: Colors.grey, fontSize: 11)),
             const SizedBox(width: 10),
             Icon(Icons.grid_on, size: 14, color: Colors.grey[400]),
             const SizedBox(width: 4),
-            Text(size, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+            Text(size,
+                style: const TextStyle(color: Colors.grey, fontSize: 11)),
           ],
         ),
         const SizedBox(height: 4),
-        const Text('Selengkapnya >', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
+        const Text('Selengkapnya >',
+            style: TextStyle(
+                color: AppColors.primary,
+                fontSize: 11,
+                fontWeight: FontWeight.bold)),
       ],
     );
   }
 
   Widget _buildTimeSlotsRow(String venueName, String courtName) {
     // Ambil availability dari data court yang diisi owner
-    const dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const dayNames = [
+      'Minggu',
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu'
+    ];
     final dayName = dayNames[_selectedDate.weekday % 7];
 
-    final venueData = GlobalVenueData.venues.where((v) => v['name'] == venueName);
+    final venueData =
+        GlobalVenueData.venues.where((v) => v['name'] == venueName);
     List<String> slots = [];
     Map<String, dynamic>? courtMap;
     if (venueData.isNotEmpty) {
@@ -821,7 +959,10 @@ class _DashboardPageState extends State<DashboardPage> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Text(
           'Venue tidak beroperasi pada hari ini.',
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+          style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade500,
+              fontStyle: FontStyle.italic),
         ),
       );
     }
@@ -830,13 +971,17 @@ class _DashboardPageState extends State<DashboardPage> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: slots
-            .map((time) => _buildTimeSlot(venueName, courtMap ?? {'name': courtName}, time, isAvailable: true))
+            .map((time) => _buildTimeSlot(
+                venueName, courtMap ?? {'name': courtName}, time,
+                isAvailable: true))
             .toList(),
       ),
     );
   }
 
-  Widget _buildTimeSlot(String venueName, Map<String, dynamic> court, String time, {required bool isAvailable}) {
+  Widget _buildTimeSlot(
+      String venueName, Map<String, dynamic> court, String time,
+      {required bool isAvailable}) {
     final courtName = court['name'] ?? 'Lapangan';
     final dateStr = BookingUtils.formatDate(_selectedDate);
     final isBooked = BookingUtils.isSlotBooked(
@@ -854,7 +999,8 @@ class _DashboardPageState extends State<DashboardPage> {
             ? () {
                 final hour = int.tryParse(time.split(':')[0]) ?? 0;
                 final nextHour = hour + 1;
-                final timeRange = '$time - ${nextHour.toString().padLeft(2, '0')}:00';
+                final timeRange =
+                    '$time - ${nextHour.toString().padLeft(2, '0')}:00';
 
                 Navigator.push(
                   context,
@@ -876,18 +1022,26 @@ class _DashboardPageState extends State<DashboardPage> {
               }
             : null,
         style: OutlinedButton.styleFrom(
-          foregroundColor: effectiveAvailable ? AppColors.primary : Colors.grey.shade400,
-          backgroundColor: effectiveAvailable ? Colors.white : Colors.grey.shade100,
-          side: BorderSide(color: effectiveAvailable ? AppColors.primary : Colors.grey.shade300),
+          foregroundColor:
+              effectiveAvailable ? AppColors.primary : Colors.grey.shade400,
+          backgroundColor:
+              effectiveAvailable ? Colors.white : Colors.grey.shade100,
+          side: BorderSide(
+              color: effectiveAvailable
+                  ? AppColors.primary
+                  : Colors.grey.shade300),
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
         child: Text(
           time,
           style: TextStyle(
-            color: effectiveAvailable ? AppColors.primary : Colors.grey.shade500,
+            color:
+                effectiveAvailable ? AppColors.primary : Colors.grey.shade500,
             fontSize: 12,
-            fontWeight: effectiveAvailable ? FontWeight.w600 : FontWeight.normal,
+            fontWeight:
+                effectiveAvailable ? FontWeight.w600 : FontWeight.normal,
             decoration: null,
           ),
         ),
