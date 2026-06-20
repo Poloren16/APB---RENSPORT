@@ -49,6 +49,14 @@ Aplikasi ini mendukung tiga peran pengguna dengan hak akses dan fitur yang dises
 
 ---
 
+## 🚀 CI/CD Android Release
+
+Repository ini memiliki workflow GitHub Actions untuk membangun APK Android secara otomatis saat ada push ke branch `main`, tag `v*`, atau saat dijalankan manual dari tab **Actions**.
+
+Panduan lengkap penggunaan workflow, konfigurasi secret `ENV_FILE`, artifact APK, dan GitHub Release otomatis tersedia di [GITHUB_ACTIONS_ANDROID_RELEASE.md](GITHUB_ACTIONS_ANDROID_RELEASE.md).
+
+---
+
 ## ⚙️ Langkah Instalasi & Konfigurasi
 
 ### 1. Konfigurasi Environment (`.env`)
@@ -129,5 +137,4 @@ Berikut adalah beberapa tampilan utama dari aplikasi **RENSIUS**:
 | Dashboard Admin | Verifikasi Owner | Aktivasi Lapangan Baru |
 | :---: | :---: | :---: |
 | ![Dashboard Admin](screenshots/admin_dashboard.png) | ![Verifikasi](screenshots/admin_verification.png) | ![Aktivasi](screenshots/admin_activation.png) |
-
 
