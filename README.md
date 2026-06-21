@@ -55,6 +55,8 @@ Repository ini memiliki workflow GitHub Actions untuk membangun APK Android seca
 
 Panduan lengkap penggunaan workflow, konfigurasi secret `ENV_FILE`, artifact APK, dan GitHub Release otomatis tersedia di [GITHUB_ACTIONS_ANDROID_RELEASE.md](GITHUB_ACTIONS_ANDROID_RELEASE.md).
 
+Dokumentasi kontrak API Supabase, Storage, dan Midtrans tersedia di [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
+
 ---
 
 ## ⚙️ Langkah Instalasi & Konfigurasi
@@ -137,4 +139,3 @@ Berikut adalah beberapa tampilan utama dari aplikasi **RENSIUS**:
 | Dashboard Admin | Verifikasi Owner | Aktivasi Lapangan Baru |
 | :---: | :---: | :---: |
 | ![Dashboard Admin](screenshots/admin_dashboard.png) | ![Verifikasi](screenshots/admin_verification.png) | ![Aktivasi](screenshots/admin_activation.png) |
-
