@@ -13,7 +13,7 @@ Aplikasi ini mendukung tiga peran pengguna dengan hak akses dan fitur yang dises
 ### 1. Pelanggan (End Users / Customers)
 * **Autentikasi Mandiri:** Register dan login menggunakan email, *username*, nomor telepon, dan kata sandi via Supabase Auth.
 * **Eksplorasi Lapangan:** Mencari lokasi arena olahraga terdekat berbasis koordinat peta interaktif (*Google Maps API*).
-* **Penyaringan Lapangan:** Memfilter pencarian berdasarkan cabang olahraga, range harga sewa, lokasi daerah, dan fasilitas.
+* **Penyaringan Lapangan:** Memfilter pencarian berdasarkan cabang olahraga.
 * **Reservasi Real-Time:** Memesan slot jadwal sewa lapangan secara langsung tanpa perlu konfirmasi manual kepada pengelola.
 * **Sewa Peralatan (Layanan Tambahan):** Menyewa alat penunjang olahraga (seperti raket, bola, atau cone) secara langsung saat memesan lapangan.
 * **Pembayaran Non-Tunai:** Proses pembayaran digital otomatis terintegrasi menggunakan simulator Midtrans Sandbox.
